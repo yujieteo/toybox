@@ -1,6 +1,6 @@
 # Spikes 1 and 2: results
 
-Machine: Apple M5, headless Chrome 144 or later with ANGLE Metal (hardware WebGL2). Phone: not measured. Proof files are in `/Users/yj/src/firstmate/data/toybox-v2/spikes-1-2/`.
+Machine: Apple M5, headless Google Chrome (stable) with ANGLE Metal (hardware WebGL2). Phone: not measured. Proof files are in `/Users/yj/src/firstmate/data/toybox-v2/spikes-1-2/`.
 
 ## Spike 1: MP4 export from the Goose wasm renderer
 
