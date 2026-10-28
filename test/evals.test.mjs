@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { build as riot } from '../evals/riot.mjs';
 import { build as home } from '../evals/hometeamns.mjs';
+import { build as narrated } from '../evals/narrated.mjs';
 import { loadScene, validate } from '../core/scene.mjs';
 
-for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', home, [8, 10]]]) {
+for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', home, [8, 10]], ['narrated', narrated, [2, 2]]]) {
   test(`eval ${name}: every quality bar passes`, () => {
     const rep = build();
     const failed = rep.rows.filter((r) => !r.ok);
@@ -46,4 +47,14 @@ test('hometeamns scene: every object is labelled as estimated', () => {
   const s = loadScene(new URL('../evals/out/hometeamns.toybox.json', import.meta.url).pathname);
   assert.ok(s.objects.every((o) => o.estimated === true && o.source === 'estimated'));
   assert.equal(s.objects.filter((o) => o.model === 'person').length, 1);
+});
+
+test('narrated scene: the voice sets the beats, and the motion words follow the words', () => {
+  const s = loadScene(new URL('../evals/out/narrated.toybox.json', import.meta.url).pathname);
+  assert.ok(s.narration.every((n) => n.voice && existsSync(new URL(`../evals/out/${n.voice}`, import.meta.url))));
+  assert.ok(s.facts.every((f) => /^https:\/\//.test(f.source)));
+  assert.ok(s.narration.flatMap((n) => n.facts || []).every((f) => s.facts.some((x) => x.id === f)));
+  assert.deepEqual(s.captions.map((c) => c.text), s.narration.map((n) => n.text));
+  assert.ok(s.motions.length >= 8 && s.motions.every((m) => m.cue));
+  assert.ok(s.callouts.some((c) => c.text.includes('^{st}')));
 });

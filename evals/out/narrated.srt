@@ -1,0 +1,27 @@
+1
+00:00:00,500 --> 00:00:02,380
+This is a zebra crossing.
+
+2
+00:00:02,380 --> 00:00:04,541
+White stripes mark it on the road.
+
+3
+00:00:04,541 --> 00:00:06,715
+A person steps onto the crossing.
+
+4
+00:00:06,715 --> 00:00:10,093
+In the United Kingdom, a driver must then give way.
+
+5
+00:00:10,093 --> 00:00:15,647
+The car stops, and the person walks across.
+
+6
+00:00:15,647 --> 00:00:18,093
+The car goes on when the road is clear.
+
+7
+00:00:18,093 --> 00:00:23,917
+The first zebra crossing opened in Slough on 31 October 1951.

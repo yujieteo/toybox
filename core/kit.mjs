@@ -188,6 +188,11 @@ add('sign-large', 'Sign, large board', 'sign', [
   box([-1.2, 1.5, 0], [0.12, 3.0, 0.12], C.steel), box([1.2, 1.5, 0], [0.12, 3.0, 0.12], C.steel), box([0, 2.5, 0.08], [3.0, 1.2, 0.08], C.white, 'board'),
 ], ['sign', 'label']);
 
+// ---- characters: a soft ball with 2 big eyes, no arms, no mouth, no feet (the narrator of the vid videos).
+// A part with eye true is an eye: blink, look and the other motion words of web/motion.js move it.
+const eye = (x) => ({ ...sph([x, 0.525, 0.47], [0.115, 0.25, 0.08], '#ffffff', 'eyes'), eye: true });
+add('narrator', 'Narrator (a pink ball with 2 eyes)', 'prop', [sph([0, 0.5, 0], [1, 1, 1], '#ff2e88', 'body'), eye(-0.135), eye(0.135)], ['character', 'narrator']);
+
 // ---- indoor
 add('wall-3', 'Wall segment, 3 m', 'structure', [box([0, 1.4, 0], [3, 2.8, 0.15], C.wall, 'wall')], ['wall']);
 add('wall-5', 'Wall segment, 5 m', 'structure', [box([0, 1.4, 0], [5, 2.8, 0.15], C.wall, 'wall')], ['wall']);

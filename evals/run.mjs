@@ -1,10 +1,11 @@
-// Runs both eval cases. Exits with 1 when a quality bar fails.
+// Runs the eval cases. Exits with 1 when a quality bar fails.
 import { build as riot } from './riot.mjs';
 import { build as home } from './hometeamns.mjs';
+import { build as narrated } from './narrated.mjs';
 import { printReport } from './lib.mjs';
 
 let failed = 0;
-for (const build of [riot, home]) {
+for (const build of [riot, home, narrated]) {
   const rep = build();
   printReport(rep);
   if (!rep.ok) failed++;

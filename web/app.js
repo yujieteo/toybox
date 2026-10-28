@@ -13,6 +13,7 @@ const status = t => { $('status').textContent = t; };
 
 const canvas = $('canvas'), overlay = $('overlay');
 const v = await createViewer({ canvas, overlay });
+v.voiceUrl = f => `/api/voice?f=${encodeURIComponent(f)}&token=${token}`;
 function fit() {
   const r = $('stage').getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
   const w = Math.round(r.width * d), h = Math.round(r.height * d);

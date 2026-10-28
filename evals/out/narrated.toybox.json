@@ -1,0 +1,746 @@
+{
+ "toybox": 1,
+ "title": "The zebra crossing",
+ "author": "Toybox eval",
+ "duration": 25.39,
+ "backdrop": {
+  "ground": "street",
+  "size": [
+   60,
+   90
+  ],
+  "color": "#9fb88c"
+ },
+ "lighting": [
+  {
+   "t": 0,
+   "look": "day"
+  }
+ ],
+ "objects": [
+  {
+   "id": "zebra",
+   "model": "road-zebra",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    -26.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight-1",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    -16.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight-2",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    -6.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight-3",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    6.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight-4",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    16.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight-5",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    26.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "road-straight-6",
+   "model": "road-straight",
+   "at": [
+    0,
+    0,
+    36.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "narrator",
+   "model": "narrator",
+   "at": [
+    -6.5,
+    0,
+    -3
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "The narrator of this video. It is not a fact.",
+   "estimated": false,
+   "hidden": false
+  },
+  {
+   "id": "p1",
+   "model": "person",
+   "variant": 4,
+   "at": [
+    5.5,
+    0,
+    0
+   ],
+   "yaw": 270,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "car",
+   "model": "car-sedan",
+   "at": [
+    -2,
+    0,
+    40
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  }
+ ],
+ "tracks": [
+  {
+   "object": "p1",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 5.011,
+     "v": [
+      5.5,
+      0,
+      0
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 6.411,
+     "v": [
+      3.5,
+      0,
+      0
+     ],
+     "ease": "step"
+    },
+    {
+     "t": 11.84,
+     "v": [
+      3.5,
+      0,
+      0
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 15.89,
+     "v": [
+      -4.6,
+      0,
+      0
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "p1",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 5.011,
+     "v": 270,
+     "ease": "step"
+    },
+    {
+     "t": 11.84,
+     "v": 270,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "p1",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 5.011,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 6.411,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 11.84,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 15.89,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "car",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      -2,
+      0,
+      40
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 10.559,
+     "v": [
+      -2,
+      0,
+      5
+     ],
+     "ease": "step"
+    },
+    {
+     "t": 16.39,
+     "v": [
+      -2,
+      0,
+      5
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 25.39,
+     "v": [
+      -2,
+      0,
+      -40
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "car",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 0,
+     "v": 180,
+     "ease": "step"
+    },
+    {
+     "t": 16.39,
+     "v": 180,
+     "ease": "linear"
+    }
+   ]
+  }
+ ],
+ "camera": [
+  {
+   "t": 0,
+   "shot": "wide",
+   "eye": [
+    4.056,
+    5.386,
+    9.115
+   ],
+   "target": [
+    -0.663,
+    0.875,
+    -1.002
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 6.715,
+   "shot": "wide",
+   "eye": [
+    4.764,
+    4.424,
+    7.944
+   ],
+   "target": [
+    -1.5,
+    0.875,
+    -1.002
+   ],
+   "fov": 50,
+   "ease": "step",
+   "cue": [
+    3
+   ]
+  },
+  {
+   "t": 18.093,
+   "shot": "close",
+   "eye": [
+    -5.739,
+    1.16,
+    1.314
+   ],
+   "target": [
+    -6.5,
+    0.7,
+    -3
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "cue": [
+    6
+   ]
+  },
+  {
+   "t": 23.917,
+   "shot": "close",
+   "eye": [
+    -6.5,
+    1.148,
+    1.26
+   ],
+   "target": [
+    -6.5,
+    0.7,
+    -3
+   ],
+   "fov": 50,
+   "ease": "inout"
+  }
+ ],
+ "chapters": [
+  {
+   "id": "c1",
+   "start": 0.5,
+   "end": 18.093,
+   "title": "The zebra crossing",
+   "cue": [
+    0
+   ],
+   "endCue": [
+    6
+   ],
+   "clock": "",
+   "caption": "",
+   "focus": [
+    "zebra",
+    "narrator",
+    "p1"
+   ],
+   "shot": "wide",
+   "source": "https://en.wikipedia.org/wiki/Zebra_crossing"
+  },
+  {
+   "id": "c2",
+   "start": 18.093,
+   "end": 23.917,
+   "title": "The first one",
+   "cue": [
+    6
+   ],
+   "clock": "",
+   "caption": "",
+   "focus": [
+    "narrator"
+   ],
+   "shot": "close",
+   "source": "https://en.wikipedia.org/wiki/Zebra_crossing"
+  }
+ ],
+ "captions": [
+  {
+   "start": 0.5,
+   "end": 2.38,
+   "text": "This is a zebra crossing."
+  },
+  {
+   "start": 2.38,
+   "end": 4.541,
+   "text": "White stripes mark it on the road."
+  },
+  {
+   "start": 4.541,
+   "end": 6.715,
+   "text": "A person steps onto the crossing."
+  },
+  {
+   "start": 6.715,
+   "end": 10.093,
+   "text": "In the United Kingdom, a driver must then give way."
+  },
+  {
+   "start": 10.093,
+   "end": 15.647,
+   "text": "The car stops, and the person walks across."
+  },
+  {
+   "start": 15.647,
+   "end": 18.093,
+   "text": "The car goes on when the road is clear."
+  },
+  {
+   "start": 18.093,
+   "end": 23.917,
+   "text": "The first zebra crossing opened in Slough on 31 October 1951."
+  }
+ ],
+ "callouts": [
+  {
+   "start": 21.799,
+   "end": 23.917,
+   "text": "31^{st} October 1951",
+   "object": "narrator",
+   "source": "https://en.wikipedia.org/wiki/Zebra_crossing",
+   "cue": [
+    6,
+    "31"
+   ]
+  }
+ ],
+ "credits": [],
+ "facts": [
+  {
+   "id": "stripes",
+   "text": "A zebra crossing is a pedestrian crossing marked with white stripes.",
+   "source": "https://en.wikipedia.org/wiki/Zebra_crossing"
+  },
+  {
+   "id": "give-way",
+   "text": "In the United Kingdom, road traffic must give way when a pedestrian has moved onto a zebra crossing (the Highway Code).",
+   "source": "https://en.wikipedia.org/wiki/Zebra_crossing"
+  },
+  {
+   "id": "first",
+   "text": "The first zebra crossing was introduced on Slough High Street on 31 October 1951.",
+   "source": "https://en.wikipedia.org/wiki/Zebra_crossing"
+  }
+ ],
+ "narration": [
+  {
+   "text": "This is a zebra crossing.",
+   "facts": [
+    "stripes"
+   ],
+   "voice": "voice/29b598d24470.wav",
+   "seconds": 1.43,
+   "start": 0.5,
+   "end": 1.93
+  },
+  {
+   "text": "White stripes mark it on the road.",
+   "facts": [
+    "stripes"
+   ],
+   "voice": "voice/26634fab85f9.wav",
+   "seconds": 1.711,
+   "start": 2.38,
+   "end": 4.091
+  },
+  {
+   "text": "A person steps onto the crossing.",
+   "voice": "voice/52d37fa59383.wav",
+   "seconds": 1.724,
+   "start": 4.541,
+   "end": 6.265
+  },
+  {
+   "text": "In the United Kingdom, a driver must then give way.",
+   "facts": [
+    "give-way"
+   ],
+   "voice": "voice/3407353f40c3.wav",
+   "seconds": 2.928,
+   "start": 6.715,
+   "end": 9.643
+  },
+  {
+   "text": "The car stops, and the person walks across.",
+   "pause": 2.6,
+   "voice": "voice/fc67ab3b7e77.wav",
+   "seconds": 2.504,
+   "start": 10.093,
+   "end": 12.597
+  },
+  {
+   "text": "The car goes on when the road is clear.",
+   "voice": "voice/c8c4c670cb35.wav",
+   "seconds": 1.996,
+   "start": 15.647,
+   "end": 17.643
+  },
+  {
+   "text": "The first zebra crossing opened in Slough on 31 October 1951.",
+   "facts": [
+    "first"
+   ],
+   "voice": "voice/ef45845e09a4.wav",
+   "seconds": 5.024,
+   "start": 18.093,
+   "end": 23.117
+  }
+ ],
+ "motions": [
+  {
+   "object": "narrator",
+   "move": "pop",
+   "t": 0.5,
+   "cue": [
+    0
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "look",
+   "t": 1.072,
+   "d": 1.6,
+   "x": 1,
+   "cue": [
+    0,
+    "zebra"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "squint",
+   "t": 2.38,
+   "d": 1,
+   "cue": [
+    1,
+    "White"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "look",
+   "t": 4.645,
+   "d": 1.8,
+   "x": 1,
+   "y": 0.3,
+   "cue": [
+    2,
+    "person"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "hop",
+   "t": 9.126,
+   "cue": [
+    3,
+    "give way"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "squash",
+   "t": 10.559,
+   "cue": [
+    4,
+    "stops"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "glance",
+   "t": 17.336,
+   "cue": [
+    5,
+    "clear"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "spin",
+   "t": 18.422,
+   "cue": [
+    6,
+    "first"
+   ]
+  },
+  {
+   "object": "narrator",
+   "move": "wave",
+   "t": 22.705,
+   "cue": [
+    6,
+    "1951"
+   ]
+  }
+ ]
+}

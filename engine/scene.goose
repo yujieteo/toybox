@@ -32,6 +32,7 @@ let DEG: f32 = 0.0174533;
 let FLAG_HIDDEN: i32 = 1;
 let FLAG_CEIL: i32 = 2;
 let FLAG_WALL: i32 = 4;
+let FLAG_EYE: i32 = 8;
 
 // ---------------------------------------------------------------- matrices
 fn ident() -> Mat {
@@ -214,6 +215,7 @@ var g_vis: i32[>..] = [];     // per object: bit0 visible, bit1 mirrored
 var g_bone: i32[>..] = [];    // per object: the bone of the parent person that it follows, or -1
 var g_bslot: i32[>..] = [];   // per object: the slot of its bone matrices in g_bmat, or -1
 var g_bmat: f32[>..] = [];    // per slot: 20 bone matrices of a person (320 floats)
+var g_pose: f32[>..] = [];    // per object: the motion pose, dx up tilt hs vs eyaw epitch eye pivot (see obj_pose)
 // camera keys: t ex ey ez tx ty tz fov ease
 var g_ct: f32[>..] = [];
 var g_cv: f32[>..] = [];
@@ -274,7 +276,7 @@ export "skel_set" fn skel_set(i: i32, parent: i32, x: f32, y: f32, z: f32) {
 export "scene_reset" fn scene_reset() {
     g_objs = []; g_n = 0; g_trks = []; g_nt = 0;
     g_kt = []; g_k0 = []; g_k1 = []; g_k2 = []; g_ke = [];
-    g_cur = []; g_world = []; g_vis = []; g_bone = []; g_bslot = []; g_bmat = [];
+    g_cur = []; g_world = []; g_vis = []; g_bone = []; g_bslot = []; g_bmat = []; g_pose = [];
     g_ct = []; g_cv = []; g_ce = []; g_ncam = 0;
     g_lt = []; g_ll = []; g_nlight = 0;
     g_map_on = 0; g_cut_ceil = 0; g_cut_wall = 0;
@@ -290,6 +292,8 @@ export "obj_add" fn obj_add(prim: i32, mesh: i32, parent: i32, flags: i32, varia
         r: r, g: g, b: b, r2: r2, g2: g2, b2: b2, shadow: shadow });
     for k in 10 { g_cur.push(0.0); }
     for k in 16 { g_world.push(0.0); }
+    g_pose.push(0.0); g_pose.push(0.0); g_pose.push(0.0); g_pose.push(1.0); g_pose.push(1.0);
+    g_pose.push(0.0); g_pose.push(0.0); g_pose.push(1.0); g_pose.push(0.0);
     g_vis.push(1); g_bone.push(-1); g_bslot.push(-1);
     g_n += 1;
     g_n - 1
@@ -303,6 +307,16 @@ export "obj_bone" fn obj_bone(i: i32, b: i32) {
         g_bone[i] = b;
         if g_bslot[p] < 0 { g_bslot[p] = (g_bmat.len as i32) / 320; for k in 320 { g_bmat.push(0.0); } }
     }
+}
+
+// The motion pose of object i for the next render_frame (web/motion.js computes it from the time).
+// dx and up move it to its side and up (metres), tilt rocks it round its front axis (degrees), hs and vs
+// scale its width and height. Its children with FLAG_EYE turn round the point at height pivot (metres,
+// in the model) by eyaw and epitch (radians, to the right and up), and eye scales their height.
+export "obj_pose" fn obj_pose(i: i32, dx: f32, up: f32, tilt: f32, hs: f32, vs: f32, eyaw: f32, epitch: f32, eye: f32, pivot: f32) {
+    let b = i * 9;
+    g_pose[b] = dx; g_pose[b + 1] = up; g_pose[b + 2] = tilt; g_pose[b + 3] = hs; g_pose[b + 4] = vs;
+    g_pose[b + 5] = eyaw; g_pose[b + 6] = epitch; g_pose[b + 7] = eye; g_pose[b + 8] = pivot;
 }
 
 // channel: 0 at, 1 yaw, 2 scale, 3 pose
@@ -586,11 +600,21 @@ export "render_frame" fn render_frame(t: f64) {
     for i in g_n {
         let o = g_objs[i];
         let b = i * 10;
-        var local = mul(translate(g_cur[b], g_cur[b + 1], g_cur[b + 2]),
-                    mul(rot_y(g_cur[b + 3] * DEG), mul(rot_z(o.rz * DEG), mul(rot_y(o.ry * DEG), mul(rot_x(o.rx * DEG),
-                    scale(g_cur[b + 4], g_cur[b + 5], g_cur[b + 6]))))));
-        var vis: i32 = 1;
+        let pb = i * 9;
         var flags = o.flags;
+        var esy: f32 = 1.0;
+        if o.parent >= 0 && (flags / FLAG_EYE) % 2 == 1 { esy = g_pose[o.parent * 9 + 7]; }
+        let pose = mul(translate(g_pose[pb], g_pose[pb + 1], 0.0), mul(rot_z(g_pose[pb + 2] * DEG), scale(g_pose[pb + 3], g_pose[pb + 4], g_pose[pb + 3])));
+        var local = mul(translate(g_cur[b], g_cur[b + 1], g_cur[b + 2]),
+                    mul(rot_y(g_cur[b + 3] * DEG), mul(pose, mul(rot_z(o.rz * DEG), mul(rot_y(o.ry * DEG), mul(rot_x(o.rx * DEG),
+                    scale(g_cur[b + 4], g_cur[b + 5] * esy, g_cur[b + 6])))))));
+        if o.parent >= 0 && (flags / FLAG_EYE) % 2 == 1 {
+            let pp = o.parent * 9;
+            let cy = g_pose[pp + 8];
+            local = mul(translate(0.0, cy, 0.0), mul(rot_y(g_pose[pp + 5]), mul(rot_x(0.0 - g_pose[pp + 6]), mul(translate(0.0, 0.0 - cy, 0.0), local))));
+        }
+        var vis: i32 = 1;
+        if g_pose[pb + 3] * g_pose[pb + 4] < 0.000001 { vis = 0; }
         var mirror = o.flip;
         if o.parent >= 0 {
             if g_bone[i] >= 0 { local = mul(bone_of(o.parent, g_bone[i]), local); }
@@ -616,7 +640,8 @@ export "render_frame" fn render_frame(t: f64) {
                 gl_draw(mesh, mvp, local, o.r, o.g, o.b, 1.0, 1);
             }
             if o.shadow > 0.0 && o.parent < 0 {
-                let sm = mul(translate(g_cur[b], 0.012, g_cur[b + 2]), scale(o.shadow * 2.0, 0.01, o.shadow * 2.0));
+                let ss = o.shadow * 2.0 * g_pose[pb + 3];
+                let sm = mul(translate(g_cur[b], 0.012, g_cur[b + 2]), scale(ss, 0.01, ss));
                 let smvp = mul(vp, sm);
                 gl_front(0);
                 gl_draw(1, smvp, sm, 0.0, 0.0, 0.0, 0.28, 0);

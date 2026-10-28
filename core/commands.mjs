@@ -1,10 +1,12 @@
 // One function per tool: (scene, args, ctx) => { ok: true, result } | { ok: false, errors: [{code, message}] }
 // A command changes the scene only when the result is valid.
-import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, readdirSync, mkdirSync, copyFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:path';
 import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, checkScene, motionErrors, viewBlocks, focusAt,
-  HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
+  HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, MOVES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
+import { retime, cueTime, cued } from './narration.mjs';
+import { voiceFile, voiceSeconds } from './voice.mjs';
 import { rotYaw } from './geom.mjs';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.mjs';
 
@@ -27,6 +29,7 @@ const common = {
   estimated: { type: 'boolean', description: 'True when no source gives this value.' },
   measured: { type: 'boolean', description: 'True when the value is a measured fact. Needs source.' },
 };
+const cueArg = { type: 'array', minItems: 1, maxItems: 3, description: '[sentence, "word", offset]: the time when the narration says "word" in sentence (0 is the first), plus offset seconds. [sentence] is the start of the sentence. The time follows the voice when the narration changes.' };
 
 export function checkArgs(schema, v, path = 'args') {
   const errs = [];
@@ -69,6 +72,7 @@ function maxTime(s) {
   for (const k of s.camera || []) m = Math.max(m, k.t);
   for (const k of s.lighting || []) m = Math.max(m, k.t);
   for (const k of [...(s.chapters || []), ...(s.captions || []), ...(s.callouts || [])]) m = Math.max(m, k.end);
+  for (const k of s.motions || []) m = Math.max(m, k.t + (k.d ?? 0));
   return m;
 }
 const errKey = (e) => `${e.code}|${e.message}`;
@@ -79,7 +83,14 @@ function mutate(scene, ctx, fn) {
   const cat = ctx?.catalogue || loadCatalogue();
   const copy = cloneScene(scene);
   let result;
-  try { result = fn(copy, cat); } catch (e) { if (e instanceof Fail) return fail([{ code: e.code, message: e.message }]); throw e; }
+  try {
+    result = fn(copy, cat);
+    if (copy.narration?.length || cued(copy).length) retime(copy);
+  } catch (e) {
+    if (e instanceof Fail) return fail([{ code: e.code, message: e.message }]);
+    if (e.message.startsWith('Cue ') || e.message.includes('is not in sentence')) return fail([{ code: 'bad_cue', message: e.message }]);
+    throw e;
+  }
   copy.duration = Math.max(copy.duration || 0, r2(maxTime(copy)));
   const after = hardErrors(validate(copy, cat));
   if (after.length) {
@@ -95,6 +106,12 @@ function mutate(scene, ctx, fn) {
   return okr(result);
 }
 
+// The time that a: gives with cue (a cue of the narration) or with key (a number).
+function timeArg(s, a, key = 't', cueKey = 'cue') {
+  if (a[cueKey]) { try { return cueTime(s.narration, a[cueKey]); } catch (e) { throw new Fail('bad_cue', e.message); } }
+  if (a[key] === undefined) throw new Fail('bad_args', `Give ${key} or ${cueKey}.`);
+  return a[key];
+}
 const find = (s, id) => { const o = s.objects.find((x) => x.id === id); if (!o) throw new Fail('unknown_object', `No object with id "${id}".`); return o; };
 function modelOrFail(cat, model) {
   if (model === 'person') return null;
@@ -221,12 +238,15 @@ function wrapYaw(prev, y) { let d = (y - prev) % 360; if (d > 180) d -= 360; if 
 
 // ---------- tools
 const tools = [];
-function def(name, description, properties, required, fn) {
+function def(name, description, properties, required, fn, answer) {
   const inputSchema = { type: 'object', properties, required, additionalProperties: false };
   const run = (scene, args = {}, ctx = {}) => {
     const errs = checkArgs(inputSchema, args || {});
     if (errs.length) return fail(errs);
-    try { return fn(scene, args || {}, ctx || {}); } catch (e) { if (e instanceof Fail) return fail([{ code: e.code, message: e.message }]); throw e; }
+    try {
+      const r = fn(scene, args || {}, ctx || {});
+      return r.ok && answer ? okr(answer(scene)) : r;
+    } catch (e) { if (e instanceof Fail) return fail([{ code: e.code, message: e.message }]); throw e; }
   };
   tools.push({ name, description, inputSchema, run });
 }
@@ -256,6 +276,8 @@ def('get_scene', 'Read the scene. By default it returns a summary with every obj
       objects: scene.objects.map((o) => ({ id: o.id, model: o.model, at: o.at, yaw: o.yaw, label: o.label || undefined, tags: o.tags?.length ? o.tags : undefined })),
       chapters: scene.chapters.map((c) => ({ id: c.id, start: c.start, end: c.end, title: c.title, shot: c.shot })),
       camera: scene.camera.map((k) => ({ t: k.t, shot: k.shot, ease: k.ease })),
+      narration: scene.narration?.map((n, i) => ({ i, start: n.start, end: n.end, text: n.text, voice: !!n.voice })),
+      facts: scene.facts, motions: scene.motions?.length,
     });
   });
 
@@ -340,6 +362,7 @@ def('remove', 'Remove an object, its animation tracks and its children. Remove o
     s.tracks = s.tracks.filter((t) => !gone.has(t.object));
     for (const c of s.chapters) if (c.focus) c.focus = c.focus.filter((f) => !gone.has(f));
     s.callouts = s.callouts.filter((c) => !gone.has(c.object));
+    if (s.motions) s.motions = s.motions.filter((m) => !gone.has(m.object));
     return { removed: [...gone] };
   }));
 
@@ -407,9 +430,15 @@ def('place_sign', 'Place a sign model. Its text shows as a label next to it, onl
     s.objects.push(o); return { id: o.id };
   }));
 
-def('set_pose', 'Set the pose of an object at time t. Without t (or t = 0) it sets the starting pose.', { id: str, t: num, pose: { type: 'string', enum: POSES } }, ['id', 'pose'],
+def('set_pose', 'Set the pose of an object at time t (or at a cue of the narration). Without t (or t = 0) it sets the starting pose.', { id: str, t: num, cue: cueArg, pose: { type: 'string', enum: POSES } }, ['id', 'pose'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     const o = find(s, a.id);
+    if (a.cue) {
+      if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }]);
+      const t = timeArg(s, a);
+      mergeKeys(s, o.id, 'pose', [{ t, v: a.pose, ease: 'step', cue: a.cue }]);
+      return { id: o.id, t, pose: a.pose };
+    }
     if (!a.t) { o.pose = a.pose; if (trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: a.pose, ease: 'step' }]); return { id: o.id, t: 0, pose: a.pose }; }
     if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }]);
     mergeKeys(s, o.id, 'pose', [{ t: a.t, v: a.pose, ease: 'step' }]);
@@ -471,15 +500,16 @@ def('move_along', 'Move an object along a path of points. Writes at, yaw and pos
     return out;
   }));
 
-def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
-  { t: num, shot: { type: 'string', enum: SHOTS }, frame: strArr, eye: vec3, target: vec3, fov: num, ease: { type: 'string', enum: EASES },
+def('set_camera', 'Add or replace a camera key at time t (or at a cue of the narration). Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
+  { t: num, cue: cueArg, shot: { type: 'string', enum: SHOTS }, frame: strArr, eye: vec3, target: vec3, fov: num, ease: { type: 'string', enum: EASES },
     view: { type: 'number', description: 'Camera side in degrees: 0 looks north from the south side, 90 looks west from the east side.' }, elevation: num, margin: num, distance: num, cut: { type: 'boolean' } },
-  ['t', 'shot'],
+  ['shot'],
   (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
+    a = { ...a, t: timeArg(s, a) };
     let eye = a.eye, target = a.target, fov = a.fov ?? 50;
     if (a.frame?.length) { const f = frameCamera(s, cat, a.frame, a.shot, a.t, a); eye = f.eye; target = f.target; fov = f.fov; }
     if (!eye || !target) throw new Fail('bad_args', 'Give frame (object ids) or both eye and target.');
-    const key = { t: a.t, shot: a.shot, eye: eye.map(r2), target: target.map(r2), fov, ease: a.ease || 'inout' };
+    const key = { t: a.t, shot: a.shot, eye: eye.map(r2), target: target.map(r2), fov, ease: a.ease || 'inout', ...(a.cue ? { cue: a.cue } : {}) };
     s.camera = s.camera.filter((k) => Math.abs(k.t - a.t) > 1e-9);
     const prev = [...s.camera].reverse().find((k) => k.t < a.t);
     if (a.cut && prev) prev.ease = 'step';
@@ -495,25 +525,28 @@ def('set_lighting', 'Set the lighting look from time t (day, dusk, night, indoor
     s.lighting = (s.lighting || []).filter((k) => k.t !== a.t); s.lighting.push({ t: a.t, look: a.look }); s.lighting.sort((p, q) => p.t - q.t); return { t: a.t, look: a.look };
   }));
 
-def('add_caption', 'Add a caption (up to 280 characters, at least 0.06 s per character on screen, no overlap with other captions).', { start: num, end: num, text: str }, ['start', 'end', 'text'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => { s.captions.push({ start: a.start, end: a.end, text: a.text }); return { index: s.captions.length - 1, chars: a.text.length }; }));
-
-def('add_callout', 'Add a callout label tied to an object for a time range. The range must be inside one chapter (validate: callout_outside_chapter).', { start: num, end: num, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['start', 'end', 'text'],
+def('add_caption', 'Add a caption (up to 280 characters, at least 0.06 s per character on screen, no overlap with other captions). A scene with narration makes its captions from the narration: do not add captions to it.', { start: num, end: num, text: str }, ['start', 'end', 'text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const c = { start: a.start, end: a.end, text: a.text }; for (const k of ['object', 'source', 'estimated', 'measured']) if (a[k] !== undefined) c[k] = a[k];
+    if (s.narration?.length) throw new Fail('narrated', 'This scene has narration. Its captions are the sentences of the narration. Change the narration with narrate.'); s.captions.push({ start: a.start, end: a.end, text: a.text }); return { index: s.captions.length - 1, chars: a.text.length }; }));
+
+def('add_callout', 'Add a callout label tied to an object for a time range (start and end, or cue and end_cue of the narration). The range must be inside one chapter (validate: callout_outside_chapter). ^{...} and _{...} in the text draw small raised and lowered text, for example "m^{2}" or "CO_{2}".', { start: num, end: num, cue: cueArg, end_cue: cueArg, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['text'],
+  (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    const c = { start: timeArg(s, a, 'start'), end: timeArg(s, a, 'end', 'end_cue'), text: a.text }; for (const k of ['object', 'source', 'estimated', 'measured']) if (a[k] !== undefined) c[k] = a[k];
+    if (a.cue) c.cue = a.cue;
+    if (a.end_cue) c.endCue = a.end_cue;
     s.callouts.push(c); return { index: s.callouts.length - 1 };
   }));
 
-def('add_chapter', 'Add a chapter (a named time range). With caption it also adds the caption for the whole chapter. focus lists the objects the shot must show. source says where the chapter facts come from.',
-  { start: num, end: num, title: str, clock: str, caption: str, focus: strArr, shot: { type: 'string', enum: SHOTS }, source: common.source, estimated: common.estimated, measured: common.measured, id: str },
-  ['start', 'end', 'title'],
+def('add_chapter', 'Add a chapter (a named time range: start and end, or cue and end_cue of the narration). With caption it also adds the caption for the whole chapter (not in a scene with narration). focus lists the objects the shot must show. source says where the chapter facts come from.',
+  { start: num, end: num, cue: cueArg, end_cue: cueArg, title: str, clock: str, caption: str, focus: strArr, shot: { type: 'string', enum: SHOTS }, source: common.source, estimated: common.estimated, measured: common.measured, id: str },
+  ['title'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     const id = a.id || `c${s.chapters.length + 1}`;
-    const c = { id, start: a.start, end: a.end, title: a.title, clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
+    const c = { id, start: timeArg(s, a, 'start'), end: timeArg(s, a, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
     for (const k of ['estimated', 'measured']) if (a[k] !== undefined) c[k] = a[k];
     for (const f of c.focus) find(s, f);
     s.chapters.push(c);
-    if (a.caption) s.captions.push({ start: a.start, end: a.end, text: a.caption });
+    if (a.caption) s.captions.push({ start: c.start, end: c.end, text: a.caption });
     return { id };
   }));
 
@@ -560,6 +593,58 @@ def('set_cutaway', 'Hide ceilings and the walls between the camera and its targe
 def('add_credit', 'Add a credit line that the export draws (for example a data licence credit).', { text: str }, ['text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => { s.credits = s.credits || []; if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; }));
 
+// ---------- narration, facts and motion words (guide "narration")
+const beats = (s) => ({ length: s.captions.at(-1)?.end ?? 0, beats: s.narration.map((n, i) => ({ i, start: n.start, end: n.end, text: n.text, voice: !!n.voice })) });
+const sentence = { anyOf: [str, { type: 'object', required: ['text'], additionalProperties: false, properties: {
+  text: str, pause: { type: 'number', minimum: 0, description: 'Seconds of silence after the sentence: the picture holds after a change.' }, facts: { ...strArr, description: 'Ids of the facts (add_fact) that the sentence states.' } } }] };
+def('narrate', 'Set the narration (replaces it). 1 sentence = 1 beat, and each sentence is also the caption of its beat. A sentence that has a voice file keeps it. Others get stand-in times until make_voice. Returns the start and end of each beat. Read guide "narration".',
+  { sentences: { type: 'array', items: sentence, minItems: 1 } }, ['sentences'],
+  (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    s.narration = a.sentences.map((x) => {
+      const n = typeof x === 'string' ? { text: x } : { ...x };
+      if (!n.text.trim()) throw new Fail('bad_args', 'A sentence needs a text.');
+      const sec = ctx.sceneDir ? voiceSeconds(ctx.sceneDir, n.text) : null;
+      if (sec) Object.assign(n, { voice: voiceFile(n.text), seconds: sec });
+      return n;
+    });
+    s.captions = [];
+    return null;
+  }), (s) => beats(s));
+
+def('make_voice', 'Make the voice of each sentence of the narration on this computer (Kokoro, voice af_heart) and time the beats with it. The first call on a computer installs the voice (about 750 MB in ~/.cache/toybox/voice) and can take some minutes. Cued times move with the new beats.', {}, [],
+  (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    if (!s.narration?.length) throw new Fail('no_narration', 'The scene has no narration. Call narrate first.');
+    if (!ctx.sceneDir) throw new Fail('no_voice', 'No voice here. Call make_voice through the MCP server or the command line.');
+    for (const n of s.narration) {
+      const sec = voiceSeconds(ctx.sceneDir, n.text);
+      if (!sec) throw new Fail('no_voice', `No voice file for "${n.text}".`);
+      Object.assign(n, { voice: voiceFile(n.text), seconds: sec });
+    }
+    return null;
+  }), (s) => beats(s));
+
+def('add_fact', 'Add a fact of the outline with its source. Use only facts that you read in a source. Never guess a fact: leave out a fact that has no source. A sentence of the narration lists the ids of the facts that it states.',
+  { id: str, text: str, source: { type: 'string', description: 'The URL or the document where you read the fact.' } }, ['text', 'source'],
+  (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    s.facts = s.facts || [];
+    const id = a.id || `f${s.facts.length + 1}`;
+    if (s.facts.some((f) => f.id === id)) throw new Fail('duplicate_id', `Fact ${id} exists.`);
+    s.facts.push({ id, text: a.text, source: a.source });
+    return { id };
+  }));
+
+def('add_motion', `Add a motion word to an object at time t (or at a cue of the narration): ${MOVES.join(', ')}. pop grows it from nothing, out shrinks it to nothing, hop jumps (h: height in half-heights of the model, d: seconds), squash presses it down, wave rocks it (deg). blink, squint, look (x and y from -1 to 1: right and up, for d seconds), glance and spin move the eyes of a character (the model "narrator"). A model with motions stays a pure function of time. Never pop or out a building, a structure or a vehicle.`,
+  { id: str, move: { type: 'string', enum: MOVES }, t: num, cue: cueArg, d: { type: 'number', description: 'Seconds.' }, h: num, x: num, y: num, deg: num }, ['id', 'move'],
+  (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    find(s, a.id);
+    const m = { object: a.id, move: a.move, t: timeArg(s, a) };
+    for (const k of ['d', 'h', 'x', 'y', 'deg']) if (a[k] !== undefined) m[k] = a[k];
+    if (a.cue) m.cue = a.cue;
+    s.motions = s.motions || [];
+    s.motions.push(m);
+    return { id: a.id, move: a.move, t: m.t };
+  }));
+
 def('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid. It also tests every chapter for a blocked view (code view_blocked): a building, structure or vehicle between the camera and a focus object, or in front of much of the frame, for more than 0.5 s. And it tests motion every 0.25 s: collision (two objects pass into each other), off_ground (a person or a vehicle floats or sinks) and wrong_lane (a vehicle drives on the wrong side).', {}, [],
   (scene, a, ctx) => { const errs = checkScene(scene, ctx.catalogue || loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
 
@@ -577,6 +662,10 @@ def('export_scene', 'Write the scene to a .toybox.json file (and the captions to
       if (!rel || rel.startsWith('..') || isAbsolute(rel) || !file.endsWith('.toybox.json')) throw new Fail('bad_path', `path must be a .toybox.json file inside ${ctx.exportDir}.`);
     }
     saveScene(file, scene);
+    if (ctx.sceneDir && resolve(dirname(file)) !== resolve(ctx.sceneDir)) for (const n of scene.narration || []) if (n.voice) {
+      mkdirSync(join(dirname(file), 'voice'), { recursive: true });
+      copyFileSync(join(ctx.sceneDir, n.voice), join(dirname(file), n.voice));
+    }
     const srtPath = file.replace(/(\.toybox)?\.json$/, '') + '.srt';
     writeFileSync(srtPath, srt(scene));
     const odbl = writeSceneOdbl(scene, dirname(resolve(file)));
@@ -584,7 +673,7 @@ def('export_scene', 'Write the scene to a .toybox.json file (and the captions to
   });
 
 const GUIDE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'guide');
-def('guide', 'Read a how-to guide. Start with "overview". Others: people, motion, camera, indoor, map, explainer.', { name: str }, [],
+def('guide', 'Read a how-to guide. Start with "overview". Others: people, motion, camera, indoor, map, explainer, narration.', { name: str }, [],
   (scene, a) => {
     const names = readdirSync(GUIDE_DIR).filter((f) => f.endsWith('.txt')).map((f) => f.slice(0, -4));
     const name = a.name || 'overview';
@@ -599,7 +688,8 @@ export function runTool(scene, name, args, ctx) {
   return commands[name](scene, args, ctx);
 }
 export const { list_models, new_scene, get_scene, place, place_near, place_group, transform, duplicate, remove, build_room, build_stairs, place_sign,
-  set_pose, animate, move_along, set_camera, set_lighting, add_caption, add_callout, add_chapter, set_backdrop, import_osm, set_cutaway, add_credit, render_preview, export_scene, guide } = commands;
+  set_pose, animate, move_along, set_camera, set_lighting, add_caption, add_callout, add_chapter, set_backdrop, import_osm, set_cutaway, add_credit, render_preview, export_scene, guide,
+  narrate, make_voice, add_fact, add_motion } = commands;
 export const validate_scene = commands.validate;
 
 export const READ_ONLY = new Set(['list_models', 'get_scene', 'validate', 'render_preview', 'guide', 'export_scene']);
