@@ -239,9 +239,11 @@ export function viewBlocks(scene, cat, cam, focus, t) {
   const cover = frameCover(cam, occ);
   return { objects, frame: cover.part > MAX_COVER ? cover.by : null };
 }
-// The visible focus objects of the first chapter that holds time t, or null when no chapter holds t.
+// The visible focus objects of the chapter that holds time t, or null when no chapter holds t. At a
+// boundary the chapter that starts at t holds it.
 export function focusAt(scene, t) {
-  const c = (scene.chapters || []).find((k) => k.start <= t && t <= k.end);
+  const cs = scene.chapters || [];
+  const c = cs.find((k) => k.start <= t && t < k.end) ?? cs.find((k) => k.start <= t && t <= k.end);
   return c ? (c.focus || []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden)) : null;
 }
 

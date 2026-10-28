@@ -70,6 +70,16 @@ test('set_camera and validate agree when a framed object is not a chapter focus'
   assert.deepEqual(blockedViews(s), []);
 });
 
+test('set_camera at a chapter boundary checks the chapter that starts there', () => {
+  const s = street();
+  must(C.place(s, { model: 'person', at: [20, 0], id: 'q', variant: 2 }));
+  must(C.place(s, { model: 'shophouse-2', at: [20, 0, 8], id: 'h2' }));
+  must(C.add_chapter(s, { start: 4, end: 8, title: 'Two', caption: 'A second person stands in the street.', focus: ['q'], source: 'test' }));
+  const r = must(C.set_camera(s, { t: 4, shot: 'medium', eye: [20, 3, 20], target: [20, 1, 0] }));
+  assert.ok(r.blocked.some((b) => b.id === 'q' && b.by === 'h2'), JSON.stringify(r.blocked));
+  assert.ok(!r.blocked.some((b) => b.id === 'p'));
+});
+
 test('outfits: listed with sources, on known bones, and checked on place', () => {
   const s = newScene({});
   const { outfits } = must(C.list_models(s, {}));
