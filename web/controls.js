@@ -17,7 +17,7 @@ export function bindControls(v, { canvas, ui }) {
   canvas.addEventListener('pointerdown', e => {
     canvas.setPointerCapture(e.pointerId); canvas.focus();
     pts.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); drag = null; return; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); if (drag && drag.snap) v.endDrag(); drag = null; return; }
     const [x, y] = px(e), hit = v.pick(x, y);
     drag = { x: e.clientX, y: e.clientY, hit, moved: false, start: hit && hit === v.selected, pan: e.shiftKey || e.button === 2 };
   });
@@ -32,13 +32,14 @@ export function bindControls(v, { canvas, ui }) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!drag.moved && Math.hypot(dx, dy) < 4) return;
     drag.moved = true;
-    if (drag.start) { const [x, y] = px(e), g = v.groundPoint(x, y); if (g) { if (!drag.snap) { drag.snap = true; } v.moveSelectedTo(g[0], g[2]); } return; }
+    if (drag.start) { const [x, y] = px(e), g = v.groundPoint(x, y); if (g) { if (!drag.snap) { drag.snap = true; v.beginDrag(); } v.moveSelectedTo(g[0], g[2]); } return; }
     if (drag.pan) v.panBy(dx, dy); else v.orbitBy(dx * 0.008, dy * 0.006);
     drag.x = e.clientX; drag.y = e.clientY;
   });
   const up = e => {
     pts.delete(e.pointerId); if (pts.size < 2) pinch = 0;
     if (drag && !drag.moved) v.select(drag.hit);
+    if (drag && drag.snap) v.endDrag();
     drag = null;
   };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);

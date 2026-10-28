@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { build as riot } from '../evals/riot.mjs';
 import { build as home } from '../evals/hometeamns.mjs';
 import { loadScene, validate } from '../core/scene.mjs';
@@ -19,7 +20,11 @@ test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on fig
   const s = loadScene(new URL('../evals/out/riot.toybox.json', import.meta.url).pathname);
   assert.ok(s.duration >= 150 && s.duration <= 180, String(s.duration));
   assert.equal(s.backdrop.ground, 'street');
-  assert.equal(s.map.origin.lat, 1.3068); assert.equal(s.map.estimated, true);
+  assert.equal(s.map.origin.lat, 1.30888); assert.equal(s.map.estimated, true);
+  assert.ok(s.map.osm.buildings.length > 50, 'real OpenStreetMap footprints');
+  const odbl = JSON.parse(readFileSync(new URL(`../evals/out/${s.map.osm.dataFile}`, import.meta.url), 'utf8'));
+  assert.equal(odbl.header.license, 'ODbL 1.0'); assert.equal(odbl.osm.buildings.length, s.map.osm.buildings.length);
+  assert.ok(!s.credits.some((c) => /OpenStreetMap/.test(c)), 'the viewer adds the OpenStreetMap credit by itself');
   assert.ok(s.chapters.every((c) => /^https:\/\/en\.wikipedia\.org/.test(c.source) || /^estimated/.test(c.source)));
   assert.ok(s.objects.filter((o) => o.model === 'person').every((o) => !o.label));
   assert.ok(s.captions.every((c) => !/victim/i.test(c.text)));

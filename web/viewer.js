@@ -50,6 +50,29 @@ export async function createViewer(opts) {
   }
   const catalogue = await (await fetch(`${assetsUrl}/catalogue.json`)).json();
   const models = new Map(catalogue.models.map(m => [m.id, m]));
+  // Imported CC0 models (Kenney, Poly Haven): each colour group becomes one engine mesh, ids 16 to 511
+  // (0 to 3 are the primitives, 8 to 10 the map buildings, 512 is MAX_MESH in engine/gl_shim.h).
+  // File format: see tools/assets/import.mjs.
+  {
+    const meshModels = catalogue.models.filter(m => m.mesh);
+    const files = await Promise.all(meshModels.map(async m => (await fetch(`${assetsUrl}/${m.mesh}`)).arrayBuffer()));
+    let next = 16;
+    meshModels.forEach((m, i) => {
+      const buf = files[i], head = new DataView(buf), g = head.getUint32(4, true), s = head.getFloat32(8, true);
+      if (head.getUint32(0, true) !== 0x314d4254 || next + g > 512) return;
+      const ids = [];
+      let off = 12 + 4 * g;
+      for (let k = 0; k < g; k++) {
+        const n = head.getUint32(12 + 4 * k, true), q = new Int16Array(buf, off, n * 6), f = new Float32Array(n * 6);
+        for (let j = 0; j < f.length; j++) f[j] = j % 6 < 3 ? q[j] * s : q[j] / 32767;
+        off += n * 12;
+        M.HEAPF32.set(f, up() >> 2);
+        M._toybox_mesh_upload(next, f.length);
+        ids.push(next++);
+      }
+      m.meshIds = ids;
+    });
+  }
 
   const v = {
     M, catalogue, models, scene: null, t: 0, playing: false, selected: null,
@@ -108,7 +131,11 @@ export async function createViewer(opts) {
       const shadow = structural || ['road', 'building'].includes(m.kind) ? 0 : 0.45 * Math.max(m.size[0], m.size[2]);
       const root = add(6, 0, parent, flags, 0, 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc, [0, 0, 0], [0, 0, 0], shadow);
       v.rootIds.set(o.id, root);
-      for (const p of m.parts) {
+      if (m.mesh) (m.meshIds || []).forEach((id, k) => {
+        const gr = m.groups[k];
+        add(5, id, root, flags, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], hexRGB((o.colors && gr.slot && o.colors[gr.slot]) || gr.color), [0, 0, 0], 0);
+      });
+      else for (const p of m.parts) {
         const c = hexRGB((o.colors && p.slot && o.colors[p.slot]) || p.color);
         const prim = { box: 0, cylinder: 1, sphere: 2, wedge: 3 }[p.prim] ?? 0;
         add(prim, 0, root, flags, 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, c, [0, 0, 0], 0);
@@ -178,6 +205,7 @@ export async function createViewer(opts) {
   function buildMap(scene) {
     const map = scene.map;
     M._ground_map(0, 0, 0, 0, 0);
+    v.mapImage = false;
     if (!map) return;
     if (map.osm && map.osm.buildings && map.osm.buildings.length) {
       const palette = [[0.86, 0.80, 0.70], [0.78, 0.80, 0.82], [0.84, 0.68, 0.58]];
@@ -192,14 +220,15 @@ export async function createViewer(opts) {
         v.rootIds.set('__osm' + gi, id);
       });
     }
-    if (map.onemap && map.origin) loadTiles(map);
+    if (v.oneMap(scene)) loadTiles(map);
   }
+  v.oneMap = scene => !!(scene.map && scene.map.origin && (scene.backdrop || {}).ground === 'map');
   const mercator = (lat, lon, z) => {
     const n = 2 ** z, x = (lon + 180) / 360 * n, s = Math.sin(lat * Math.PI / 180);
     return [x, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n];
   };
   async function loadTiles(map) {
-    const z = map.onemap.zoom || 18, style = map.onemap.style || 'Default', o = map.origin;
+    const om = map.onemap || {}, z = om.zoom || 18, style = om.style || 'Default', o = map.origin;
     const [fx, fy] = mercator(o.lat, o.lon, z), cx = Math.floor(fx), cy = Math.floor(fy), R = 1;
     const mPerTile = 156543.03392 * Math.cos(o.lat * Math.PI / 180) / 2 ** z * 256;
     const cv = document.createElement('canvas'); cv.width = cv.height = 256 * (2 * R + 1);
@@ -250,6 +279,15 @@ export async function createViewer(opts) {
   function pill(ctx, x, y, w, h, r, fill) {
     ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
   }
+  // The "approximate" tag on an estimated chapter, callout or sign. x, y is its top left corner.
+  function approx(ctx, x, y, s) {
+    ctx.font = `600 ${s}px ${FONT}`;
+    const tw = ctx.measureText('approximate').width;
+    pill(ctx, x, y, tw + s, s * 1.5, s * 0.3, '#f2c14e');
+    ctx.fillStyle = '#1c1b18'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('approximate', x + s * 0.5, y + s * 0.75);
+    return tw + s;
+  }
   const FONT = '"DM Sans", system-ui, sans-serif';
   // The text at least 4 percent of the frame height; white on a dark box (contrast above 4.5 to 1).
   function drawOverlay(ctx, w, h, t) {
@@ -269,6 +307,7 @@ export async function createViewer(opts) {
       pill(ctx, p[0] - tw / 2 - s * 0.4, p[1] - s * 0.8, tw + s * 0.8, s * 1.4, s * 0.3, 'rgba(255,255,255,0.92)');
       ctx.fillStyle = '#1c1b18'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
       ctx.fillText(o.label, p[0], p[1] - s * 0.1);
+      if (o.estimated) { ctx.font = `600 ${s * 0.75}px ${FONT}`; approx(ctx, p[0] - (ctx.measureText('approximate').width + s * 0.75) / 2, p[1] + s * 0.7, s * 0.75); }
     }
     // callouts
     for (const c of sc.callouts || []) {
@@ -287,6 +326,7 @@ export async function createViewer(opts) {
       pill(ctx, x, y, bw, bh, s * 0.35, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       lines.forEach((l, i) => ctx.fillText(l, x + s * 0.5, y + s * 0.3 + i * lh));
+      if (c.estimated || (sc.objects.find(o => o.id === c.object) || {}).estimated) approx(ctx, x, Math.max(2, y - s * 0.8), s * 0.55);
     }
     // chapter title and clock
     const ch = (sc.chapters || []).find(c => t >= c.start && t < c.end);
@@ -298,6 +338,7 @@ export async function createViewer(opts) {
       pill(ctx, h * 0.02, h * 0.02, tw + s, s * 1.6, s * 0.4, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8);
+      if (ch.estimated) approx(ctx, h * 0.02 + tw + s * 1.3, h * 0.02 + s * 0.2, s * 0.8);
     }
     // captions
     const caps = (sc.captions || []).filter(c => t >= c.start && t < c.end);
@@ -305,7 +346,7 @@ export async function createViewer(opts) {
       ctx.font = `500 ${fs}px ${FONT}`;
       const lines = wrap(ctx, caps.map(c => c.text).join(' '), w * 0.82), lh = fs * 1.25;
       const bw = Math.max(...lines.map(l => ctx.measureText(l).width)) + fs, bh = lines.length * lh + fs * 0.5;
-      const nCred = (sc.credits || []).length + (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length ? 1 : 0) + (sc.map && sc.map.onemap && v.mapImage ? 1 : 0);
+      const nCred = (sc.credits || []).length + (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length ? 1 : 0) + (v.mapImage ? 1 : 0);
       const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
       pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
@@ -314,7 +355,7 @@ export async function createViewer(opts) {
     // credits
     const credits = [...(sc.credits || [])];
     if (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length) credits.push(OSM_CREDIT);
-    if (sc.map && sc.map.onemap && v.mapImage) credits.push(ONEMAP_CREDIT);
+    if (v.mapImage) credits.push(ONEMAP_CREDIT);
     if (credits.length) {
       const s = Math.round(h * 0.022);
       ctx.font = `400 ${s}px ${FONT}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
@@ -324,7 +365,7 @@ export async function createViewer(opts) {
         pill(ctx, w - tw - s * 1.2, y - s * 1.3, tw + s, s * 1.25, s * 0.25, 'rgba(20,20,20,0.6)');
         ctx.fillStyle = '#fff'; ctx.fillText(c, w - s * 0.7, y - s * 0.15); y -= s * 1.4;
       }
-      if (v.logo && sc.map && sc.map.onemap) ctx.drawImage(v.logo, w - s * 5.5, y - s * 1.8, s * 5, s * 1.8);
+      if (v.logo && v.mapImage) ctx.drawImage(v.logo, w - s * 5.5, y - s * 1.8, s * 5, s * 1.8);
     }
     // selection box
     if (v.selected && !v.exporting) {
@@ -336,12 +377,21 @@ export async function createViewer(opts) {
 
   // ---- camera control
   v.camState = () => ({ eye: [M._cam_x(), M._cam_y(), M._cam_z()] });
+  function storyCam(t) {   // the story camera target and fov at time t, as the engine samples them
+    const ks = v.scene.camera || [];
+    if (!ks.length) return { target: [0, 1, 0], fov: 50 };
+    let a = 0;
+    ks.forEach((k, i) => { if (k.t <= t) a = i; });
+    const b = Math.min(a + 1, ks.length - 1), A = ks[a], B = ks[b];
+    let u = b === a ? 0 : Math.max(0, Math.min(1, (t - A.t) / (B.t - A.t)));
+    u = A.ease === 'step' ? 0 : A.ease === 'linear' ? u : u * u * (3 - 2 * u);
+    return { target: A.target.map((x, i) => x + (B.target[i] - x) * u), fov: (A.fov || 50) + ((B.fov || 50) - (A.fov || 50)) * u };
+  }
   function ensureUserCam() {
     if (v.userCam) return;
-    // start from the story camera: look from the current eye at a point on the ground ahead
+    // start from the story camera: look from the current eye at its target
     const e = [M._cam_x(), M._cam_y(), M._cam_z()];
-    const cam = (v.scene.camera || []).length ? v.scene.camera[0] : { target: [0, 1, 0] };
-    const tg = cam.target;
+    const tg = storyCam(v.t).target;
     const dx = e[0] - tg[0], dy = e[1] - tg[1], dz = e[2] - tg[2];
     const d = Math.hypot(dx, dy, dz) || 10;
     v.orbit = { yaw: Math.atan2(dx, dz), pitch: Math.asin(Math.max(-1, Math.min(1, dy / d))), dist: d, tx: tg[0], ty: tg[1], tz: tg[2] };
@@ -387,11 +437,11 @@ export async function createViewer(opts) {
   v.select = (id) => { v.selected = id; v.draw(v.t); if (v.onchange) v.onchange('select'); };
   v.groundPoint = (px, py) => {   // ray through the pixel, hit on the plane y = 0
     const e = [M._cam_x(), M._cam_y(), M._cam_z()];
-    const t = v.userCam ? [v.orbit.tx, v.orbit.ty, v.orbit.tz] : ((v.scene.camera || [{ target: [0, 1, 0] }])[0].target);
+    const cam = storyCam(v.t), t = v.userCam ? [v.orbit.tx, v.orbit.ty, v.orbit.tz] : cam.target;
     let f = [t[0] - e[0], t[1] - e[1], t[2] - e[2]]; const fl = Math.hypot(...f); f = f.map(x => x / fl);
     let s = [-f[2], 0, f[0]]; const sl = Math.hypot(...s) || 1; s = s.map(x => x / sl);
     const u = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]];
-    const tn = Math.tan(50 * Math.PI / 360), nx = (px / W * 2 - 1) * tn * W / H, ny = (1 - py / H * 2) * tn;
+    const tn = Math.tan(cam.fov * Math.PI / 360), nx = (px / W * 2 - 1) * tn * W / H, ny = (1 - py / H * 2) * tn;
     const d = [f[0] + s[0] * nx + u[0] * ny, f[1] + s[1] * nx + u[1] * ny, f[2] + s[2] * nx + u[2] * ny];
     if (Math.abs(d[1]) < 1e-4) return null;
     const k = -e[1] / d[1]; if (k < 0) return null;
@@ -400,15 +450,15 @@ export async function createViewer(opts) {
   const snapshot = () => { v.undo.push(JSON.stringify(v.scene)); if (v.undo.length > 20) v.undo.shift(); };
   v.undoEdit = () => { const s = v.undo.pop(); if (s) { v.load(JSON.parse(s)); if (v.onedit) v.onedit(); } };
   const objOf = id => v.scene.objects.find(o => o.id === id);
+  const moveObj = (o, dx, dz) => {
+    o.at = [o.at[0] + dx, o.at[1], o.at[2] + dz];
+    for (const tr of v.scene.tracks || []) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) k.v = [k.v[0] + dx, k.v[1], k.v[2] + dz];
+  };
   v.edit = (op, arg) => {
     const o = objOf(v.selected); if (!o) return;
     snapshot();
     const sc = Array.isArray(o.scale) ? o.scale : o.scale ? [o.scale, o.scale, o.scale] : [1, 1, 1];
-    if (op === 'move') {
-      const [dx, dz] = arg;
-      o.at = [o.at[0] + dx, o.at[1], o.at[2] + dz];
-      for (const tr of v.scene.tracks || []) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) k.v = [k.v[0] + dx, k.v[1], k.v[2] + dz];
-    }
+    if (op === 'move') moveObj(o, arg[0], arg[1]);
     if (op === 'scale') o.scale = sc.map(x => +(x * arg).toFixed(4));
     if (op === 'rotate') o.yaw = (((o.yaw || 0) + arg) % 360 + 360) % 360;
     if (op === 'flip') o.flip = !o.flip;
@@ -425,9 +475,18 @@ export async function createViewer(opts) {
     v.load(v.scene);
     if (v.onedit) v.onedit();
   };
+  // A drag: one undo step at the start, one engine rebuild for each frame, one save at the end.
+  let dragFrame = 0;
+  v.beginDrag = () => { if (objOf(v.selected)) snapshot(); };
   v.moveSelectedTo = (gx, gz) => {
     const o = objOf(v.selected); if (!o) return;
-    v.edit('move', [gx - o.at[0], gz - o.at[2]]);
+    moveObj(o, gx - o.at[0], gz - o.at[2]);
+    if (!dragFrame) dragFrame = requestAnimationFrame(() => { dragFrame = 0; v.load(v.scene); });
+  };
+  v.endDrag = () => {
+    cancelAnimationFrame(dragFrame); dragFrame = 0;
+    v.load(v.scene);
+    if (v.onedit) v.onedit();
   };
 
   // ---- playback

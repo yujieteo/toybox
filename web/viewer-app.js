@@ -5,7 +5,7 @@ import { bindControls } from './controls.js';
 const $ = id => document.getElementById(id);
 const canvas = $('canvas'), overlay = $('overlay');
 const q = new URLSearchParams(location.search);
-const v = await createViewer({ canvas, overlay, engineUrl: q.get('engine') || 'engine/toybox.js', assetsUrl: q.get('assets') || 'assets' });
+const v = await createViewer({ canvas, overlay });
 globalThis.toybox = v;
 function fit() {
   const r = $('stage').getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
@@ -21,7 +21,7 @@ function open(scene) {
     $('seek').max = scene.duration || 60;
     v.undo = []; v.selected = null;
     v.load(scene, false);
-    if (scene.map && scene.map.onemap) v.loadLogo().then(() => v.draw(v.t));
+    if (v.oneMap(scene)) v.loadLogo().then(() => v.draw(v.t));
   } catch (e) { $('err').textContent = e.message; }
 }
 new ResizeObserver(fit).observe($('stage'));

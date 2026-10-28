@@ -373,6 +373,94 @@
    "hidden": false
   },
   {
+   "id": "sofa-2",
+   "model": "kenney-sofa",
+   "at": [
+    -12,
+    0,
+    0.5
+   ],
+   "yaw": 90,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "coffee-table",
+   "model": "polyhaven-coffee-table",
+   "at": [
+    -10.3,
+    0,
+    0.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "kenney-potted-plant",
+   "model": "kenney-potted-plant",
+   "at": [
+    -13.6,
+    0,
+    2.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wet-sign",
+   "model": "polyhaven-wet-floor-sign",
+   "at": [
+    1.6,
+    0,
+    1.8
+   ],
+   "yaw": 200,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
    "id": "lift-1",
    "model": "lift-door",
    "at": [

@@ -38,19 +38,29 @@ export function parseOverpass(json, origin) {
   return out;
 }
 
-export async function fetchBuildings({ lat, lon, radius = 150, endpoint = OVERPASS_URL, fetchImpl = fetch }) {
-  const query = `[out:json][timeout:25];way["building"](around:${radius},${lat},${lon});out geom;`;
+export async function fetchOverpass(query, { endpoint = OVERPASS_URL, fetchImpl = fetch } = {}) {
   const res = await fetchImpl(endpoint, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'toybox/0.1' }, body: 'data=' + encodeURIComponent(query) });
   if (!res.ok) throw new Error(`Overpass answered ${res.status}`);
-  return parseOverpass(await res.json(), { lat, lon });
+  return res.json();
+}
+export const bboxQuery = ([s, w, n, e]) => `[out:json][timeout:25];way["building"](${s},${w},${n},${e});out geom;`;
+
+export async function fetchBuildings({ lat, lon, radius = 150, endpoint = OVERPASS_URL, fetchImpl = fetch }) {
+  return parseOverpass(await fetchOverpass(`[out:json][timeout:25];way["building"](around:${radius},${lat},${lon});out geom;`, { endpoint, fetchImpl }), { lat, lon });
+}
+
+// Local metres turned so that a street with compass bearing `bearing` runs along z.
+export function turn([x, z], bearing = 0) {
+  const c = Math.cos(bearing * D), s = Math.sin(bearing * D);
+  return [x * c + z * s, -x * s + z * c];
 }
 
 // The map.osm block for a scene file. Re-projects to `origin` when buildings carry lat/lon.
-export function toMapBlock(buildings, origin) {
+export function toMapBlock(buildings, origin, bearing = 0) {
   return {
     attribution: ATTRIBUTION,
     buildings: buildings.map((b) => {
-      const o = { id: b.id, height: b.height, poly: b.ll ? b.ll.map(([la, lo]) => project(la, lo, origin).map((v) => Math.round(v * 100) / 100)) : b.poly };
+      const o = { id: b.id, height: b.height, poly: b.ll ? b.ll.map(([la, lo]) => turn(project(la, lo, origin), bearing).map((v) => Math.round(v * 100) / 100)) : b.poly };
       if (b.levels) o.levels = b.levels;
       return o;
     }),
@@ -58,14 +68,15 @@ export function toMapBlock(buildings, origin) {
 }
 
 // A data file taken from OpenStreetMap. The header keeps the licence and the credit with the data.
-export function writeOdbl(path, buildings, origin) {
+export function writeOdbl(path, buildings, origin, bearing = 0) {
   const file = {
     header: {
       license: 'ODbL 1.0', licenseUrl: ODBL_URL, credit: ATTRIBUTION,
       notice: 'This file is a database derived from OpenStreetMap. You may share it only under the ODbL and with this credit. See https://www.openstreetmap.org/copyright',
     },
     origin: origin || null,
-    osm: toMapBlock(buildings, origin || { lat: 0, lon: 0 }),
+    ...(bearing ? { bearing } : {}),
+    osm: toMapBlock(buildings, origin || { lat: 0, lon: 0 }, bearing),
   };
   if (!origin) file.osm = { attribution: ATTRIBUTION, buildings: buildings.map(({ ll, ...b }) => b) };
   writeFileSync(path, JSON.stringify(file, null, 1) + '\n');

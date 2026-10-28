@@ -29,7 +29,7 @@ async function pull() {
   const sel = v.selected;
   v.load(s);
   v.selected = s.objects.some(o => o.id === sel) ? sel : null;
-  if (s.map && s.map.onemap && !v.logo) v.loadLogo();
+  if (v.oneMap(s) && !v.logo) v.loadLogo();
   v.draw(v.t);
 }
 async function poll() {
@@ -42,8 +42,9 @@ async function poll() {
 v.onedit = () => {
   clearTimeout(saving);
   saving = setTimeout(async () => {
-    await api('/api/scene', { method: 'POST', body: JSON.stringify(v.scene) });
-    const { v: ver } = await (await api('/api/version')).json(); lastVersion = ver; saving = null;
+    const r = await api(`/api/scene?v=${lastVersion}`, { method: 'POST', body: JSON.stringify(v.scene) });
+    const a = await r.json(); saving = null;
+    if (r.status === 409) { status(a.error); lastVersion = 0; } else if (a.v) lastVersion = a.v; else status(a.error);
   }, 400);
 };
 await poll();

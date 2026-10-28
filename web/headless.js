@@ -11,7 +11,7 @@ try {
   v.resize(w, h); canvas.width = w; canvas.height = h;
   const scene = await (await api('/api/scene')).json();
   v.load(scene, false);
-  if (scene.map && scene.map.onemap) await v.loadLogo();
+  if (v.oneMap(scene)) await v.loadLogo();
   await document.fonts.load('500 20px "DM Sans"'); await document.fonts.load('600 20px "DM Sans"');
   if (q.get('mode') === 'frame') {
     v.draw(+q.get('t') || 0);

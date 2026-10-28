@@ -38,7 +38,9 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 - `tags` may hold `wall` (with `yaw` as the outward normal direction of its front face), `ceiling`, `floor`. `cutaway` hides objects tagged `ceiling`, and walls that face the camera and sit between the camera and the camera target.
 - A track replaces the static value of its channel. Between keys the value is interpolated by the `ease` of the earlier key. A `pose` track has string values and `step` ease. The engine cross-fades poses over 0.3 s. A walk, run or wave cycle runs on the scene time.
 - Keys in a track and in `camera` have strictly increasing `t`.
-- `map.osm` holds footprints already projected to local metres from `map.origin` (x east, z south). The ODbL data file and the credit text must stay together. `map.onemap` only asks the viewer to draw OneMap tiles live under the scene. The file holds no OneMap data.
+- `map.osm` holds footprints already projected to local metres from `map.origin` (x east, z south). The `import_osm` tool writes it, and `map.osm.dataFile` names the ODbL data file next to the scene. The data file and the scene file must stay together. The viewer and the MP4 show "© OpenStreetMap contributors" for every scene with footprints.
+- `map.bearing` (degrees) turns the footprints so that a street with this compass bearing runs along z. Ground `map` cannot have a bearing.
+- Ground `map` with `map.origin` makes the viewer draw OneMap tiles live under the scene. `map.onemap` can set `zoom` and `style`. The file holds no OneMap data.
 - `source` is a free text that names where a measured value or a claim comes from. `estimated: true` marks any value that no source gives. A measured claim needs `source`. An estimate needs `estimated: true`.
 - Time values are seconds from the start. `duration` is at least the end of every caption, chapter, callout and key.
 

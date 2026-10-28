@@ -9,9 +9,9 @@ export const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), 'out');
 
 export class Builder {
   constructor(opts) { this.scene = newScene(opts); this.calls = 0; }
-  cmd(tool, args) {
+  cmd(tool, args, ctx = {}) {
     this.calls++;
-    const r = runTool(this.scene, tool, args, { catalogue: loadCatalogue() });
+    const r = runTool(this.scene, tool, args, { catalogue: loadCatalogue(), ...ctx });
     if (!r.ok) throw new Error(`${tool} ${JSON.stringify(args).slice(0, 200)} failed: ${r.errors.map((e) => `${e.code}: ${e.message}`).join(' | ')}`);
     return r.result;
   }

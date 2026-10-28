@@ -1,0 +1,253 @@
+[
+ {
+  "id": "kenney-sedan",
+  "name": "Sedan (Kenney)",
+  "kind": "vehicle",
+  "license": "CC0",
+  "source": "https://kenney.nl/assets/car-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "size": [
+   1.8,
+   1.45,
+   4.5
+  ],
+  "mesh": "models/kenney-sedan.bin",
+  "groups": [
+   {
+    "color": "#3a3a40",
+    "tris": 1020
+   },
+   {
+    "color": "#8a91ad",
+    "tris": 400
+   },
+   {
+    "color": "#6d6e83",
+    "tris": 352
+   },
+   {
+    "color": "#ea6745",
+    "slot": "body",
+    "tris": 146
+   },
+   {
+    "color": "#b0b8db",
+    "tris": 92
+   },
+   {
+    "color": "#e5ebf5",
+    "tris": 22
+   }
+  ],
+  "tags": [
+   "car",
+   "vehicle",
+   "kenney"
+  ]
+ },
+ {
+  "id": "kenney-road-barrier",
+  "name": "Concrete road barrier (Kenney)",
+  "kind": "prop",
+  "license": "CC0",
+  "source": "https://kenney.nl/assets/city-kit-roads",
+  "author": "Kenney (www.kenney.nl)",
+  "size": [
+   0.6,
+   0.8,
+   2
+  ],
+  "mesh": "models/kenney-road-barrier.bin",
+  "groups": [
+   {
+    "color": "#848aa5",
+    "tris": 22
+   },
+   {
+    "color": "#949bba",
+    "tris": 16
+   },
+   {
+    "color": "#b6bfe5",
+    "tris": 14
+   },
+   {
+    "color": "#a5add0",
+    "tris": 8
+   }
+  ],
+  "tags": [
+   "barrier",
+   "kenney"
+  ]
+ },
+ {
+  "id": "kenney-tree-oak",
+  "name": "Tree, broad crown (Kenney)",
+  "kind": "nature",
+  "license": "CC0",
+  "source": "https://kenney.nl/assets/nature-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "size": [
+   3.657,
+   7,
+   4.222
+  ],
+  "mesh": "models/kenney-tree-oak.bin",
+  "groups": [
+   {
+    "color": "#e28357",
+    "tris": 132
+   },
+   {
+    "color": "#29c9ab",
+    "tris": 64
+   }
+  ],
+  "tags": [
+   "tree",
+   "kenney"
+  ]
+ },
+ {
+  "id": "kenney-sofa",
+  "name": "Lounge sofa (Kenney)",
+  "kind": "furniture",
+  "license": "CC0",
+  "source": "https://kenney.nl/assets/furniture-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "size": [
+   2,
+   0.939,
+   0.837
+  ],
+  "mesh": "models/kenney-sofa.bin",
+  "groups": [
+   {
+    "color": "#f15e57",
+    "slot": "body",
+    "tris": 88
+   },
+   {
+    "color": "#e59964",
+    "tris": 40
+   }
+  ],
+  "tags": [
+   "sofa",
+   "kenney"
+  ]
+ },
+ {
+  "id": "kenney-potted-plant",
+  "name": "Potted plant (Kenney)",
+  "kind": "furniture",
+  "license": "CC0",
+  "source": "https://kenney.nl/assets/furniture-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "size": [
+   0.389,
+   1.2,
+   0.443
+  ],
+  "mesh": "models/kenney-potted-plant.bin",
+  "groups": [
+   {
+    "color": "#e59964",
+    "tris": 40
+   },
+   {
+    "color": "#2ed193",
+    "tris": 16
+   },
+   {
+    "color": "#ad744c",
+    "tris": 4
+   }
+  ],
+  "tags": [
+   "plant",
+   "kenney"
+  ]
+ },
+ {
+  "id": "polyhaven-monobloc-chair",
+  "name": "Plastic monobloc chair (Poly Haven)",
+  "kind": "furniture",
+  "license": "CC0",
+  "source": "https://polyhaven.com/a/plastic_monobloc_chair_01",
+  "author": "Kuutti Siitonen",
+  "size": [
+   0.642,
+   0.88,
+   0.628
+  ],
+  "mesh": "models/polyhaven-monobloc-chair.bin",
+  "groups": [
+   {
+    "color": "#c8c6c3",
+    "tris": 2362
+   },
+   {
+    "color": "#87847e",
+    "tris": 994
+   }
+  ],
+  "tags": [
+   "chair",
+   "polyhaven"
+  ]
+ },
+ {
+  "id": "polyhaven-coffee-table",
+  "name": "Coffee table, modern (Poly Haven)",
+  "kind": "furniture",
+  "license": "CC0",
+  "source": "https://polyhaven.com/a/modern_coffee_table_01",
+  "author": "Amin",
+  "size": [
+   0.6,
+   0.39,
+   1.202
+  ],
+  "mesh": "models/polyhaven-coffee-table.bin",
+  "groups": [
+   {
+    "color": "#91683e",
+    "tris": 3280
+   },
+   {
+    "color": "#6b6052",
+    "tris": 1224
+   }
+  ],
+  "tags": [
+   "table",
+   "polyhaven"
+  ]
+ },
+ {
+  "id": "polyhaven-wet-floor-sign",
+  "name": "Wet floor sign (Poly Haven)",
+  "kind": "prop",
+  "license": "CC0",
+  "source": "https://polyhaven.com/a/WetFloorSign_01",
+  "author": "Fran Calvente",
+  "size": [
+   0.3,
+   0.63,
+   0.359
+  ],
+  "mesh": "models/polyhaven-wet-floor-sign.bin",
+  "groups": [
+   {
+    "color": "#cdbe31",
+    "tris": 228
+   }
+  ],
+  "tags": [
+   "sign",
+   "polyhaven"
+  ]
+ }
+]

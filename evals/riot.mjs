@@ -1,7 +1,9 @@
 // Eval case 1: the Little India riot of 8 December 2013 (Race Course Road at Hampshire Road, Singapore).
 // A deterministic script that stands in for an agent. It builds the scene only through the tool commands.
 import { fileURLToPath } from 'node:url';
-import { Builder, rng, finish, printReport } from './lib.mjs';
+import { readFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { Builder, rng, finish, printReport, OUT_DIR } from './lib.mjs';
 
 const WIKI = 'https://en.wikipedia.org/wiki/2013_Little_India_riot';
 const L = { estimated: true, source: 'estimated: street layout and positions are not in a public source' };
@@ -26,27 +28,31 @@ export function build() {
   const timed = (id, pts, times, extra = {}) => { b.cmd('move_along', { id, path: pts.map((p) => (p.length === 2 ? [p[0], 0, p[1]] : p)), times, ...extra }); return times.at(-1); };
   const swap = (id, t, to) => b.cmd('animate', { id, channel: 'scale', keys: to ? [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] : [{ t: 0, v: [1, 1, 1], ease: 'step' }, { t, v: [0.001, 0.001, 0.001], ease: 'step' }] });
 
-  b.cmd('set_backdrop', { ground: 'street', size: [160, 160], origin: { lat: 1.3068, lon: 103.8512 }, source: 'estimated: approximate position of Race Course Road at Hampshire Road, read from a map', estimated: true });
+  b.cmd('set_backdrop', { ground: 'street', size: [160, 160], origin: { lat: 1.30888, lon: 103.85116 }, source: 'estimated: junction of Race Course Road and Hampshire Road, read from OpenStreetMap road data', estimated: true });
+  // Real footprints (OpenStreetMap, recorded once). Race Course Road has a compass bearing of about 35 degrees.
+  mkdirSync(OUT_DIR, { recursive: true });
+  const overpass = JSON.parse(readFileSync(new URL('./fixtures/race-course-road-osm.json', import.meta.url), 'utf8'));
+  b.cmd('import_osm', { bbox: [1.3077, 103.8501, 1.3101, 103.8524], bearing: 35 }, { overpass, odblPath: join(OUT_DIR, 'riot.osm.json') });
   b.cmd('add_credit', { text: `Facts: ${WIKI}` });
   b.cmd('add_credit', { text: 'Street layout and figure positions are approximate. Faces are generic.' });
 
   // ---------- the street (all layout is estimated)
   place('road-junction', [0, 0], { id: 'junction' });
   for (let k = 0; k < 4; k++) for (const [s, sg] of [['n', -1], ['s', 1]]) place('road-straight', [0, 0, sg * (9 + 10 * k)], { id: `rcr-${s}${k}` });
-  for (let k = 0; k < 3; k++) for (const [s, sg] of [['e', 1], ['w', -1]]) place('road-straight', [sg * (9 + 10 * k), 0, 0], { id: `hamp-${s}${k}`, yaw: 90 });
+  for (let k = 0; k < 3; k++) place('road-straight', [-(9 + 10 * k), 0, 0], { id: `hamp-w${k}`, yaw: 90 });
   place('road-zebra', [0, 0.01, -14], { id: 'zebra' });
   for (const [x, z0, id] of [[4.15, -43, 'k-en'], [4.15, 7, 'k-es'], [-4.15, -43, 'k-wn'], [-4.15, 7, 'k-ws']]) b.cmd('place_group', { model: 'kerb', count: 19, pattern: 'line', at: [x, 0, z0], angle: 270, spacing: 2, yaw: 90, id, ...L });
-  const walls = ['#d9a5a0', '#e8dcc0', '#9db89a', '#d8c6a0', '#a9c3d2', '#d9b79a'], trims = ['#5f9ea0', '#4f7a52', '#b5483c', '#4a79a5'];
-  let n = 0;
-  for (const [side, x, yaw] of [['e', 14.2, 270], ['w', -14.2, 90]]) for (const [dir, sg] of [['n', -1], ['s', 1]]) for (let i = 0; i < 6; i++, n++) {
-    place(n % 3 === 1 ? 'shophouse-3' : 'shophouse-2', [x, 0, sg * (10 + 6 * i)], { id: `sh-${side}-${dir}-${i}`, yaw, colors: { wall: walls[n % walls.length], trim: trims[n % trims.length] } });
-  }
   for (const z of [-37, 18, 34, -44, 44]) { place('lamp-post', [4.8, 0, z], { yaw: 180 }); place('lamp-post', [-4.8, 0, -z], { yaw: 0 }); }
   place('traffic-light', [4.8, 0, -5], { id: 'tl-1' }); place('traffic-light', [-4.8, 0, 5], { id: 'tl-2' });
   for (const z of [-36, -10, 24]) place('tree', [-5.8, 0, z], { scale: 0.7 });
   place('bus-stop', [5.5, 0, -22], { id: 'busstop', yaw: 270 });
   place('bench', [5.8, 0, 9], { id: 'bench', yaw: 270 });
   place('bin', [5.0, 0, -27]); place('bin', [-5.0, 0, 20]);
+  // imported CC0 models (Kenney, Poly Haven): parked cars, a road barrier, trees and coffee-shop chairs
+  place('kenney-sedan', [-28, 0, 2.2], { id: 'parked-1', yaw: 270 }); place('kenney-sedan', [-21, 0, -2.2], { id: 'parked-2', yaw: 90, colors: { body: '#4a79a5' } });
+  place('kenney-road-barrier', [-12, 0, -1.2], { id: 'barrier-w1' }); place('kenney-road-barrier', [-12, 0, 1.2], { id: 'barrier-w2' });
+  place('kenney-tree-oak', [6.0, 0, 40], { scale: 0.7 }); place('kenney-tree-oak', [-6.0, 0, 32], { scale: 0.7 });
+  place('polyhaven-monobloc-chair', [6.4, 0, -29.5], { yaw: 270 }); place('polyhaven-monobloc-chair', [6.4, 0, -30.6], { yaw: 250 });
   b.cmd('place_sign', { text: 'Race Course Road', at: [5.9, 0, 5.5], yaw: 270, ...L });
   b.cmd('place_sign', { text: 'Hampshire Road', at: [10, 0, -5.6], yaw: 0, ...L });
 
@@ -86,7 +92,7 @@ export function build() {
       const id = `cr-${crowd.length + 1}`, th = (R() * 2 - 1) * 1.35, rad = 2.8 + R() * 9;
       const tgt = [Math.max(-6.5, Math.min(6.5, 2.2 + Math.sin(th) * rad * 1.1)), -15.2 + Math.cos(th) * rad * 0.9];
       tgt[1] = Math.max(tgt[1], -14.2);
-      const far = pick([[-70, 1.5], [70, -1.5], [1.5, 70], [-1.5, 72], [72, 2.5], [-72, -2.5]]);
+      const far = pick([[-70, 1.5], [1.5, -70], [1.5, 70], [-1.5, 72], [-2.5, -72], [-72, -2.5]]);
       const arrive = a0 + R() * (a1 - a0), tStart = Math.max(0.2, arrive - dist([far[0], 0, far[1]], [tgt[0], 0, tgt[1]]) / 1.9);
       person(id, Math.floor(R() * 24), far);
       leg(id, [far, tgt], tStart, 1.9, { pose: 'walk' });
@@ -152,7 +158,7 @@ export function build() {
   // ---------- chapter 12: the crowd disperses (23:30)
   crowd.forEach((id, i) => {
     const o = b.scene.objects.find((x) => x.id === id), tr = b.scene.tracks.find((t) => t.object === id && t.channel === 'at');
-    const here = tr.keys.at(-1).v, far = [[-70, 1.5], [70, -1.5], [1.5, 70], [-1.5, 72]][i % 4];
+    const here = tr.keys.at(-1).v, far = [[-70, 1.5], [2.5, -70], [1.5, 70], [-1.5, 72]][i % 4];
     leg(id, [[here[0], here[2]], far], 132.2 + (i % 10) * 0.4, 4.5, { pose: 'run', end_pose: 'stand' });
   });
   cops.forEach((id) => null);
@@ -182,7 +188,7 @@ export function build() {
     cam(start, end, segs);
     b.cmd('add_chapter', { id, start, end, title, clock, caption, focus, shot, source, ...(est ? { estimated: true } : { measured: true }) });
   };
-  const street = ['rcr-n0', 'sh-e-n-0', 'sh-w-n-0'];
+  const street = ['rcr-n0', 'rcr-n1', 'junction'];
   chapter('c1', 0, 12, 'A quiet evening', '', 'Race Course Road in Little India, Singapore. The evening of 8 December 2013. Shophouses line the street and people walk home. The layout here is approximate.', ['w1', 'w2'], 'wide', 'estimated: scene of an ordinary evening, not a recorded event', true,
     [{ t: 0, shot: 'wide', frame: street }, { t: 7, shot: 'medium', frame: ['w1', 'w3', 'chat1', 'chat2'] }]);
   chapter('c2', 12, 24, 'A worker leaves a bus', '', 'A private bus stops by the bus stop and a worker steps off. This is a typical scene, not a recorded one. The details are approximate.', ['bus1', 'busstop'], 'medium', 'estimated: illustrative scene', true,

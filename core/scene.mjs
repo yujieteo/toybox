@@ -180,6 +180,7 @@ export function validate(scene, catalogue) {
   }
   if (!isNum(scene.duration) || scene.duration < 0) E('schema', 'duration', 'duration must be a number of seconds.');
   if (scene.backdrop && !GROUNDS.includes(scene.backdrop.ground)) E('schema', 'backdrop.ground', `ground must be one of ${GROUNDS.join(', ')}.`);
+  if (scene.backdrop?.ground === 'map' && scene.map?.bearing) E('schema', 'map.bearing', 'OneMap tiles cannot turn. Use a ground other than "map" when the map has a bearing.');
   if (scene.lighting !== undefined && !Array.isArray(scene.lighting)) E('schema', 'lighting', 'lighting must be an array.');
   const models = new Map(cat.models.map((m) => [m.id, m]));
   const ids = new Set();

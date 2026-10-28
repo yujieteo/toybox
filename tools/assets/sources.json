@@ -1,0 +1,61 @@
+{
+ "checked": "2026-10-28",
+ "assets": [
+  {
+   "id": "kenney-sedan", "name": "Sedan (Kenney)", "kind": "vehicle", "tags": ["car", "vehicle", "kenney"],
+   "from": "kenney", "page": "https://kenney.nl/assets/car-kit", "file": "Models/GLB format/sedan.glb",
+   "title": "Car Kit: sedan", "author": "Kenney (www.kenney.nl)",
+   "evidence": "Page: \"License: Creative Commons CC0\" (link to creativecommons.org/publicdomain/zero/1.0). License.txt in the archive: \"License: (Creative Commons Zero, CC0)\".",
+   "fit": [1.8, 1.45, 4.5], "maxColors": 6, "slots": { "body": "#ea6745" }
+  },
+  {
+   "id": "kenney-road-barrier", "name": "Concrete road barrier (Kenney)", "kind": "prop", "tags": ["barrier", "kenney"],
+   "from": "kenney", "page": "https://kenney.nl/assets/city-kit-roads", "file": "Models/GLB format/construction-barrier.glb",
+   "title": "City Kit (Roads): construction-barrier", "author": "Kenney (www.kenney.nl)",
+   "evidence": "Page: \"License: Creative Commons CC0\" (link to creativecommons.org/publicdomain/zero/1.0). License.txt in the archive: \"License: (Creative Commons Zero, CC0)\".",
+   "fit": [0.6, 0.8, 2.0], "maxColors": 4
+  },
+  {
+   "id": "kenney-tree-oak", "name": "Tree, broad crown (Kenney)", "kind": "nature", "tags": ["tree", "kenney"],
+   "from": "kenney", "page": "https://kenney.nl/assets/nature-kit", "file": "Models/GLTF format/tree_oak.glb",
+   "title": "Nature Kit: tree_oak", "author": "Kenney (www.kenney.nl)",
+   "evidence": "Page: \"License: Creative Commons CC0\" (link to creativecommons.org/publicdomain/zero/1.0). License.txt in the archive: \"License: (Creative Commons Zero, CC0)\".",
+   "fit": [null, 7.0, null], "maxColors": 4
+  },
+  {
+   "id": "kenney-sofa", "name": "Lounge sofa (Kenney)", "kind": "furniture", "tags": ["sofa", "kenney"],
+   "from": "kenney", "page": "https://kenney.nl/assets/furniture-kit", "file": "Models/GLTF format/loungeSofa.glb",
+   "title": "Furniture Kit: loungeSofa", "author": "Kenney (www.kenney.nl)",
+   "evidence": "Page: \"License: Creative Commons CC0\" (link to creativecommons.org/publicdomain/zero/1.0). License.txt in the archive: \"License: (Creative Commons Zero, CC0)\".",
+   "fit": [2.0, null, null], "maxColors": 4, "slots": { "body": "#f15e57" }
+  },
+  {
+   "id": "kenney-potted-plant", "name": "Potted plant (Kenney)", "kind": "furniture", "tags": ["plant", "kenney"],
+   "from": "kenney", "page": "https://kenney.nl/assets/furniture-kit", "file": "Models/GLTF format/pottedPlant.glb",
+   "title": "Furniture Kit: pottedPlant", "author": "Kenney (www.kenney.nl)",
+   "evidence": "Page: \"License: Creative Commons CC0\" (link to creativecommons.org/publicdomain/zero/1.0). License.txt in the archive: \"License: (Creative Commons Zero, CC0)\".",
+   "fit": [null, 1.2, null], "maxColors": 4
+  },
+  {
+   "id": "polyhaven-monobloc-chair", "name": "Plastic monobloc chair (Poly Haven)", "kind": "furniture", "tags": ["chair", "polyhaven"],
+   "from": "polyhaven", "page": "https://polyhaven.com/a/plastic_monobloc_chair_01", "asset": "plastic_monobloc_chair_01",
+   "title": "Plastic Monobloc Chair 01", "author": "Kuutti Siitonen",
+   "evidence": "Page: \"CC0 License\" block, and the page metadata gives license https://creativecommons.org/publicdomain/zero/1.0/ (\"CC0 1.0 Universal - public domain dedication, no attribution\").",
+   "maxColors": 2
+  },
+  {
+   "id": "polyhaven-coffee-table", "name": "Coffee table, modern (Poly Haven)", "kind": "furniture", "tags": ["table", "polyhaven"],
+   "from": "polyhaven", "page": "https://polyhaven.com/a/modern_coffee_table_01", "asset": "modern_coffee_table_01",
+   "title": "Modern Coffee Table 01", "author": "Amin",
+   "evidence": "Page: \"CC0 License\" block, and the page metadata gives license https://creativecommons.org/publicdomain/zero/1.0/ (\"CC0 1.0 Universal - public domain dedication, no attribution\").",
+   "maxColors": 2
+  },
+  {
+   "id": "polyhaven-wet-floor-sign", "name": "Wet floor sign (Poly Haven)", "kind": "prop", "tags": ["sign", "polyhaven"],
+   "from": "polyhaven", "page": "https://polyhaven.com/a/WetFloorSign_01", "asset": "WetFloorSign_01",
+   "title": "Wet Floor Sign 01", "author": "Fran Calvente",
+   "evidence": "Page: \"CC0 License\" block, and the page metadata gives license https://creativecommons.org/publicdomain/zero/1.0/ (\"CC0 1.0 Universal - public domain dedication, no attribution\").",
+   "maxColors": 1
+  }
+ ]
+}

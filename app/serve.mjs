@@ -57,7 +57,7 @@ fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { toybox: { command: pr
 function chat(text, res) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
   const ev = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
-  const sys = fs.existsSync(path.join(root, 'core/guide/overview.md')) ? ['--append-system-prompt', 'You build animated 3D explainer scenes with the toybox tools. Read the guide "overview" first. Reply in plain text, short sentences, no markdown.'] : [];
+  const sys = ['--append-system-prompt', 'You build animated 3D explainer scenes with the toybox tools. Read the guide "overview" first. Reply in plain text, short sentences, no markdown.'];
   const a = ['-p', text, '--output-format', 'stream-json', '--verbose', '--strict-mcp-config', '--mcp-config', mcpConfig,
     '--allowedTools', 'mcp__toybox', '--permission-mode', 'default', ...sys, ...(sessionStarted ? ['--resume', sessionId] : ['--session-id', sessionId])];
   const child = spawn('claude', a, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -79,13 +79,15 @@ function chat(text, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.headers.host !== `127.0.0.1:${port}`) return send(res, 403, { error: 'Bad host.' });
   const u = new URL(req.url, origin); const p = decodeURIComponent(u.pathname);
   if (p.startsWith('/api/') || p.startsWith('/export/') || p === '/result') {
     if (!authed(req, u)) return send(res, 403, { error: 'Bad token or origin.' });
     if (p === '/api/scene' && req.method === 'GET') { res.setHeader('content-type', 'application/json'); return res.end(fs.readFileSync(scenePath)); }
     if (p === '/api/version') return send(res, 200, { v: fs.statSync(scenePath).mtimeMs });
     if (p === '/api/scene' && req.method === 'POST') {
-      try { const s = JSON.parse(await body(req)); if (s.toybox !== 1 || !Array.isArray(s.objects)) throw new Error('not a scene'); fs.writeFileSync(scenePath, JSON.stringify(s, null, 2)); return send(res, 200, { ok: true }); }
+      if (fs.statSync(scenePath).mtimeMs !== +u.searchParams.get('v')) return send(res, 409, { error: 'The agent changed the scene before your edit was saved. The page shows the new scene. Make the edit again.' });
+      try { const s = JSON.parse(await body(req)); if (s.toybox !== 1 || !Array.isArray(s.objects)) throw new Error('not a scene'); fs.writeFileSync(scenePath, JSON.stringify(s, null, 2)); return send(res, 200, { ok: true, v: fs.statSync(scenePath).mtimeMs }); }
       catch (e) { return send(res, 400, { error: 'The scene is not valid: ' + e.message }); }
     }
     if (p === '/api/chat' && req.method === 'POST') { const { text } = JSON.parse(await body(req)); return chat(String(text || ''), res); }
@@ -115,9 +117,13 @@ const server = http.createServer(async (req, res) => {
       await job.chain; await new Promise((ok) => job.h264.end(ok));
       const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-r', String(job.cfg.fps), '-f', 'h264', '-i', job.base + '.h264', '-c:v', 'copy', '-movflags', '+faststart', job.base + '.mp4']);
       fs.rmSync(job.base + '.h264', { force: true });
+      if (r.error || r.status !== 0) {
+        const e = { error: 'ffmpeg could not make the MP4: ' + (r.error ? r.error.message : String(r.stderr).slice(0, 300)) };
+        const done = job.resolve; send(res, 500, e); if (done) done(e); return;
+      }
       fs.copyFileSync(scenePath, job.base + '.toybox.json');
       const info = Object.fromEntries(u.searchParams); delete info.token;
-      Object.assign(info, { mp4: job.base + '.mp4', srt: job.base + '.srt', scene: job.base + '.toybox.json', ffmpeg_status: r.status });
+      Object.assign(info, { mp4: job.base + '.mp4', srt: job.base + '.srt', scene: job.base + '.toybox.json' });
       const done = job.resolve; send(res, 200, info); if (done) done(info); return;
     }
     if (p === '/api/frame-result') {
@@ -128,11 +134,9 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/job-error') { const m = String(await body(req)); send(res, 200, { ok: true }); if (job && job.resolve) job.resolve({ error: m.slice(0, 500) }); return; }
     return send(res, 404, { error: 'No such call.' });
   }
-  let f;
-  if (p.startsWith('/engine/')) f = path.join(engineDir, p.slice(8));
-  else if (p.startsWith('/assets/')) f = path.join(root, p);
-  else f = path.join(root, 'web', p === '/' ? 'app.html' : p);
-  if (!f.startsWith(root) && !f.startsWith(engineDir)) return send(res, 403, { error: 'no' });
+  const [base, rel] = p.startsWith('/engine/') ? [engineDir, p.slice(8)] : p.startsWith('/assets/') ? [path.join(root, 'assets'), p.slice(8)] : [path.join(root, 'web'), p === '/' ? 'app.html' : p.slice(1)];
+  const f = path.resolve(base, rel), inside = path.relative(base, f);
+  if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) return send(res, 403, { error: 'no' });
   fs.readFile(f, (e, d) => { if (e) return send(res, 404, { error: 'no' }); res.setHeader('content-type', types[path.extname(f)] || 'application/octet-stream'); res.end(d); });
 });
 server.listen(port, '127.0.0.1', () => {

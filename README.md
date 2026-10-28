@@ -17,8 +17,9 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 | `core/` | The scene schema, the checks, the model kit, the MCP server and the guides for the agent. |
 | `app/serve.mjs` | The local daemon. It serves the page, runs the chat agent and renders pictures and videos in a headless browser. |
 | `web/` | The chat page (`app.html`), the static viewer (`viewer.html`), the export code and the style. |
-| `assets/` | The model catalogue and the person mesh. |
+| `assets/` | The model catalogue, the person mesh, the imported CC0 models (`assets/models/`) and their credits (`assets/ATTRIBUTION.md`). |
 | `tools/people/` | The script that turns the MakeHuman CC0 body into the person mesh. |
+| `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `node tools/assets/import.mjs` |
 | `docs/` | The design (`design.md`), the file format (`scene-format.md`) and the spike results (`spikes-1-2.md`). |
 | `test/` | Tests. Run `node --test test/` |
 
@@ -51,7 +52,8 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 - People differ only by colour, size and hair. The body shape is the same.
 - Clothes are colour regions of the body. Feet slide a little when a person walks. A sitting person has no chair of its own.
 - The shadow is a soft disc, not a shadow map.
-- Kenney and Poly Haven model loaders do not exist yet. All models in the kit are built from boxes, cylinders, spheres and wedges, so they are our own CC0 work.
+- The catalogue has few Kenney and Poly Haven models. The other models are built from boxes, cylinders, spheres and wedges.
+- An imported model shows flat colours. The engine has no textures, so the import script reduces each model to a small number of colours (`maxColors` in `tools/assets/sources.json`).
 - OneMap tiles load live from the OneMap server. Toybox stores none of them. A browser that blocks the tile server shows no map, and the credit text does not show.
 
 ## Licences
@@ -62,8 +64,8 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 | Goose (compiler and runtime) | Apache 2.0 |
 | Emscripten (emcc) | MIT and University of Illinois/NCSA |
 | MakeHuman base mesh, skeleton and weights | CC0 |
-| Toybox model kit (`assets/catalogue.json`) | CC0, made for this project |
-| Kenney and Poly Haven models | CC0. Not in use yet. |
+| Toybox model kit (the models in `assets/catalogue.json` without a `mesh` file) | CC0, made for this project |
+| Kenney and Poly Haven models (`assets/models/`) | CC0 1.0. Each model has its source page, author and licence in the catalogue and in `assets/ATTRIBUTION.md`. Both eval scenes use them. |
 | OpenStreetMap footprints | ODbL. The scene shows "© OpenStreetMap contributors". A scene file that holds footprints holds ODbL data. Keep the credit with the data. |
 | OneMap tiles | Singapore Open Data Licence, with the OneMap logo and "OneMap © Singapore Land Authority". Not stored. |
 | DM Sans and Source Serif 4 fonts | SIL Open Font Licence 1.1 (`web/fonts/OFL-*.txt`) |

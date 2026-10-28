@@ -8,7 +8,7 @@ const must = (r) => { assert.ok(r.ok, JSON.stringify(r)); return r.result; };
 
 test('every tool has name, description and an object inputSchema', () => {
   const need = ['list_models', 'new_scene', 'get_scene', 'place', 'place_near', 'place_group', 'transform', 'duplicate', 'remove', 'build_room', 'build_stairs', 'place_sign',
-    'set_pose', 'animate', 'move_along', 'set_camera', 'set_lighting', 'add_caption', 'add_callout', 'add_chapter', 'set_backdrop', 'set_cutaway', 'add_credit', 'validate', 'render_preview', 'export_scene'];
+    'set_pose', 'animate', 'move_along', 'set_camera', 'set_lighting', 'add_caption', 'add_callout', 'add_chapter', 'set_backdrop', 'import_osm', 'set_cutaway', 'add_credit', 'validate', 'render_preview', 'export_scene'];
   for (const n of need) {
     const t = toolSpecs.find((x) => x.name === n); assert.ok(t, n);
     assert.ok(t.description.length > 10); assert.equal(t.inputSchema.type, 'object');

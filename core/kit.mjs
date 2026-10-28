@@ -1,6 +1,7 @@
 // Generator for assets/catalogue.json: the Toybox kit, built from box, cylinder, sphere and wedge.
 // Run: node core/kit.mjs   (writes assets/catalogue.json)
-import { writeFileSync } from 'node:fs';
+// It also adds the imported CC0 models in assets/models/index.json (made by tools/assets/import.mjs).
+import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { modelBounds } from './geom.mjs';
@@ -263,11 +264,19 @@ function finish(m) {
   return out;
 }
 
-export function buildCatalogue() { return { models: models.map(finish) }; }
+const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets');
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'catalogue.json');
+export function buildCatalogue() {
+  const index = join(ASSETS, 'models', 'index.json');
+  const imported = existsSync(index) ? JSON.parse(readFileSync(index, 'utf8')) : [];
+  return { models: [...models.map(finish), ...imported] };
+}
+
+export function writeCatalogue() {
+  const out = join(ASSETS, 'catalogue.json');
   const cat = buildCatalogue();
   writeFileSync(out, JSON.stringify(cat, null, 1) + '\n');
   console.log(`wrote ${cat.models.length} models to ${out}`);
 }
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) writeCatalogue();

@@ -3,7 +3,7 @@
 // Same scene and same time always give the same pixels.
 export function srt(scene) {
   const ts = s => { const ms = Math.round(s * 1000), p = (n, l = 2) => String(n).padStart(l, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`; };
-  return (scene.captions || []).map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.text}\n`).join('\n');
+  return [...(scene.captions || [])].sort((a, b) => a.start - b.start).map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.text}\n`).join('\n');
 }
 
 export async function exportVideo(v, { width = 1920, height = 1080, fps = 30, name = 'scene', base = '', token = '', onprogress } = {}) {
@@ -16,14 +16,15 @@ export async function exportVideo(v, { width = 1920, height = 1080, fps = 30, na
   const g = out.getContext('2d');
   const gl = document.getElementById('canvas');
   await fetch(`${base}/export/start?token=${token}&name=${encodeURIComponent(name)}&fps=${fps}&w=${width}&h=${height}`, { method: 'POST', body: srt(v.scene) });
-  let chain = Promise.resolve(), bytes = 0;
+  let chain = Promise.resolve(), bytes = 0, encErr = null;
   const enc = new VideoEncoder({
     output: chunk => { const b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); bytes += b.length; chain = chain.then(() => fetch(`${base}/export/chunk?token=${token}`, { method: 'POST', body: b })); },
-    error: e => { throw e; } });
+    error: e => { encErr = e; } });
   enc.configure({ codec: width * height > 1280 * 720 ? 'avc1.640028' : 'avc1.64001f', width, height, bitrate: 6e6, framerate: fps, avc: { format: 'annexb' }, latencyMode: 'quality' });
   const hashes = [];
   const t0 = performance.now();
   for (let i = 0; i < n; i++) {
+    if (encErr) throw encErr;
     v.draw(i / fps);                                   // draws the scene and the overlay
     g.drawImage(gl, 0, 0, width, height);
     g.drawImage(document.getElementById('overlay'), 0, 0, width, height);
@@ -34,6 +35,7 @@ export async function exportVideo(v, { width = 1920, height = 1080, fps = 30, na
     if (onprogress && i % 15 === 0) onprogress(i / n);
   }
   await enc.flush(); await chain;
+  if (encErr) throw encErr;
   const info = { frames: n, seconds: dur, fps, width, height, h264_bytes: bytes, encode_ms: Math.round(performance.now() - t0), hashes: hashes.join(',') };
   const res = await (await fetch(`${base}/export/end?token=${token}&` + new URLSearchParams(Object.entries(info).map(([k, x]) => [k, String(x)])), { method: 'POST' })).json();
   v.exporting = false; v.resize(w0, h0); v.userCam = keepCam; v.selected = keepSel; v.draw(v.t);

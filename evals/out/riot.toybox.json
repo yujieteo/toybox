@@ -225,28 +225,6 @@
    "hidden": false
   },
   {
-   "id": "hamp-e0",
-   "model": "road-straight",
-   "at": [
-    9,
-    0,
-    0
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
    "id": "hamp-w0",
    "model": "road-straight",
    "at": [
@@ -269,54 +247,10 @@
    "hidden": false
   },
   {
-   "id": "hamp-e1",
-   "model": "road-straight",
-   "at": [
-    19,
-    0,
-    0
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
    "id": "hamp-w1",
    "model": "road-straight",
    "at": [
     -19,
-    0,
-    0
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "hamp-e2",
-   "model": "road-straight",
-   "at": [
-    29,
     0,
     0
    ],
@@ -2203,630 +2137,6 @@
    "hidden": false
   },
   {
-   "id": "sh-e-n-0",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    -10
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9a5a0",
-    "trim": "#5f9ea0"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-n-1",
-   "model": "shophouse-3",
-   "at": [
-    14.2,
-    0,
-    -16
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#e8dcc0",
-    "trim": "#4f7a52"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-n-2",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    -22
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#9db89a",
-    "trim": "#b5483c"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-n-3",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    -28
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d8c6a0",
-    "trim": "#4a79a5"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-n-4",
-   "model": "shophouse-3",
-   "at": [
-    14.2,
-    0,
-    -34
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#a9c3d2",
-    "trim": "#5f9ea0"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-n-5",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    -40
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9b79a",
-    "trim": "#4f7a52"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-s-0",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    10
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9a5a0",
-    "trim": "#b5483c"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-s-1",
-   "model": "shophouse-3",
-   "at": [
-    14.2,
-    0,
-    16
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#e8dcc0",
-    "trim": "#4a79a5"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-s-2",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    22
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#9db89a",
-    "trim": "#5f9ea0"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-s-3",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    28
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d8c6a0",
-    "trim": "#4f7a52"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-s-4",
-   "model": "shophouse-3",
-   "at": [
-    14.2,
-    0,
-    34
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#a9c3d2",
-    "trim": "#b5483c"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-e-s-5",
-   "model": "shophouse-2",
-   "at": [
-    14.2,
-    0,
-    40
-   ],
-   "yaw": 270,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9b79a",
-    "trim": "#4a79a5"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-n-0",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    -10
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9a5a0",
-    "trim": "#5f9ea0"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-n-1",
-   "model": "shophouse-3",
-   "at": [
-    -14.2,
-    0,
-    -16
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#e8dcc0",
-    "trim": "#4f7a52"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-n-2",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    -22
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#9db89a",
-    "trim": "#b5483c"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-n-3",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    -28
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d8c6a0",
-    "trim": "#4a79a5"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-n-4",
-   "model": "shophouse-3",
-   "at": [
-    -14.2,
-    0,
-    -34
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#a9c3d2",
-    "trim": "#5f9ea0"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-n-5",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    -40
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9b79a",
-    "trim": "#4f7a52"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-s-0",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    10
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9a5a0",
-    "trim": "#b5483c"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-s-1",
-   "model": "shophouse-3",
-   "at": [
-    -14.2,
-    0,
-    16
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#e8dcc0",
-    "trim": "#4a79a5"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-s-2",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    22
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#9db89a",
-    "trim": "#5f9ea0"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-s-3",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    28
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d8c6a0",
-    "trim": "#4f7a52"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-s-4",
-   "model": "shophouse-3",
-   "at": [
-    -14.2,
-    0,
-    34
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#a9c3d2",
-    "trim": "#b5483c"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
-   "id": "sh-w-s-5",
-   "model": "shophouse-2",
-   "at": [
-    -14.2,
-    0,
-    40
-   ],
-   "yaw": 90,
-   "scale": [
-    1,
-    1,
-    1
-   ],
-   "flip": false,
-   "colors": {
-    "wall": "#d9b79a",
-    "trim": "#4a79a5"
-   },
-   "tags": [],
-   "label": "",
-   "parent": null,
-   "source": "estimated: street layout and positions are not in a public source",
-   "estimated": true,
-   "hidden": false
-  },
-  {
    "id": "lamp-post",
    "model": "lamp-post",
    "at": [
@@ -3231,6 +2541,185 @@
     20
    ],
    "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "parked-1",
+   "model": "kenney-sedan",
+   "at": [
+    -28,
+    0,
+    2.2
+   ],
+   "yaw": 270,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "parked-2",
+   "model": "kenney-sedan",
+   "at": [
+    -21,
+    0,
+    -2.2
+   ],
+   "yaw": 90,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "body": "#4a79a5"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "barrier-w1",
+   "model": "kenney-road-barrier",
+   "at": [
+    -12,
+    0,
+    -1.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "barrier-w2",
+   "model": "kenney-road-barrier",
+   "at": [
+    -12,
+    0,
+    1.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "kenney-tree-oak",
+   "model": "kenney-tree-oak",
+   "at": [
+    6,
+    0,
+    40
+   ],
+   "yaw": 0,
+   "scale": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "kenney-tree-oak-1",
+   "model": "kenney-tree-oak",
+   "at": [
+    -6,
+    0,
+    32
+   ],
+   "yaw": 0,
+   "scale": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "polyhaven-monobloc-chair",
+   "model": "polyhaven-monobloc-chair",
+   "at": [
+    6.4,
+    0,
+    -29.5
+   ],
+   "yaw": 270,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "polyhaven-monobloc-chair-1",
+   "model": "polyhaven-monobloc-chair",
+   "at": [
+    6.4,
+    0,
+    -30.6
+   ],
+   "yaw": 250,
    "scale": [
     1,
     1,
@@ -3833,9 +3322,9 @@
    "model": "person",
    "variant": 9,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -4001,9 +3490,9 @@
    "model": "person",
    "variant": 7,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -4113,9 +3602,9 @@
    "model": "person",
    "variant": 17,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4253,9 +3742,9 @@
    "model": "person",
    "variant": 2,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4309,9 +3798,9 @@
    "model": "person",
    "variant": 17,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -4337,9 +3826,9 @@
    "model": "person",
    "variant": 18,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -4421,9 +3910,9 @@
    "model": "person",
    "variant": 5,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4477,9 +3966,9 @@
    "model": "person",
    "variant": 23,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4561,9 +4050,9 @@
    "model": "person",
    "variant": 9,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4673,9 +4162,9 @@
    "model": "person",
    "variant": 14,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -4813,9 +4302,9 @@
    "model": "person",
    "variant": 10,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4841,9 +4330,9 @@
    "model": "person",
    "variant": 20,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -4869,9 +4358,9 @@
    "model": "person",
    "variant": 7,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -5037,9 +4526,9 @@
    "model": "person",
    "variant": 9,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -5261,9 +4750,9 @@
    "model": "person",
    "variant": 5,
    "at": [
-    72,
+    -2.5,
     0,
-    2.5
+    -72
    ],
    "yaw": 0,
    "scale": [
@@ -5289,9 +4778,9 @@
    "model": "person",
    "variant": 12,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -5317,9 +4806,9 @@
    "model": "person",
    "variant": 17,
    "at": [
-    70,
+    1.5,
     0,
-    -1.5
+    -70
    ],
    "yaw": 0,
    "scale": [
@@ -7091,11 +6580,11 @@
      "ease": "linear"
     },
     {
-     "t": 146.97,
+     "t": 145.14,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -7112,7 +6601,7 @@
     },
     {
      "t": 132.6,
-     "v": 79.1,
+     "v": 184.066,
      "ease": "linear"
     }
    ]
@@ -7162,7 +6651,7 @@
      "ease": "step"
     },
     {
-     "t": 146.97,
+     "t": 145.14,
      "v": "stand",
      "ease": "step"
     }
@@ -7282,11 +6771,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 20.15867164359352,
+     "t": 25.94824060655685,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -7324,8 +6813,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 20.15867164359352,
-     "v": -99.976,
+     "t": 25.94824060655685,
+     "v": 2.479,
      "ease": "step"
     },
     {
@@ -7345,7 +6834,7 @@
      "ease": "step"
     },
     {
-     "t": 20.15867164359352,
+     "t": 25.94824060655685,
      "v": "walk",
      "ease": "step"
     },
@@ -7527,11 +7016,11 @@
      "ease": "linear"
     },
     {
-     "t": 148.37,
+     "t": 148.17,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -7548,7 +7037,7 @@
     },
     {
      "t": 134.2,
-     "v": 84.817,
+     "v": 183.648,
      "ease": "linear"
     }
    ]
@@ -7598,7 +7087,7 @@
      "ease": "step"
     },
     {
-     "t": 148.37,
+     "t": 148.17,
      "v": "stand",
      "ease": "step"
     }
@@ -7936,11 +7425,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 11.407661297952018,
+     "t": 19.86321866674703,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -7963,11 +7452,11 @@
      "ease": "linear"
     },
     {
-     "t": 152.08,
+     "t": 148.7,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -7978,13 +7467,13 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 11.407661297952018,
-     "v": -101.128,
+     "t": 19.86321866674703,
+     "v": 0.013,
      "ease": "step"
     },
     {
      "t": 135.79999999999998,
-     "v": -278.36,
+     "v": 175.074,
      "ease": "linear"
     }
    ]
@@ -7999,7 +7488,7 @@
      "ease": "step"
     },
     {
-     "t": 11.407661297952018,
+     "t": 19.86321866674703,
      "v": "walk",
      "ease": "step"
     },
@@ -8034,7 +7523,7 @@
      "ease": "step"
     },
     {
-     "t": 152.08,
+     "t": 148.7,
      "v": "stand",
      "ease": "step"
     }
@@ -8372,11 +7861,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 14.815732504267167,
+     "t": 17.44057108824306,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -8399,11 +7888,11 @@
      "ease": "linear"
     },
     {
-     "t": 148.26,
+     "t": 147.15,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -8414,13 +7903,13 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 14.815732504267167,
-     "v": -95.703,
+     "t": 17.44057108824306,
+     "v": 1.813,
      "ease": "step"
     },
     {
      "t": 133.39999999999998,
-     "v": -275.703,
+     "v": 180.887,
      "ease": "linear"
     }
    ]
@@ -8435,7 +7924,7 @@
      "ease": "step"
     },
     {
-     "t": 14.815732504267167,
+     "t": 17.44057108824306,
      "v": "walk",
      "ease": "step"
     },
@@ -8470,7 +7959,7 @@
      "ease": "step"
     },
     {
-     "t": 148.26,
+     "t": 147.15,
      "v": "stand",
      "ease": "step"
     }
@@ -8835,11 +8324,11 @@
      "ease": "linear"
     },
     {
-     "t": 149.46,
+     "t": 149.04,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -8856,7 +8345,7 @@
     },
     {
      "t": 135,
-     "v": 85.266,
+     "v": 182.414,
      "ease": "linear"
     }
    ]
@@ -8906,7 +8395,7 @@
      "ease": "step"
     },
     {
-     "t": 149.46,
+     "t": 149.04,
      "v": "stand",
      "ease": "step"
     }
@@ -8917,11 +8406,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 17.255996154817716,
+     "t": 21.447145975704156,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -8959,8 +8448,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 17.255996154817716,
-     "v": -100.746,
+     "t": 21.447145975704156,
+     "v": 5.062,
      "ease": "step"
     },
     {
@@ -8980,7 +8469,7 @@
      "ease": "step"
     },
     {
-     "t": 17.255996154817716,
+     "t": 21.447145975704156,
      "v": "walk",
      "ease": "step"
     },
@@ -9135,11 +8624,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 24.33045354388078,
+     "t": 33.58328625769505,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -9177,8 +8666,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 24.33045354388078,
-     "v": -101.723,
+     "t": 33.58328625769505,
+     "v": -0.424,
      "ease": "step"
     },
     {
@@ -9198,7 +8687,7 @@
      "ease": "step"
     },
     {
-     "t": 24.33045354388078,
+     "t": 33.58328625769505,
      "v": "walk",
      "ease": "step"
     },
@@ -9244,11 +8733,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 25.324883225558537,
+     "t": 36.0589398620828,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -9271,11 +8760,11 @@
      "ease": "linear"
     },
     {
-     "t": 149.78,
+     "t": 145.51,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -9286,13 +8775,13 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 25.324883225558537,
-     "v": -100.882,
+     "t": 36.0589398620828,
+     "v": -3.852,
      "ease": "step"
     },
     {
      "t": 132.6,
-     "v": -278.25,
+     "v": 171.09,
      "ease": "linear"
     }
    ]
@@ -9307,7 +8796,7 @@
      "ease": "step"
     },
     {
-     "t": 25.324883225558537,
+     "t": 36.0589398620828,
      "v": "walk",
      "ease": "step"
     },
@@ -9342,7 +8831,7 @@
      "ease": "step"
     },
     {
-     "t": 149.78,
+     "t": 145.51,
      "v": "stand",
      "ease": "step"
     }
@@ -9571,11 +9060,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 31.005321999612335,
+     "t": 38.04933992281056,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -9613,8 +9102,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 31.005321999612335,
-     "v": -97.538,
+     "t": 38.04933992281056,
+     "v": -3.245,
      "ease": "step"
     },
     {
@@ -9634,7 +9123,7 @@
      "ease": "step"
     },
     {
-     "t": 31.005321999612335,
+     "t": 38.04933992281056,
      "v": "walk",
      "ease": "step"
     },
@@ -9707,11 +9196,11 @@
      "ease": "linear"
     },
     {
-     "t": 150.23,
+     "t": 146.84,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -9728,7 +9217,7 @@
     },
     {
      "t": 134.2,
-     "v": 80.633,
+     "v": 176.278,
      "ease": "linear"
     }
    ]
@@ -9778,7 +9267,7 @@
      "ease": "step"
     },
     {
-     "t": 150.23,
+     "t": 146.84,
      "v": "stand",
      "ease": "step"
     }
@@ -9789,11 +9278,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 33.939769391732185,
+     "t": 38.73144153309663,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -9831,8 +9320,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 33.939769391732185,
-     "v": -98.062,
+     "t": 38.73144153309663,
+     "v": 1.073,
      "ease": "step"
     },
     {
@@ -9852,7 +9341,7 @@
      "ease": "step"
     },
     {
-     "t": 33.939769391732185,
+     "t": 38.73144153309663,
      "v": "walk",
      "ease": "step"
     },
@@ -10116,11 +9605,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 37.082139709144926,
+     "t": 39.121747591676304,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -10143,11 +9632,11 @@
      "ease": "linear"
     },
     {
-     "t": 150.04,
+     "t": 149.16,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -10158,13 +9647,13 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 37.082139709144926,
-     "v": -97.637,
+     "t": 39.121747591676304,
+     "v": 4.765,
      "ease": "step"
     },
     {
      "t": 135.79999999999998,
-     "v": 82.363,
+     "v": 183.815,
      "ease": "linear"
     }
    ]
@@ -10179,7 +9668,7 @@
      "ease": "step"
     },
     {
-     "t": 37.082139709144926,
+     "t": 39.121747591676304,
      "v": "walk",
      "ease": "step"
     },
@@ -10214,7 +9703,7 @@
      "ease": "step"
     },
     {
-     "t": 150.04,
+     "t": 149.16,
      "v": "stand",
      "ease": "step"
     }
@@ -10537,11 +10026,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 28.122942284955187,
+     "t": 37.69832718756068,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -10564,11 +10053,11 @@
      "ease": "linear"
     },
     {
-     "t": 150.52,
+     "t": 146.72,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -10579,13 +10068,13 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 28.122942284955187,
-     "v": -99.558,
+     "t": 37.69832718756068,
+     "v": -3.735,
      "ease": "step"
     },
     {
      "t": 133.39999999999998,
-     "v": -276.871,
+     "v": 171.367,
      "ease": "linear"
     }
    ]
@@ -10600,7 +10089,7 @@
      "ease": "step"
     },
     {
-     "t": 28.122942284955187,
+     "t": 37.69832718756068,
      "v": "walk",
      "ease": "step"
     },
@@ -10630,7 +10119,7 @@
      "ease": "step"
     },
     {
-     "t": 150.52,
+     "t": 146.72,
      "v": "stand",
      "ease": "step"
     }
@@ -10980,11 +10469,11 @@
      "ease": "linear"
     },
     {
-     "t": 151.26,
+     "t": 148.5,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -11001,7 +10490,7 @@
     },
     {
      "t": 135,
-     "v": -276.269,
+     "v": -184.94,
      "ease": "linear"
     }
    ]
@@ -11046,7 +10535,7 @@
      "ease": "step"
     },
     {
-     "t": 151.26,
+     "t": 148.5,
      "v": "stand",
      "ease": "step"
     }
@@ -11057,11 +10546,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 34.489102585999,
+     "t": 36.31736688041649,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -11099,8 +10588,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 34.489102585999,
-     "v": -93.255,
+     "t": 36.31736688041649,
+     "v": 0.444,
      "ease": "step"
     },
     {
@@ -11120,7 +10609,7 @@
      "ease": "step"
     },
     {
-     "t": 34.489102585999,
+     "t": 36.31736688041649,
      "v": "walk",
      "ease": "step"
     },
@@ -11161,11 +10650,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 27.446211832412068,
+     "t": 30.963893393803083,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -11203,8 +10692,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 27.446211832412068,
-     "v": -95.959,
+     "t": 30.963893393803083,
+     "v": 0.701,
      "ease": "step"
     },
     {
@@ -11224,7 +10713,7 @@
      "ease": "step"
     },
     {
-     "t": 27.446211832412068,
+     "t": 30.963893393803083,
      "v": "walk",
      "ease": "step"
     },
@@ -11265,11 +10754,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 38.36082609103023,
+     "t": 40.73560749424048,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -11307,8 +10796,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 38.36082609103023,
-     "v": -96.308,
+     "t": 40.73560749424048,
+     "v": 3.135,
      "ease": "step"
     },
     {
@@ -11328,7 +10817,7 @@
      "ease": "step"
     },
     {
-     "t": 38.36082609103023,
+     "t": 40.73560749424048,
      "v": "walk",
      "ease": "step"
     },
@@ -11386,11 +10875,11 @@
      "ease": "linear"
     },
     {
-     "t": 149.75,
+     "t": 145.68,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -11407,7 +10896,7 @@
     },
     {
      "t": 132.6,
-     "v": 82.322,
+     "v": 171.208,
      "ease": "linear"
     }
    ]
@@ -11442,7 +10931,7 @@
      "ease": "step"
     },
     {
-     "t": 149.75,
+     "t": 145.68,
      "v": "stand",
      "ease": "step"
     }
@@ -11762,11 +11251,11 @@
      "ease": "linear"
     },
     {
-     "t": 150.9,
+     "t": 147.94,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -11783,7 +11272,7 @@
     },
     {
      "t": 134.2,
-     "v": 84.571,
+     "v": 173.224,
      "ease": "linear"
     }
    ]
@@ -11818,7 +11307,7 @@
      "ease": "step"
     },
     {
-     "t": 150.9,
+     "t": 147.94,
      "v": "stand",
      "ease": "step"
     }
@@ -11829,11 +11318,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 39.067471885799215,
+     "t": 43.81276996217045,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -11871,8 +11360,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 39.067471885799215,
-     "v": -97.316,
+     "t": 43.81276996217045,
+     "v": 0.892,
      "ease": "step"
     },
     {
@@ -11892,7 +11381,7 @@
      "ease": "step"
     },
     {
-     "t": 39.067471885799215,
+     "t": 43.81276996217045,
      "v": "walk",
      "ease": "step"
     },
@@ -12138,11 +11627,11 @@
      "ease": "linear"
     },
     {
-     "t": 151.54,
+     "t": 148.55,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -12159,7 +11648,7 @@
     },
     {
      "t": 135.79999999999998,
-     "v": 80.908,
+     "v": 177.555,
      "ease": "linear"
     }
    ]
@@ -12194,7 +11683,7 @@
      "ease": "step"
     },
     {
-     "t": 151.54,
+     "t": 148.55,
      "v": "stand",
      "ease": "step"
     }
@@ -12514,11 +12003,11 @@
      "ease": "linear"
     },
     {
-     "t": 147.88,
+     "t": 147.41,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -12535,7 +12024,7 @@
     },
     {
      "t": 133.39999999999998,
-     "v": 85.143,
+     "v": 182.358,
      "ease": "linear"
     }
    ]
@@ -12570,7 +12059,7 @@
      "ease": "step"
     },
     {
-     "t": 147.88,
+     "t": 147.41,
      "v": "stand",
      "ease": "step"
     }
@@ -12581,11 +12070,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 45.63961674251283,
+     "t": 47.93920119558911,
      "v": [
-      72,
+      -2.5,
       0,
-      2.5
+      -72
      ],
      "ease": "linear"
     },
@@ -12623,8 +12112,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 45.63961674251283,
-     "v": -100.585,
+     "t": 47.93920119558911,
+     "v": 7.805,
      "ease": "step"
     },
     {
@@ -12644,7 +12133,7 @@
      "ease": "step"
     },
     {
-     "t": 45.63961674251283,
+     "t": 47.93920119558911,
      "v": "walk",
      "ease": "step"
     },
@@ -12675,11 +12164,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 46.07478566965248,
+     "t": 47.53673556086268,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -12717,8 +12206,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 46.07478566965248,
-     "v": -96.769,
+     "t": 47.53673556086268,
+     "v": 4.689,
      "ease": "step"
     },
     {
@@ -12738,7 +12227,7 @@
      "ease": "step"
     },
     {
-     "t": 46.07478566965248,
+     "t": 47.53673556086268,
      "v": "walk",
      "ease": "step"
     },
@@ -12769,11 +12258,11 @@
    "channel": "at",
    "keys": [
     {
-     "t": 47.1302367618228,
+     "t": 51.72706905276677,
      "v": [
-      70,
+      1.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     },
@@ -12811,8 +12300,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 47.1302367618228,
-     "v": -101.31,
+     "t": 51.72706905276677,
+     "v": 5.12,
      "ease": "step"
     },
     {
@@ -12832,7 +12321,7 @@
      "ease": "step"
     },
     {
-     "t": 47.1302367618228,
+     "t": 51.72706905276677,
      "v": "walk",
      "ease": "step"
     },
@@ -12890,11 +12379,11 @@
      "ease": "linear"
     },
     {
-     "t": 150.77,
+     "t": 147.59,
      "v": [
-      70,
+      2.5,
       0,
-      -1.5
+      -70
      ],
      "ease": "linear"
     }
@@ -12911,7 +12400,7 @@
     },
     {
      "t": 135,
-     "v": 80.352,
+     "v": 177.525,
      "ease": "linear"
     }
    ]
@@ -12946,7 +12435,7 @@
      "ease": "step"
     },
     {
-     "t": 150.77,
+     "t": 147.59,
      "v": "stand",
      "ease": "step"
     }
@@ -15201,14 +14690,14 @@
    "t": 0,
    "shot": "wide",
    "eye": [
-    12.222,
-    23.05,
-    24.579
+    9.646,
+    15.052,
+    16.503
    ],
    "target": [
     0,
-    4.05,
-    -9
+    0.056,
+    -10
    ],
    "fov": 50,
    "ease": "inout"
@@ -15217,14 +14706,14 @@
    "t": 6,
    "shot": "wide",
    "eye": [
-    15.697,
-    23.089,
-    23.183
+    12.205,
+    14.859,
+    15.024
    ],
    "target": [
     0,
-    4.05,
-    -9
+    0.056,
+    -10
    ],
    "fov": 50,
    "ease": "inout"
@@ -15489,12 +14978,12 @@
    "t": 53.5,
    "shot": "medium",
    "eye": [
-    8.767,
-    7.474,
-    11.063
+    7.512,
+    7.676,
+    11.824
    ],
    "target": [
-    0.64,
+    -0.892,
     1.55,
     -11.264
    ],
@@ -15585,14 +15074,14 @@
    "t": 72,
    "shot": "top",
    "eye": [
-    0.02,
-    15.746,
-    -8.978
+    0.002,
+    15.632,
+    -9.029
    ],
    "target": [
-    0.02,
+    0.002,
     0.875,
-    -10.279
+    -10.32
    ],
    "fov": 50,
    "ease": "inout"
@@ -15601,14 +15090,14 @@
    "t": 83,
    "shot": "top",
    "eye": [
-    0.161,
-    16.283,
-    -8.938
+    0.142,
+    16.191,
+    -8.987
    ],
    "target": [
-    0.02,
+    0.002,
     0.875,
-    -10.279
+    -10.32
    ],
    "fov": 50,
    "ease": "inout"
@@ -15873,12 +15362,12 @@
    "t": 132,
    "shot": "top",
    "eye": [
-    0.032,
+    0.034,
     13.583,
     -9.954
    ],
    "target": [
-    0.032,
+    0.034,
     0.875,
     -11.066
    ],
@@ -15889,14 +15378,14 @@
    "t": 143,
    "shot": "top",
    "eye": [
-    3.581,
-    77.707,
-    17.438
+    -19.815,
+    141.473,
+    0.417
    ],
    "target": [
-    2.879,
+    -21.101,
     0.875,
-    10.753
+    -11.817
    ],
    "fov": 50,
    "ease": "inout"
@@ -16255,10 +15744,4345 @@
  ],
  "map": {
   "origin": {
-   "lat": 1.3068,
-   "lon": 103.8512
+   "lat": 1.30888,
+   "lon": 103.85116
   },
-  "source": "estimated: approximate position of Race Course Road at Hampshire Road, read from a map",
-  "estimated": true
+  "source": "estimated: junction of Race Course Road and Hampshire Road, read from OpenStreetMap road data",
+  "estimated": true,
+  "osm": {
+   "attribution": "© OpenStreetMap contributors",
+   "buildings": [
+    {
+     "id": "w155991884",
+     "height": 19.2,
+     "poly": [
+      [
+       159.52,
+       18.73
+      ],
+      [
+       183.8,
+       17.53
+      ],
+      [
+       186.18,
+       15.4
+      ],
+      [
+       184.55,
+       -7.77
+      ],
+      [
+       176.81,
+       -7.43
+      ],
+      [
+       177.09,
+       -0.87
+      ],
+      [
+       158.92,
+       -0.07
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w178436661",
+     "height": 6.4,
+     "poly": [
+      [
+       198,
+       35.35
+      ],
+      [
+       198.1,
+       39.04
+      ],
+      [
+       177.21,
+       39.65
+      ],
+      [
+       177.09,
+       35.94
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w178436832",
+     "height": 6.4,
+     "poly": [
+      [
+       152.86,
+       58.52
+      ],
+      [
+       153.01,
+       52.47
+      ],
+      [
+       171.64,
+       52.94
+      ],
+      [
+       171.48,
+       59
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w178436843",
+     "height": 6.4,
+     "poly": [
+      [
+       153.01,
+       52.47
+      ],
+      [
+       153.15,
+       47.17
+      ],
+      [
+       171.77,
+       47.65
+      ],
+      [
+       171.64,
+       52.94
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w178436855",
+     "height": 6.4,
+     "poly": [
+      [
+       153.15,
+       47.17
+      ],
+      [
+       153.3,
+       41.29
+      ],
+      [
+       171.93,
+       41.76
+      ],
+      [
+       171.77,
+       47.65
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w178436870",
+     "height": 6.4,
+     "poly": [
+      [
+       153.3,
+       41.29
+      ],
+      [
+       154.39,
+       36.9
+      ],
+      [
+       155.75,
+       35.74
+      ],
+      [
+       169.5,
+       35.62
+      ],
+      [
+       171.93,
+       41.76
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w178436989",
+     "height": 6.4,
+     "poly": [
+      [
+       35.85,
+       133.35
+      ],
+      [
+       39.75,
+       133.52
+      ],
+      [
+       38.94,
+       151.61
+      ],
+      [
+       35.03,
+       151.43
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w178437079",
+     "height": 19.2,
+     "poly": [
+      [
+       73.33,
+       42.2
+      ],
+      [
+       72.87,
+       84.56
+      ],
+      [
+       77.28,
+       88.51
+      ],
+      [
+       95.63,
+       88.7
+      ],
+      [
+       100.62,
+       83.63
+      ],
+      [
+       101.05,
+       42.97
+      ],
+      [
+       97.97,
+       38.52
+      ],
+      [
+       76,
+       38.29
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w184914352",
+     "height": 16,
+     "poly": [
+      [
+       97.97,
+       -108.4
+      ],
+      [
+       96.74,
+       -74.96
+      ],
+      [
+       114.48,
+       -74.29
+      ],
+      [
+       114,
+       -61.26
+      ],
+      [
+       129.46,
+       -60.69
+      ],
+      [
+       131.55,
+       -117.32
+      ],
+      [
+       115.13,
+       -117.93
+      ],
+      [
+       114.74,
+       -107.78
+      ]
+     ],
+     "levels": 5
+    },
+    {
+     "id": "w184914354",
+     "height": 9,
+     "poly": [
+      [
+       79.71,
+       -42.76
+      ],
+      [
+       78.14,
+       -44.23
+      ],
+      [
+       79.83,
+       -45.83
+      ],
+      [
+       78.14,
+       -47.26
+      ],
+      [
+       79.95,
+       -49.06
+      ],
+      [
+       78.36,
+       -50.23
+      ],
+      [
+       80.08,
+       -52.07
+      ],
+      [
+       82.38,
+       -51.98
+      ],
+      [
+       82.49,
+       -54.65
+      ],
+      [
+       80.34,
+       -54.72
+      ],
+      [
+       79.39,
+       -54.76
+      ],
+      [
+       79.43,
+       -56.01
+      ],
+      [
+       80.54,
+       -88.54
+      ],
+      [
+       81.98,
+       -88.49
+      ],
+      [
+       82.1,
+       -91.72
+      ],
+      [
+       88.65,
+       -91.51
+      ],
+      [
+       88.61,
+       -89.83
+      ],
+      [
+       92.57,
+       -89.69
+      ],
+      [
+       92.44,
+       -85.77
+      ],
+      [
+       90.57,
+       -85.83
+      ],
+      [
+       89.56,
+       -56.22
+      ],
+      [
+       91.52,
+       -56.13
+      ],
+      [
+       91.48,
+       -55.14
+      ],
+      [
+       101.64,
+       -54.74
+      ],
+      [
+       101.77,
+       -58.27
+      ],
+      [
+       97.63,
+       -58.43
+      ],
+      [
+       97.86,
+       -64.21
+      ],
+      [
+       101.42,
+       -64.07
+      ],
+      [
+       101.66,
+       -69.97
+      ],
+      [
+       104.34,
+       -69.87
+      ],
+      [
+       104.41,
+       -71.9
+      ],
+      [
+       106.05,
+       -73.55
+      ],
+      [
+       107.55,
+       -71.78
+      ],
+      [
+       108.92,
+       -73.62
+      ],
+      [
+       110.68,
+       -71.66
+      ],
+      [
+       113.41,
+       -71.55
+      ],
+      [
+       113.25,
+       -67.12
+      ],
+      [
+       111.36,
+       -67.2
+      ],
+      [
+       111.32,
+       -65.99
+      ],
+      [
+       109.93,
+       -66.05
+      ],
+      [
+       109.86,
+       -64.32
+      ],
+      [
+       111.39,
+       -64.26
+      ],
+      [
+       111.27,
+       -61.14
+      ],
+      [
+       107.84,
+       -61.27
+      ],
+      [
+       107.75,
+       -58.5
+      ],
+      [
+       111.18,
+       -58.37
+      ],
+      [
+       110.93,
+       -51.92
+      ],
+      [
+       109.69,
+       -51.96
+      ],
+      [
+       109.63,
+       -50.37
+      ],
+      [
+       110.95,
+       -50.32
+      ],
+      [
+       110.9,
+       -49.24
+      ],
+      [
+       112.95,
+       -49.17
+      ],
+      [
+       112.77,
+       -44.33
+      ],
+      [
+       110,
+       -44.45
+      ],
+      [
+       108.27,
+       -42.44
+      ],
+      [
+       106.55,
+       -44.05
+      ],
+      [
+       105.43,
+       -42.55
+      ],
+      [
+       103.33,
+       -44.63
+      ],
+      [
+       103.45,
+       -47.72
+      ],
+      [
+       101.59,
+       -47.78
+      ],
+      [
+       101.48,
+       -45.08
+      ],
+      [
+       99.93,
+       -43.58
+      ],
+      [
+       98.65,
+       -45.09
+      ],
+      [
+       97.44,
+       -43.67
+      ],
+      [
+       94.35,
+       -43.79
+      ],
+      [
+       94.45,
+       -46.17
+      ],
+      [
+       92.83,
+       -46.23
+      ],
+      [
+       92.76,
+       -44.51
+      ],
+      [
+       87.57,
+       -44.72
+      ],
+      [
+       87.63,
+       -46.32
+      ],
+      [
+       86.06,
+       -46.37
+      ],
+      [
+       86,
+       -44.63
+      ],
+      [
+       84.91,
+       -44.67
+      ],
+      [
+       84.83,
+       -42.57
+      ]
+     ]
+    },
+    {
+     "id": "w184914355",
+     "height": 9,
+     "poly": [
+      [
+       83.05,
+       -140.79
+      ],
+      [
+       81.38,
+       -139.42
+      ],
+      [
+       82.96,
+       -137.72
+      ],
+      [
+       81.17,
+       -136.41
+      ],
+      [
+       82.87,
+       -134.48
+      ],
+      [
+       81.21,
+       -133.42
+      ],
+      [
+       82.79,
+       -131.47
+      ],
+      [
+       85.09,
+       -131.42
+      ],
+      [
+       85.02,
+       -128.75
+      ],
+      [
+       82.88,
+       -128.82
+      ],
+      [
+       81.94,
+       -128.86
+      ],
+      [
+       81.9,
+       -127.58
+      ],
+      [
+       80.79,
+       -95.06
+      ],
+      [
+       82.21,
+       -95
+      ],
+      [
+       82.1,
+       -91.72
+      ],
+      [
+       88.65,
+       -91.51
+      ],
+      [
+       88.72,
+       -93.23
+      ],
+      [
+       92.74,
+       -93.09
+      ],
+      [
+       92.88,
+       -97.03
+      ],
+      [
+       90.98,
+       -97.08
+      ],
+      [
+       91.99,
+       -126.69
+      ],
+      [
+       93.94,
+       -126.66
+      ],
+      [
+       93.96,
+       -127.65
+      ],
+      [
+       104.12,
+       -127.37
+      ],
+      [
+       104.03,
+       -123.84
+      ],
+      [
+       99.89,
+       -123.95
+      ],
+      [
+       99.72,
+       -118.18
+      ],
+      [
+       103.29,
+       -118.08
+      ],
+      [
+       103.12,
+       -112.17
+      ],
+      [
+       105.8,
+       -112.09
+      ],
+      [
+       105.75,
+       -110.06
+      ],
+      [
+       107.26,
+       -108.31
+      ],
+      [
+       108.89,
+       -109.98
+      ],
+      [
+       110.13,
+       -108.04
+      ],
+      [
+       112.01,
+       -109.88
+      ],
+      [
+       114.75,
+       -109.8
+      ],
+      [
+       114.87,
+       -114.24
+      ],
+      [
+       113,
+       -114.3
+      ],
+      [
+       113.04,
+       -115.5
+      ],
+      [
+       111.64,
+       -115.54
+      ],
+      [
+       111.68,
+       -117.27
+      ],
+      [
+       113.22,
+       -117.22
+      ],
+      [
+       113.3,
+       -120.34
+      ],
+      [
+       109.88,
+       -120.44
+      ],
+      [
+       109.97,
+       -123.21
+      ],
+      [
+       113.4,
+       -123.11
+      ],
+      [
+       113.59,
+       -129.56
+      ],
+      [
+       112.34,
+       -129.6
+      ],
+      [
+       112.38,
+       -131.18
+      ],
+      [
+       113.71,
+       -131.16
+      ],
+      [
+       113.73,
+       -132.22
+      ],
+      [
+       115.79,
+       -132.17
+      ],
+      [
+       115.92,
+       -137
+      ],
+      [
+       113.15,
+       -137.08
+      ],
+      [
+       111.56,
+       -139.2
+      ],
+      [
+       109.74,
+       -137.71
+      ],
+      [
+       108.72,
+       -139.27
+      ],
+      [
+       106.49,
+       -137.33
+      ],
+      [
+       106.4,
+       -134.26
+      ],
+      [
+       104.54,
+       -134.31
+      ],
+      [
+       104.62,
+       -137.03
+      ],
+      [
+       103.16,
+       -138.62
+      ],
+      [
+       101.8,
+       -137.2
+      ],
+      [
+       100.67,
+       -138.69
+      ],
+      [
+       97.58,
+       -138.78
+      ],
+      [
+       97.52,
+       -136.4
+      ],
+      [
+       95.9,
+       -136.45
+      ],
+      [
+       95.95,
+       -138.16
+      ],
+      [
+       90.76,
+       -138.31
+      ],
+      [
+       90.71,
+       -136.71
+      ],
+      [
+       89.14,
+       -136.75
+      ],
+      [
+       89.19,
+       -138.5
+      ],
+      [
+       88.11,
+       -138.53
+      ],
+      [
+       88.17,
+       -140.65
+      ]
+     ]
+    },
+    {
+     "id": "w184914358",
+     "height": 9,
+     "poly": [
+      [
+       78.72,
+       -31.72
+      ],
+      [
+       78.45,
+       -28.07
+      ],
+      [
+       74.9,
+       -28.06
+      ],
+      [
+       74.64,
+       -13.76
+      ],
+      [
+       77.03,
+       -10.6
+      ],
+      [
+       89.15,
+       -10.45
+      ],
+      [
+       89.17,
+       -5.74
+      ],
+      [
+       92.77,
+       -5.8
+      ],
+      [
+       92.57,
+       19
+      ],
+      [
+       97.7,
+       19.05
+      ],
+      [
+       111.46,
+       19.07
+      ],
+      [
+       117.33,
+       14.86
+      ],
+      [
+       123.55,
+       -29.75
+      ],
+      [
+       120.23,
+       -29.94
+      ],
+      [
+       119.92,
+       -27.45
+      ],
+      [
+       110.69,
+       -28.54
+      ]
+     ]
+    },
+    {
+     "id": "w184914388",
+     "height": 9,
+     "poly": [
+      [
+       59,
+       110.79
+      ],
+      [
+       57.94,
+       129.68
+      ],
+      [
+       38.65,
+       128.66
+      ],
+      [
+       39.51,
+       109.8
+      ]
+     ]
+    },
+    {
+     "id": "w201276193",
+     "height": 9,
+     "poly": [
+      [
+       -114.64,
+       95
+      ],
+      [
+       -113.56,
+       75.61
+      ],
+      [
+       -79.31,
+       77.51
+      ],
+      [
+       -80.38,
+       96.9
+      ]
+     ]
+    },
+    {
+     "id": "w223871622",
+     "height": 9,
+     "poly": [
+      [
+       -53.01,
+       159.5
+      ],
+      [
+       -55.37,
+       215.21
+      ],
+      [
+       -13.68,
+       217.53
+      ],
+      [
+       -11.63,
+       161.4
+      ]
+     ]
+    },
+    {
+     "id": "w231929737",
+     "height": 9,
+     "poly": [
+      [
+       -59.8,
+       114.34
+      ],
+      [
+       -49.48,
+       114.99
+      ],
+      [
+       -49.71,
+       118.63
+      ],
+      [
+       -40.39,
+       119.21
+      ],
+      [
+       -41.44,
+       135.87
+      ],
+      [
+       -50.66,
+       135.3
+      ],
+      [
+       -50.83,
+       138.04
+      ],
+      [
+       -61.24,
+       137.38
+      ]
+     ]
+    },
+    {
+     "id": "w241208738",
+     "height": 9,
+     "poly": [
+      [
+       58.81,
+       -47.1
+      ],
+      [
+       57.53,
+       -30.55
+      ],
+      [
+       19.74,
+       -33.46
+      ],
+      [
+       21.01,
+       -50
+      ]
+     ]
+    },
+    {
+     "id": "w241208739",
+     "height": 16,
+     "poly": [
+      [
+       63.83,
+       -112.46
+      ],
+      [
+       63.4,
+       -106.78
+      ],
+      [
+       25.59,
+       -109.68
+      ],
+      [
+       19.53,
+       -110.15
+      ],
+      [
+       19.97,
+       -115.83
+      ]
+     ],
+     "levels": 5
+    },
+    {
+     "id": "w241208740",
+     "height": 19.2,
+     "poly": [
+      [
+       22.6,
+       -150.2
+      ],
+      [
+       24.15,
+       -170.34
+      ],
+      [
+       68.02,
+       -166.97
+      ],
+      [
+       66.47,
+       -146.83
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w372344933",
+     "height": 12.8,
+     "poly": [
+      [
+       62.48,
+       -94.87
+      ],
+      [
+       60.66,
+       -71.25
+      ],
+      [
+       22.87,
+       -74.15
+      ],
+      [
+       24.68,
+       -97.76
+      ]
+     ],
+     "levels": 4
+    },
+    {
+     "id": "w372344934",
+     "height": 6.4,
+     "poly": [
+      [
+       39.91,
+       101.62
+      ],
+      [
+       39.51,
+       109.8
+      ],
+      [
+       59,
+       110.79
+      ],
+      [
+       59.41,
+       102.6
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344935",
+     "height": 6.4,
+     "poly": [
+      [
+       24.68,
+       -97.76
+      ],
+      [
+       25.11,
+       -103.29
+      ],
+      [
+       62.9,
+       -100.39
+      ],
+      [
+       62.48,
+       -94.87
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344936",
+     "height": 6.4,
+     "poly": [
+      [
+       25.11,
+       -103.29
+      ],
+      [
+       25.59,
+       -109.68
+      ],
+      [
+       63.4,
+       -106.78
+      ],
+      [
+       62.9,
+       -100.39
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344937",
+     "height": 16,
+     "poly": [
+      [
+       63.83,
+       -112.46
+      ],
+      [
+       19.97,
+       -115.83
+      ],
+      [
+       21.23,
+       -132.3
+      ],
+      [
+       65.1,
+       -128.93
+      ]
+     ],
+     "levels": 5
+    },
+    {
+     "id": "w372344938",
+     "height": 19.2,
+     "poly": [
+      [
+       21.23,
+       -132.3
+      ],
+      [
+       21.69,
+       -138.28
+      ],
+      [
+       65.55,
+       -134.91
+      ],
+      [
+       65.1,
+       -128.93
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w372344939",
+     "height": 19.2,
+     "poly": [
+      [
+       21.69,
+       -138.28
+      ],
+      [
+       22.09,
+       -143.5
+      ],
+      [
+       65.95,
+       -140.13
+      ],
+      [
+       65.55,
+       -134.91
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w372344940",
+     "height": 19.2,
+     "poly": [
+      [
+       22.09,
+       -143.5
+      ],
+      [
+       22.6,
+       -150.2
+      ],
+      [
+       66.47,
+       -146.83
+      ],
+      [
+       65.95,
+       -140.13
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w372344941",
+     "height": 12.8,
+     "poly": [
+      [
+       24.15,
+       -170.34
+      ],
+      [
+       24.9,
+       -180.17
+      ],
+      [
+       68.78,
+       -176.79
+      ],
+      [
+       68.02,
+       -166.97
+      ]
+     ],
+     "levels": 4
+    },
+    {
+     "id": "w372344942",
+     "height": 12.8,
+     "poly": [
+      [
+       24.9,
+       -180.17
+      ],
+      [
+       25.46,
+       -187.36
+      ],
+      [
+       69.32,
+       -183.98
+      ],
+      [
+       68.78,
+       -176.79
+      ]
+     ],
+     "levels": 4
+    },
+    {
+     "id": "w372344943",
+     "height": 12.8,
+     "poly": [
+      [
+       25.46,
+       -187.36
+      ],
+      [
+       25.88,
+       -192.75
+      ],
+      [
+       69.75,
+       -189.39
+      ],
+      [
+       69.32,
+       -183.98
+      ]
+     ],
+     "levels": 4
+    },
+    {
+     "id": "w372344945",
+     "height": 6.4,
+     "poly": [
+      [
+       59.41,
+       102.6
+      ],
+      [
+       59.62,
+       98.52
+      ],
+      [
+       40.13,
+       97.53
+      ],
+      [
+       39.91,
+       101.62
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344969",
+     "height": 6.4,
+     "poly": [
+      [
+       59.62,
+       98.52
+      ],
+      [
+       59.83,
+       94.42
+      ],
+      [
+       40.33,
+       93.44
+      ],
+      [
+       40.13,
+       97.53
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344987",
+     "height": 6.4,
+     "poly": [
+      [
+       59.83,
+       94.42
+      ],
+      [
+       60.03,
+       90.33
+      ],
+      [
+       40.54,
+       89.35
+      ],
+      [
+       40.33,
+       93.44
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344989",
+     "height": 6.4,
+     "poly": [
+      [
+       60.03,
+       90.33
+      ],
+      [
+       60.24,
+       86.25
+      ],
+      [
+       40.75,
+       85.26
+      ],
+      [
+       40.54,
+       89.35
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344990",
+     "height": 6.4,
+     "poly": [
+      [
+       30.36,
+       146.62
+      ],
+      [
+       30.25,
+       151.96
+      ],
+      [
+       10.03,
+       151.56
+      ],
+      [
+       10.13,
+       146.22
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344991",
+     "height": 6.4,
+     "poly": [
+      [
+       60.24,
+       86.25
+      ],
+      [
+       60.45,
+       82.15
+      ],
+      [
+       40.96,
+       81.17
+      ],
+      [
+       40.75,
+       85.26
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344992",
+     "height": 6.4,
+     "poly": [
+      [
+       30.46,
+       141.28
+      ],
+      [
+       30.36,
+       146.62
+      ],
+      [
+       10.13,
+       146.22
+      ],
+      [
+       10.24,
+       140.87
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344993",
+     "height": 6.4,
+     "poly": [
+      [
+       30.57,
+       135.93
+      ],
+      [
+       30.46,
+       141.28
+      ],
+      [
+       10.24,
+       140.87
+      ],
+      [
+       10.34,
+       135.53
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344994",
+     "height": 6.4,
+     "poly": [
+      [
+       39.43,
+       73.71
+      ],
+      [
+       39.69,
+       67.54
+      ],
+      [
+       57.01,
+       68.28
+      ],
+      [
+       56.75,
+       74.45
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344995",
+     "height": 6.4,
+     "poly": [
+      [
+       30.67,
+       130.6
+      ],
+      [
+       30.57,
+       135.93
+      ],
+      [
+       10.34,
+       135.53
+      ],
+      [
+       10.45,
+       130.19
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344996",
+     "height": 6.4,
+     "poly": [
+      [
+       39.69,
+       67.54
+      ],
+      [
+       39.96,
+       61.35
+      ],
+      [
+       57.29,
+       62.1
+      ],
+      [
+       57.01,
+       68.28
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344998",
+     "height": 6.4,
+     "poly": [
+      [
+       30.79,
+       125.12
+      ],
+      [
+       30.67,
+       130.6
+      ],
+      [
+       10.45,
+       130.19
+      ],
+      [
+       10.56,
+       124.7
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372344999",
+     "height": 6.4,
+     "poly": [
+      [
+       39.96,
+       61.35
+      ],
+      [
+       40.23,
+       55.18
+      ],
+      [
+       57.55,
+       55.93
+      ],
+      [
+       57.29,
+       62.1
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345000",
+     "height": 6.4,
+     "poly": [
+      [
+       35.24,
+       119.75
+      ],
+      [
+       35.13,
+       125.2
+      ],
+      [
+       30.79,
+       125.12
+      ],
+      [
+       10.56,
+       124.7
+      ],
+      [
+       10.66,
+       119.25
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345001",
+     "height": 6.4,
+     "poly": [
+      [
+       40.23,
+       55.18
+      ],
+      [
+       40.49,
+       49.01
+      ],
+      [
+       57.81,
+       49.75
+      ],
+      [
+       57.55,
+       55.93
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345007",
+     "height": 6.4,
+     "poly": [
+      [
+       35.35,
+       114.4
+      ],
+      [
+       35.24,
+       119.75
+      ],
+      [
+       10.66,
+       119.25
+      ],
+      [
+       10.78,
+       113.9
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345008",
+     "height": 6.4,
+     "poly": [
+      [
+       40.49,
+       49.01
+      ],
+      [
+       40.76,
+       42.84
+      ],
+      [
+       58.08,
+       43.58
+      ],
+      [
+       57.81,
+       49.75
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345009",
+     "height": 6.4,
+     "poly": [
+      [
+       35.46,
+       109.06
+      ],
+      [
+       35.35,
+       114.4
+      ],
+      [
+       10.78,
+       113.9
+      ],
+      [
+       10.88,
+       108.57
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345010",
+     "height": 6.4,
+     "poly": [
+      [
+       40.76,
+       42.84
+      ],
+      [
+       41.02,
+       36.65
+      ],
+      [
+       58.35,
+       37.4
+      ],
+      [
+       58.08,
+       43.58
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345011",
+     "height": 6.4,
+     "poly": [
+      [
+       35.56,
+       103.72
+      ],
+      [
+       35.46,
+       109.06
+      ],
+      [
+       10.88,
+       108.57
+      ],
+      [
+       10.99,
+       103.22
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345012",
+     "height": 6.4,
+     "poly": [
+      [
+       41.02,
+       36.65
+      ],
+      [
+       41.29,
+       30.48
+      ],
+      [
+       58.62,
+       31.23
+      ],
+      [
+       58.35,
+       37.4
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345014",
+     "height": 6.4,
+     "poly": [
+      [
+       35.67,
+       98.37
+      ],
+      [
+       35.56,
+       103.72
+      ],
+      [
+       10.99,
+       103.22
+      ],
+      [
+       11.09,
+       97.88
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345015",
+     "height": 6.4,
+     "poly": [
+      [
+       41.29,
+       30.48
+      ],
+      [
+       41.55,
+       24.3
+      ],
+      [
+       58.87,
+       25.05
+      ],
+      [
+       58.62,
+       31.23
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345016",
+     "height": 6.4,
+     "poly": [
+      [
+       35.78,
+       93.03
+      ],
+      [
+       35.67,
+       98.37
+      ],
+      [
+       11.09,
+       97.88
+      ],
+      [
+       11.2,
+       92.54
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345017",
+     "height": 6.4,
+     "poly": [
+      [
+       41.55,
+       24.3
+      ],
+      [
+       41.82,
+       18.13
+      ],
+      [
+       59.14,
+       18.87
+      ],
+      [
+       58.87,
+       25.05
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345018",
+     "height": 6.4,
+     "poly": [
+      [
+       35.89,
+       87.69
+      ],
+      [
+       35.78,
+       93.03
+      ],
+      [
+       11.2,
+       92.54
+      ],
+      [
+       11.31,
+       87.2
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345019",
+     "height": 6.4,
+     "poly": [
+      [
+       41.82,
+       18.13
+      ],
+      [
+       42.09,
+       11.95
+      ],
+      [
+       59.41,
+       12.7
+      ],
+      [
+       59.14,
+       18.87
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345020",
+     "height": 6.4,
+     "poly": [
+      [
+       35.99,
+       82.35
+      ],
+      [
+       35.89,
+       87.69
+      ],
+      [
+       11.31,
+       87.2
+      ],
+      [
+       11.42,
+       81.85
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345021",
+     "height": 6.4,
+     "poly": [
+      [
+       42.09,
+       11.95
+      ],
+      [
+       42.35,
+       5.77
+      ],
+      [
+       59.67,
+       6.51
+      ],
+      [
+       59.41,
+       12.7
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345022",
+     "height": 6.4,
+     "poly": [
+      [
+       36.1,
+       77.01
+      ],
+      [
+       35.99,
+       82.35
+      ],
+      [
+       11.42,
+       81.85
+      ],
+      [
+       11.52,
+       76.52
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345023",
+     "height": 6.4,
+     "poly": [
+      [
+       42.35,
+       5.77
+      ],
+      [
+       42.62,
+       -0.4
+      ],
+      [
+       59.94,
+       0.34
+      ],
+      [
+       59.67,
+       6.51
+      ]
+     ],
+     "levels": 2
+    },
+    {
+     "id": "w372345025",
+     "height": 9,
+     "poly": [
+      [
+       11.51,
+       71.83
+      ],
+      [
+       11.81,
+       65.52
+      ],
+      [
+       35.33,
+       66.64
+      ],
+      [
+       35.04,
+       72.95
+      ]
+     ]
+    },
+    {
+     "id": "w372345026",
+     "height": 9.6,
+     "poly": [
+      [
+       42.62,
+       -0.4
+      ],
+      [
+       42.88,
+       -6.57
+      ],
+      [
+       60.2,
+       -5.83
+      ],
+      [
+       59.94,
+       0.34
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345027",
+     "height": 9.6,
+     "poly": [
+      [
+       11.81,
+       65.52
+      ],
+      [
+       12.12,
+       59.21
+      ],
+      [
+       35.63,
+       60.33
+      ],
+      [
+       35.33,
+       66.64
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345028",
+     "height": 9.6,
+     "poly": [
+      [
+       42.88,
+       -6.57
+      ],
+      [
+       43.15,
+       -12.76
+      ],
+      [
+       60.48,
+       -12.01
+      ],
+      [
+       60.2,
+       -5.83
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345029",
+     "height": 9.6,
+     "poly": [
+      [
+       12.12,
+       59.21
+      ],
+      [
+       12.41,
+       52.9
+      ],
+      [
+       35.94,
+       54.02
+      ],
+      [
+       35.63,
+       60.33
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345030",
+     "height": 9.6,
+     "poly": [
+      [
+       43.15,
+       -12.76
+      ],
+      [
+       43.42,
+       -18.93
+      ],
+      [
+       60.74,
+       -18.19
+      ],
+      [
+       60.48,
+       -12.01
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345031",
+     "height": 9.6,
+     "poly": [
+      [
+       12.41,
+       52.9
+      ],
+      [
+       12.71,
+       46.59
+      ],
+      [
+       36.23,
+       47.71
+      ],
+      [
+       35.94,
+       54.02
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345032",
+     "height": 9.6,
+     "poly": [
+      [
+       12.71,
+       46.59
+      ],
+      [
+       13.02,
+       40.28
+      ],
+      [
+       36.53,
+       41.4
+      ],
+      [
+       36.23,
+       47.71
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345035",
+     "height": 9.6,
+     "poly": [
+      [
+       13.02,
+       40.28
+      ],
+      [
+       13.31,
+       33.97
+      ],
+      [
+       36.84,
+       35.09
+      ],
+      [
+       36.53,
+       41.4
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345037",
+     "height": 9.6,
+     "poly": [
+      [
+       13.31,
+       33.97
+      ],
+      [
+       13.61,
+       27.66
+      ],
+      [
+       37.14,
+       28.77
+      ],
+      [
+       36.84,
+       35.09
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345039",
+     "height": 9.6,
+     "poly": [
+      [
+       13.61,
+       27.66
+      ],
+      [
+       13.91,
+       21.34
+      ],
+      [
+       37.43,
+       22.47
+      ],
+      [
+       37.14,
+       28.77
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345041",
+     "height": 9.6,
+     "poly": [
+      [
+       13.91,
+       21.34
+      ],
+      [
+       14.22,
+       15.03
+      ],
+      [
+       37.74,
+       16.16
+      ],
+      [
+       37.43,
+       22.47
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345042",
+     "height": 9.6,
+     "poly": [
+      [
+       14.22,
+       15.03
+      ],
+      [
+       14.51,
+       8.73
+      ],
+      [
+       38.04,
+       9.84
+      ],
+      [
+       37.74,
+       16.16
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345046",
+     "height": 9.6,
+     "poly": [
+      [
+       14.51,
+       8.73
+      ],
+      [
+       14.81,
+       2.41
+      ],
+      [
+       38.33,
+       3.54
+      ],
+      [
+       38.04,
+       9.84
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345048",
+     "height": 9.6,
+     "poly": [
+      [
+       14.81,
+       2.41
+      ],
+      [
+       15.12,
+       -3.89
+      ],
+      [
+       38.64,
+       -2.77
+      ],
+      [
+       38.33,
+       3.54
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345049",
+     "height": 9.6,
+     "poly": [
+      [
+       15.12,
+       -3.89
+      ],
+      [
+       15.42,
+       -10.2
+      ],
+      [
+       38.94,
+       -9.09
+      ],
+      [
+       38.64,
+       -2.77
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345051",
+     "height": 9.6,
+     "poly": [
+      [
+       15.42,
+       -10.2
+      ],
+      [
+       15.71,
+       -16.51
+      ],
+      [
+       39.23,
+       -15.39
+      ],
+      [
+       38.94,
+       -9.09
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345053",
+     "height": 9.6,
+     "poly": [
+      [
+       15.71,
+       -16.51
+      ],
+      [
+       16.02,
+       -22.82
+      ],
+      [
+       39.53,
+       -21.71
+      ],
+      [
+       39.23,
+       -15.39
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w372345058",
+     "height": 16,
+     "poly": [
+      [
+       60.66,
+       -71.25
+      ],
+      [
+       58.81,
+       -47.1
+      ],
+      [
+       21.01,
+       -50
+      ],
+      [
+       22.87,
+       -74.15
+      ]
+     ],
+     "levels": 5
+    },
+    {
+     "id": "w396336443",
+     "height": 9.6,
+     "poly": [
+      [
+       90.53,
+       0.37
+      ],
+      [
+       90.08,
+       22.63
+      ],
+      [
+       77.82,
+       22.38
+      ],
+      [
+       73.89,
+       17.9
+      ],
+      [
+       74.26,
+       0.04
+      ]
+     ],
+     "levels": 3
+    },
+    {
+     "id": "w396336446",
+     "height": 9,
+     "poly": [
+      [
+       189.38,
+       -21.07
+      ],
+      [
+       188.66,
+       -8.14
+      ],
+      [
+       140.16,
+       -10.83
+      ],
+      [
+       140.36,
+       -14.33
+      ],
+      [
+       140.87,
+       -23.75
+      ]
+     ]
+    },
+    {
+     "id": "w1078263457",
+     "height": 9,
+     "poly": [
+      [
+       128.19,
+       44.65
+      ],
+      [
+       128.39,
+       49.89
+      ],
+      [
+       128.35,
+       53.01
+      ],
+      [
+       128.43,
+       59.55
+      ],
+      [
+       128.54,
+       63.35
+      ],
+      [
+       128.59,
+       68.36
+      ],
+      [
+       128.69,
+       71.69
+      ],
+      [
+       129.34,
+       87.63
+      ],
+      [
+       126.02,
+       91.13
+      ],
+      [
+       123.8,
+       93.42
+      ],
+      [
+       115.52,
+       102.4
+      ],
+      [
+       113.2,
+       104.75
+      ],
+      [
+       111.55,
+       106.54
+      ],
+      [
+       104.08,
+       107.5
+      ],
+      [
+       91.03,
+       120.59
+      ],
+      [
+       91.23,
+       122.65
+      ],
+      [
+       96.81,
+       127.74
+      ],
+      [
+       97.4,
+       138.06
+      ],
+      [
+       87.89,
+       138.15
+      ],
+      [
+       85.66,
+       136
+      ],
+      [
+       83.63,
+       134.03
+      ],
+      [
+       81.7,
+       132.16
+      ],
+      [
+       81.62,
+       120.13
+      ],
+      [
+       81.56,
+       110.43
+      ],
+      [
+       92.71,
+       98.48
+      ],
+      [
+       100.82,
+       97.31
+      ],
+      [
+       114.7,
+       81.4
+      ],
+      [
+       113.71,
+       45.43
+      ],
+      [
+       120.94,
+       37.81
+      ]
+     ]
+    },
+    {
+     "id": "w1078263462",
+     "height": 19.2,
+     "poly": [
+      [
+       158.92,
+       -0.07
+      ],
+      [
+       136.92,
+       0.88
+      ],
+      [
+       134.7,
+       14.09
+      ],
+      [
+       139.96,
+       19.5
+      ],
+      [
+       159.52,
+       18.73
+      ]
+     ],
+     "levels": 6
+    },
+    {
+     "id": "w1263770803",
+     "height": 3.2,
+     "poly": [
+      [
+       -82.89,
+       -76.73
+      ],
+      [
+       -76.69,
+       -76.46
+      ],
+      [
+       -77.22,
+       -64.06
+      ],
+      [
+       -99.66,
+       -65.02
+      ],
+      [
+       -99.31,
+       -73.43
+      ],
+      [
+       -91.27,
+       -73.08
+      ],
+      [
+       -91.1,
+       -77.08
+      ]
+     ],
+     "levels": 1
+    },
+    {
+     "id": "w1263770837",
+     "height": 3.2,
+     "poly": [
+      [
+       -149.68,
+       -39.37
+      ],
+      [
+       -148.99,
+       -55.39
+      ],
+      [
+       -134.35,
+       -54.75
+      ],
+      [
+       -134.42,
+       -53.45
+      ],
+      [
+       -134.5,
+       -51.36
+      ],
+      [
+       -135.77,
+       -51.43
+      ],
+      [
+       -136.17,
+       -42.2
+      ],
+      [
+       -135.32,
+       -42.16
+      ],
+      [
+       -135.47,
+       -38.75
+      ],
+      [
+       -145.94,
+       -39.21
+      ]
+     ],
+     "levels": 1
+    },
+    {
+     "id": "w1263770838",
+     "height": 3.2,
+     "poly": [
+      [
+       -145.94,
+       -39.21
+      ],
+      [
+       -146.14,
+       -34.9
+      ],
+      [
+       -134.64,
+       -34.4
+      ],
+      [
+       -134.68,
+       -33.57
+      ],
+      [
+       -133.06,
+       -33.51
+      ],
+      [
+       -133.16,
+       -31.34
+      ],
+      [
+       -133.24,
+       -29.46
+      ],
+      [
+       -134.85,
+       -29.53
+      ],
+      [
+       -135.09,
+       -24.02
+      ],
+      [
+       -136.88,
+       -24.1
+      ],
+      [
+       -136.96,
+       -22.17
+      ],
+      [
+       -150.4,
+       -22.75
+      ],
+      [
+       -149.68,
+       -39.37
+      ]
+     ],
+     "levels": 1
+    },
+    {
+     "id": "w1263770850",
+     "height": 76.8,
+     "poly": [
+      [
+       -185.43,
+       -29.05
+      ],
+      [
+       -177.54,
+       -28.71
+      ],
+      [
+       -177.2,
+       -36.55
+      ],
+      [
+       -178.67,
+       -36.61
+      ],
+      [
+       -178.79,
+       -33.87
+      ],
+      [
+       -181.59,
+       -33.99
+      ],
+      [
+       -181.65,
+       -32.78
+      ],
+      [
+       -186.54,
+       -33
+      ],
+      [
+       -186.14,
+       -42.21
+      ],
+      [
+       -184.87,
+       -42.16
+      ],
+      [
+       -184.56,
+       -49.19
+      ],
+      [
+       -185.82,
+       -49.24
+      ],
+      [
+       -185.43,
+       -58.49
+      ],
+      [
+       -180.54,
+       -58.28
+      ],
+      [
+       -180.6,
+       -56.9
+      ],
+      [
+       -177.8,
+       -56.78
+      ],
+      [
+       -177.91,
+       -54.26
+      ],
+      [
+       -176.43,
+       -54.19
+      ],
+      [
+       -175.98,
+       -64.89
+      ],
+      [
+       -175.4,
+       -65.8
+      ],
+      [
+       -176.41,
+       -66.44
+      ],
+      [
+       -177.94,
+       -64.02
+      ],
+      [
+       -180.23,
+       -65.48
+      ],
+      [
+       -180.86,
+       -64.49
+      ],
+      [
+       -185.05,
+       -67.16
+      ],
+      [
+       -180.08,
+       -74.96
+      ],
+      [
+       -179.25,
+       -74.43
+      ],
+      [
+       -175.46,
+       -80.39
+      ],
+      [
+       -176.29,
+       -80.92
+      ],
+      [
+       -171.46,
+       -88.52
+      ],
+      [
+       -169.68,
+       -87.39
+      ],
+      [
+       -167.26,
+       -85.84
+      ],
+      [
+       -167.87,
+       -84.89
+      ],
+      [
+       -165.59,
+       -83.43
+      ],
+      [
+       -167.05,
+       -81.14
+      ],
+      [
+       -165.73,
+       -80.31
+      ],
+      [
+       -168.49,
+       -75.96
+      ],
+      [
+       -167.14,
+       -75.11
+      ],
+      [
+       -164.38,
+       -79.44
+      ],
+      [
+       -162.86,
+       -78.46
+      ],
+      [
+       -161.4,
+       -80.76
+      ],
+      [
+       -159.15,
+       -79.33
+      ],
+      [
+       -158.53,
+       -80.29
+      ],
+      [
+       -154.26,
+       -77.56
+      ],
+      [
+       -159.26,
+       -69.7
+      ],
+      [
+       -160.68,
+       -70.61
+      ],
+      [
+       -163.97,
+       -65.43
+      ],
+      [
+       -170.78,
+       -69.76
+      ],
+      [
+       -173.94,
+       -64.8
+      ],
+      [
+       -174.26,
+       -57.17
+      ],
+      [
+       -172.79,
+       -57.11
+      ],
+      [
+       -172.68,
+       -59.75
+      ],
+      [
+       -165.41,
+       -59.44
+      ],
+      [
+       -165.69,
+       -52.96
+      ],
+      [
+       -166.64,
+       -53
+      ],
+      [
+       -166.77,
+       -49.85
+      ],
+      [
+       -166.02,
+       -49.82
+      ],
+      [
+       -166.14,
+       -47.01
+      ],
+      [
+       -165.1,
+       -46.96
+      ],
+      [
+       -165.38,
+       -40.69
+      ],
+      [
+       -174.96,
+       -41.1
+      ],
+      [
+       -175.09,
+       -38.01
+      ],
+      [
+       -175.52,
+       -28.43
+      ],
+      [
+       -173.43,
+       -28.33
+      ],
+      [
+       -173.31,
+       -31.17
+      ],
+      [
+       -171.53,
+       -31.1
+      ],
+      [
+       -171.38,
+       -34.47
+      ],
+      [
+       -163.84,
+       -34.15
+      ],
+      [
+       -164.08,
+       -28.6
+      ],
+      [
+       -165.57,
+       -28.67
+      ],
+      [
+       -165.75,
+       -24.6
+      ],
+      [
+       -164.26,
+       -24.54
+      ],
+      [
+       -164.5,
+       -19.06
+      ],
+      [
+       -172.96,
+       -19.43
+      ],
+      [
+       -173.08,
+       -16.74
+      ],
+      [
+       -176.34,
+       -16.87
+      ],
+      [
+       -176.21,
+       -19.57
+      ],
+      [
+       -177.61,
+       -19.63
+      ],
+      [
+       -177.73,
+       -16.94
+      ],
+      [
+       -185.94,
+       -17.3
+      ]
+     ],
+     "levels": 24
+    },
+    {
+     "id": "w1263770851",
+     "height": 76.8,
+     "poly": [
+      [
+       -126.84,
+       -45.75
+      ],
+      [
+       -128.31,
+       -45.81
+      ],
+      [
+       -128.43,
+       -43.08
+      ],
+      [
+       -131.23,
+       -43.2
+      ],
+      [
+       -131.28,
+       -41.99
+      ],
+      [
+       -135.32,
+       -42.16
+      ],
+      [
+       -136.17,
+       -42.2
+      ],
+      [
+       -135.77,
+       -51.43
+      ],
+      [
+       -134.5,
+       -51.36
+      ],
+      [
+       -134.42,
+       -53.45
+      ],
+      [
+       -134.35,
+       -54.75
+      ],
+      [
+       -134.2,
+       -58.39
+      ],
+      [
+       -135.47,
+       -58.46
+      ],
+      [
+       -135.07,
+       -67.69
+      ],
+      [
+       -130.18,
+       -67.48
+      ],
+      [
+       -130.24,
+       -66.11
+      ],
+      [
+       -127.43,
+       -65.98
+      ],
+      [
+       -127.54,
+       -63.46
+      ],
+      [
+       -126.08,
+       -63.4
+      ],
+      [
+       -125.77,
+       -70.37
+      ],
+      [
+       -125.61,
+       -74.1
+      ],
+      [
+       -125.04,
+       -75
+      ],
+      [
+       -126.05,
+       -75.65
+      ],
+      [
+       -127.59,
+       -73.23
+      ],
+      [
+       -129.87,
+       -74.69
+      ],
+      [
+       -130.5,
+       -73.7
+      ],
+      [
+       -134.69,
+       -76.36
+      ],
+      [
+       -129.72,
+       -84.17
+      ],
+      [
+       -128.88,
+       -83.63
+      ],
+      [
+       -125.08,
+       -89.6
+      ],
+      [
+       -125.93,
+       -90.13
+      ],
+      [
+       -121.09,
+       -97.72
+      ],
+      [
+       -119.19,
+       -96.51
+      ],
+      [
+       -116.91,
+       -95.06
+      ],
+      [
+       -117.51,
+       -94.1
+      ],
+      [
+       -115.23,
+       -92.64
+      ],
+      [
+       -116.69,
+       -90.35
+      ],
+      [
+       -115.37,
+       -89.51
+      ],
+      [
+       -118.13,
+       -85.17
+      ],
+      [
+       -116.78,
+       -84.31
+      ],
+      [
+       -114.02,
+       -88.65
+      ],
+      [
+       -112.49,
+       -87.68
+      ],
+      [
+       -111.03,
+       -89.96
+      ],
+      [
+       -108.77,
+       -88.54
+      ],
+      [
+       -108.16,
+       -89.49
+      ],
+      [
+       -103.9,
+       -86.77
+      ],
+      [
+       -108.9,
+       -78.91
+      ],
+      [
+       -110.32,
+       -79.81
+      ],
+      [
+       -113.62,
+       -74.64
+      ],
+      [
+       -120.42,
+       -78.97
+      ],
+      [
+       -123.58,
+       -74.02
+      ],
+      [
+       -123.91,
+       -66.39
+      ],
+      [
+       -122.42,
+       -66.32
+      ],
+      [
+       -122.31,
+       -68.96
+      ],
+      [
+       -115.05,
+       -68.64
+      ],
+      [
+       -115.33,
+       -62.16
+      ],
+      [
+       -116.27,
+       -62.2
+      ],
+      [
+       -116.42,
+       -59.06
+      ],
+      [
+       -115.66,
+       -59.03
+      ],
+      [
+       -115.78,
+       -56.21
+      ],
+      [
+       -114.74,
+       -56.16
+      ],
+      [
+       -115.01,
+       -49.89
+      ],
+      [
+       -124.61,
+       -50.31
+      ],
+      [
+       -125.16,
+       -37.63
+      ],
+      [
+       -123.07,
+       -37.54
+      ],
+      [
+       -122.95,
+       -40.38
+      ],
+      [
+       -121.17,
+       -40.31
+      ],
+      [
+       -121.02,
+       -43.69
+      ],
+      [
+       -113.48,
+       -43.36
+      ],
+      [
+       -113.73,
+       -37.81
+      ],
+      [
+       -115.21,
+       -37.88
+      ],
+      [
+       -115.39,
+       -33.81
+      ],
+      [
+       -113.9,
+       -33.74
+      ],
+      [
+       -113.98,
+       -31.82
+      ],
+      [
+       -114.04,
+       -30.41
+      ],
+      [
+       -114.14,
+       -28.27
+      ],
+      [
+       -122.61,
+       -28.64
+      ],
+      [
+       -122.72,
+       -25.95
+      ],
+      [
+       -127.16,
+       -26.14
+      ],
+      [
+       -127.25,
+       -23.68
+      ],
+      [
+       -135.09,
+       -24.02
+      ],
+      [
+       -134.85,
+       -29.53
+      ],
+      [
+       -133.24,
+       -29.46
+      ],
+      [
+       -133.16,
+       -31.34
+      ],
+      [
+       -133.06,
+       -33.51
+      ],
+      [
+       -134.68,
+       -33.57
+      ],
+      [
+       -134.64,
+       -34.4
+      ],
+      [
+       -134.43,
+       -39.11
+      ],
+      [
+       -127.15,
+       -38.8
+      ]
+     ],
+     "levels": 24
+    },
+    {
+     "id": "w1263770854",
+     "height": 76.8,
+     "poly": [
+      [
+       -117.35,
+       -102.88
+      ],
+      [
+       -112.28,
+       -110.84
+      ],
+      [
+       -111.63,
+       -110.43
+      ],
+      [
+       -108.23,
+       -115.75
+      ],
+      [
+       -108.89,
+       -116.17
+      ],
+      [
+       -104.5,
+       -123.07
+      ],
+      [
+       -106.14,
+       -124.12
+      ],
+      [
+       -107.59,
+       -121.86
+      ],
+      [
+       -109.88,
+       -123.32
+      ],
+      [
+       -110.55,
+       -122.28
+      ],
+      [
+       -114.47,
+       -124.77
+      ],
+      [
+       -109.43,
+       -132.67
+      ],
+      [
+       -108.53,
+       -132.11
+      ],
+      [
+       -104.77,
+       -138.03
+      ],
+      [
+       -105.65,
+       -138.6
+      ],
+      [
+       -100.68,
+       -146.41
+      ],
+      [
+       -98.2,
+       -144.82
+      ],
+      [
+       -96.56,
+       -143.77
+      ],
+      [
+       -97.29,
+       -142.62
+      ],
+      [
+       -95.05,
+       -141.2
+      ],
+      [
+       -96.52,
+       -138.89
+      ],
+      [
+       -95.03,
+       -137.94
+      ],
+      [
+       -97.79,
+       -133.59
+      ],
+      [
+       -96.39,
+       -132.7
+      ],
+      [
+       -93.62,
+       -137.04
+      ],
+      [
+       -92.19,
+       -136.13
+      ],
+      [
+       -90.71,
+       -138.44
+      ],
+      [
+       -88.26,
+       -136.89
+      ],
+      [
+       -87.53,
+       -138.03
+      ],
+      [
+       -83.39,
+       -135.39
+      ],
+      [
+       -88.35,
+       -127.58
+      ],
+      [
+       -89.54,
+       -128.34
+      ],
+      [
+       -93.02,
+       -122.86
+      ],
+      [
+       -99.88,
+       -127.23
+      ],
+      [
+       -101.92,
+       -124.01
+      ],
+      [
+       -99.25,
+       -122.31
+      ],
+      [
+       -101.63,
+       -118.58
+      ],
+      [
+       -98.02,
+       -116.29
+      ],
+      [
+       -100.93,
+       -111.72
+      ],
+      [
+       -99.37,
+       -110.73
+      ],
+      [
+       -96.47,
+       -115.29
+      ],
+      [
+       -94.98,
+       -114.35
+      ],
+      [
+       -93.51,
+       -116.67
+      ],
+      [
+       -91.13,
+       -115.15
+      ],
+      [
+       -90.51,
+       -116.14
+      ],
+      [
+       -86.43,
+       -113.56
+      ],
+      [
+       -91.44,
+       -105.69
+      ],
+      [
+       -92.52,
+       -106.38
+      ],
+      [
+       -96.27,
+       -100.48
+      ],
+      [
+       -95.2,
+       -99.79
+      ],
+      [
+       -100.2,
+       -91.95
+      ],
+      [
+       -104.27,
+       -94.54
+      ],
+      [
+       -103.54,
+       -95.67
+      ],
+      [
+       -105.91,
+       -97.19
+      ],
+      [
+       -104.38,
+       -99.58
+      ],
+      [
+       -105.87,
+       -100.52
+      ],
+      [
+       -103.11,
+       -104.84
+      ],
+      [
+       -104.68,
+       -105.83
+      ],
+      [
+       -107.43,
+       -101.52
+      ],
+      [
+       -108.99,
+       -102.51
+      ],
+      [
+       -110.52,
+       -100.12
+      ],
+      [
+       -112.93,
+       -101.66
+      ],
+      [
+       -113.65,
+       -100.53
+      ],
+      [
+       -115.77,
+       -101.86
+      ]
+     ],
+     "levels": 24
+    },
+    {
+     "id": "w1263770856",
+     "height": 76.8,
+     "poly": [
+      [
+       -34.71,
+       -146.45
+      ],
+      [
+       -40.18,
+       -137.87
+      ],
+      [
+       -41.83,
+       -138.91
+      ],
+      [
+       -43.26,
+       -136.66
+      ],
+      [
+       -45.57,
+       -138.13
+      ],
+      [
+       -46.24,
+       -137.07
+      ],
+      [
+       -50.14,
+       -139.56
+      ],
+      [
+       -45.11,
+       -147.47
+      ],
+      [
+       -44.22,
+       -146.9
+      ],
+      [
+       -43.52,
+       -148.01
+      ],
+      [
+       -40.45,
+       -152.83
+      ],
+      [
+       -41.34,
+       -153.39
+      ],
+      [
+       -36.37,
+       -161.19
+      ],
+      [
+       -32.24,
+       -158.57
+      ],
+      [
+       -32.98,
+       -157.42
+      ],
+      [
+       -30.73,
+       -155.99
+      ],
+      [
+       -32.21,
+       -153.68
+      ],
+      [
+       -30.72,
+       -152.73
+      ],
+      [
+       -33.32,
+       -148.64
+      ],
+      [
+       -32.76,
+       -148.28
+      ],
+      [
+       -28.12,
+       -148.08
+      ],
+      [
+       -27.78,
+       -156
+      ],
+      [
+       -24.63,
+       -155.87
+      ],
+      [
+       -23.67,
+       -178.25
+      ],
+      [
+       -37.5,
+       -178.85
+      ],
+      [
+       -37.81,
+       -171.6
+      ],
+      [
+       -39.28,
+       -171.66
+      ],
+      [
+       -39.4,
+       -168.93
+      ],
+      [
+       -42.21,
+       -169.05
+      ],
+      [
+       -42.26,
+       -167.84
+      ],
+      [
+       -47.14,
+       -168.05
+      ],
+      [
+       -46.74,
+       -177.27
+      ],
+      [
+       -45.47,
+       -177.22
+      ],
+      [
+       -45.17,
+       -184.25
+      ],
+      [
+       -46.44,
+       -184.3
+      ],
+      [
+       -46.04,
+       -193.55
+      ],
+      [
+       -41.15,
+       -193.33
+      ],
+      [
+       -41.22,
+       -191.95
+      ],
+      [
+       -38.4,
+       -191.83
+      ],
+      [
+       -38.51,
+       -189.31
+      ],
+      [
+       -37.05,
+       -189.25
+      ],
+      [
+       -36.96,
+       -191.17
+      ],
+      [
+       -34.12,
+       -191.05
+      ],
+      [
+       -34.24,
+       -188.42
+      ],
+      [
+       -31.02,
+       -188.29
+      ],
+      [
+       -30.98,
+       -189.18
+      ],
+      [
+       -24.58,
+       -188.91
+      ],
+      [
+       -24.85,
+       -182.78
+      ],
+      [
+       -28.01,
+       -182.92
+      ],
+      [
+       -28.12,
+       -180.37
+      ],
+      [
+       -21.9,
+       -180.1
+      ],
+      [
+       -21.6,
+       -186.98
+      ],
+      [
+       -19.99,
+       -186.92
+      ],
+      [
+       -19.88,
+       -189.66
+      ],
+      [
+       -16.87,
+       -189.53
+      ],
+      [
+       -16.82,
+       -190.89
+      ],
+      [
+       -12.1,
+       -190.69
+      ],
+      [
+       -12.51,
+       -181.34
+      ],
+      [
+       -13.62,
+       -181.39
+      ],
+      [
+       -13.92,
+       -174.33
+      ],
+      [
+       -12.81,
+       -174.28
+      ],
+      [
+       -13.22,
+       -164.89
+      ],
+      [
+       -17.94,
+       -165.1
+      ],
+      [
+       -17.87,
+       -166.5
+      ],
+      [
+       -20.88,
+       -166.63
+      ],
+      [
+       -20.75,
+       -169.43
+      ],
+      [
+       -22.36,
+       -169.5
+      ],
+      [
+       -22.83,
+       -158.49
+      ],
+      [
+       -21.23,
+       -158.41
+      ],
+      [
+       -21.11,
+       -161.14
+      ],
+      [
+       -18.11,
+       -161.01
+      ],
+      [
+       -18.05,
+       -162.27
+      ],
+      [
+       -13.34,
+       -162.06
+      ],
+      [
+       -13.73,
+       -152.95
+      ],
+      [
+       -14.85,
+       -153.01
+      ],
+      [
+       -15.01,
+       -149.39
+      ],
+      [
+       -15.81,
+       -149.42
+      ],
+      [
+       -15.93,
+       -146.56
+      ],
+      [
+       -15.13,
+       -146.53
+      ],
+      [
+       -15.28,
+       -143.22
+      ],
+      [
+       -14.16,
+       -143.18
+      ],
+      [
+       -14.57,
+       -133.78
+      ],
+      [
+       -17.38,
+       -133.9
+      ],
+      [
+       -19.28,
+       -133.98
+      ],
+      [
+       -19.23,
+       -135.26
+      ],
+      [
+       -22.22,
+       -135.39
+      ],
+      [
+       -22.11,
+       -138.18
+      ],
+      [
+       -23.71,
+       -138.24
+      ],
+      [
+       -23.48,
+       -143.58
+      ],
+      [
+       -25,
+       -143.64
+      ],
+      [
+       -25.05,
+       -142.53
+      ],
+      [
+       -30.72,
+       -142.77
+      ],
+      [
+       -30.56,
+       -146.27
+      ]
+     ],
+     "levels": 24
+    },
+    {
+     "id": "w1263770857",
+     "height": 3.2,
+     "poly": [
+      [
+       -79.01,
+       -22.76
+      ],
+      [
+       -81.1,
+       -22.85
+      ],
+      [
+       -100.58,
+       -23.7
+      ],
+      [
+       -99.62,
+       -45.76
+      ],
+      [
+       -78.05,
+       -44.82
+      ]
+     ],
+     "levels": 1
+    },
+    {
+     "id": "w1263770858",
+     "height": 22.4,
+     "poly": [
+      [
+       -16.92,
+       -121.21
+      ],
+      [
+       -20.82,
+       -31.36
+      ],
+      [
+       -33.93,
+       -19.34
+      ],
+      [
+       -33.99,
+       -18.05
+      ],
+      [
+       -34.56,
+       -18.07
+      ],
+      [
+       -35.11,
+       -18.11
+      ],
+      [
+       -81.21,
+       -20.1
+      ],
+      [
+       -81.1,
+       -22.85
+      ],
+      [
+       -79.01,
+       -22.76
+      ],
+      [
+       -78.05,
+       -44.82
+      ],
+      [
+       -77.22,
+       -64.06
+      ],
+      [
+       -76.69,
+       -76.46
+      ],
+      [
+       -82.89,
+       -76.73
+      ],
+      [
+       -82.72,
+       -80.71
+      ],
+      [
+       -79.31,
+       -80.57
+      ],
+      [
+       -79.25,
+       -81.91
+      ],
+      [
+       -78.95,
+       -88.7
+      ],
+      [
+       -76.15,
+       -88.58
+      ],
+      [
+       -75.91,
+       -94.43
+      ],
+      [
+       -74.41,
+       -94.37
+      ],
+      [
+       -70.99,
+       -99.75
+      ],
+      [
+       -56.25,
+       -122.91
+      ],
+      [
+       -34.86,
+       -121.98
+      ],
+      [
+       -34.72,
+       -125.19
+      ],
+      [
+       -27.7,
+       -124.89
+      ],
+      [
+       -27.83,
+       -121.67
+      ],
+      [
+       -17.94,
+       -121.24
+      ]
+     ],
+     "levels": 7
+    }
+   ],
+   "dataFile": "riot.osm.json"
+  },
+  "bearing": 35
  }
 }

@@ -21,6 +21,9 @@ export function build() {
   place('turnstile', [-1.1, 0, -9], { id: 'ts-1' }); place('turnstile', [1.1, 0, -9], { id: 'ts-2' });
   place('sofa', [-8, 0, 0.5], { id: 'sofa' }); place('plant', [4, 0, 2.5]); place('plant', [-10, 0, -12]);
   place('notice-board', [5, 0, -2.5], { id: 'board', label: 'Notices' });
+  // imported CC0 models (Kenney, Poly Haven): a lounge corner and a wet floor sign at the entrance
+  place('kenney-sofa', [-12, 0, 0.5], { id: 'sofa-2', yaw: 90 }); place('polyhaven-coffee-table', [-10.3, 0, 0.5], { id: 'coffee-table' });
+  place('kenney-potted-plant', [-13.6, 0, 2.6]); place('polyhaven-wet-floor-sign', [1.6, 0, 1.8], { id: 'wet-sign', yaw: 200 });
   place('lift-door', [22, 0, -11.6], { id: 'lift-1', yaw: 0 }); place('lift-door', [25, 0, -11.6], { id: 'lift-2', yaw: 0 });
   // stairs: two flights with a landing, a U shape up to level 2 at 4.5 m
   const A = cmd('build_stairs', { id: 'stair-a', from: [12, 0, -11.1], yaw: 0, height: 2.25, ...E });

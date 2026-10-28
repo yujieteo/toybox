@@ -2,6 +2,7 @@
 // Run: node core/mcp.mjs --scene PATH [--render-url URL]
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { toolSpecs } from './commands.mjs';
 import { callTool } from './session.mjs';
 
@@ -18,7 +19,7 @@ export function parseArgs(argv) {
 
 async function toolCall(opts, name, args) {
   const text = (obj, isError) => ({ content: [{ type: 'text', text: JSON.stringify(obj) }], isError: !!isError });
-  const res = callTool(opts.scene, name, args || {});
+  const res = await callTool(opts.scene, name, args || {}, { exportDir: dirname(resolve(opts.scene)) });
   if (!res.ok) return text({ errors: res.errors }, true);
   if (name === 'render_preview') {
     if (!opts.renderUrl) return text({ errors: [{ code: 'no_viewer', message: 'No viewer is running, so render_preview cannot draw a picture. Start the Toybox viewer and the daemon.' }] }, true);

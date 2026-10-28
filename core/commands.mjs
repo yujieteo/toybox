@@ -2,10 +2,11 @@
 // A command changes the scene only when the result is valid.
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:path';
 import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible,
   HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
 import { rotYaw } from './geom.mjs';
+import { parseOverpass, toMapBlock, writeOdbl } from './osm.mjs';
 
 class Fail extends Error { constructor(code, message) { super(message); this.code = code; } }
 const fail = (errors) => ({ ok: false, errors });
@@ -387,7 +388,7 @@ def('place_sign', 'Place a sign model that shows text on its front.', { text: st
 def('set_pose', 'Set the pose of an object at time t. Without t (or t = 0) it sets the starting pose.', { id: str, t: num, pose: { type: 'string', enum: POSES } }, ['id', 'pose'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     const o = find(s, a.id);
-    if (!a.t) { o.pose = a.pose; const tr = trackOf(s, o.id, 'pose'); if (tr) { tr.keys = tr.keys.filter((k) => k.t > 0); if (!tr.keys.length) s.tracks = s.tracks.filter((x) => x !== tr); } return { id: o.id, t: 0, pose: a.pose }; }
+    if (!a.t) { o.pose = a.pose; if (trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: a.pose, ease: 'step' }]); return { id: o.id, t: 0, pose: a.pose }; }
     if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }]);
     mergeKeys(s, o.id, 'pose', [{ t: a.t, v: a.pose, ease: 'step' }]);
     return { id: o.id, t: a.t, pose: a.pose };
@@ -488,20 +489,35 @@ def('add_chapter', 'Add a chapter (a named time range). With caption it also add
     return { id };
   }));
 
-def('set_backdrop', 'Set the ground and the map. ground is grass, street, floor, plain or map. origin is {lat, lon}. osm is a block from toMapBlock.',
+def('set_backdrop', 'Set the ground and the map. ground is grass, street, floor, plain or map. Ground "map" with an origin shows OneMap tiles. origin is {lat, lon}. onemap is {zoom, style} for the tiles.',
   { ground: { type: 'string', enum: GROUNDS }, size: { type: 'array', items: num, minItems: 2, maxItems: 2 }, color: str,
-    origin: { type: 'object', properties: { lat: num, lon: num }, required: ['lat', 'lon'] }, onemap: { type: 'object' }, osm: { type: 'object' }, source: str, estimated: { type: 'boolean' } }, [],
+    origin: { type: 'object', properties: { lat: num, lon: num }, required: ['lat', 'lon'] }, onemap: { type: 'object' }, source: str, estimated: { type: 'boolean' } }, [],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     s.backdrop = { ...(s.backdrop || {}), ...(a.ground ? { ground: a.ground } : {}), ...(a.size ? { size: a.size } : {}), ...(a.color ? { color: a.color } : {}) };
-    if (a.origin || a.onemap || a.osm) {
+    if (a.origin || a.onemap) {
       s.map = s.map || {};
       if (a.origin) s.map.origin = a.origin;
       if (a.onemap) s.map.onemap = a.onemap;
-      if (a.osm) s.map.osm = a.osm;
       if (a.source !== undefined) s.map.source = a.source;
       if (a.estimated !== undefined) s.map.estimated = a.estimated;
     }
     return { backdrop: s.backdrop };
+  }));
+
+def('import_osm', 'Import the OpenStreetMap building footprints inside bbox [south, west, north, east] in degrees (at most 0.01 degrees a side). The scene origin becomes the bbox centre when the scene has no origin. bearing (degrees) turns the map so that a street with that compass bearing runs along z. The scene shows the OpenStreetMap credit by itself. The tool writes the ODbL data file next to the scene.',
+  { bbox: { type: 'array', items: num, minItems: 4, maxItems: 4 }, bearing: num }, ['bbox'],
+  (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    const [so, w, n, e] = a.bbox;
+    if (!(so < n && w < e && n - so <= 0.01 && e - w <= 0.01)) throw new Fail('bad_args', 'bbox is [south, west, north, east] with south < north, west < east and at most 0.01 degrees a side.');
+    if (!ctx.overpass) throw new Fail('no_osm_data', 'No OpenStreetMap answer. Call import_osm through the MCP server or the command line.');
+    s.map = s.map || {};
+    s.map.origin = s.map.origin || { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
+    const found = parseOverpass(ctx.overpass, s.map.origin);
+    if (!found.length) throw new Fail('no_buildings', 'OpenStreetMap has no building footprints inside this bbox.');
+    s.map.osm = toMapBlock(found, s.map.origin, a.bearing || 0);
+    if (a.bearing) s.map.bearing = a.bearing; else delete s.map.bearing;
+    if (ctx.odblPath) { writeOdbl(ctx.odblPath, found, s.map.origin, a.bearing || 0); s.map.osm.dataFile = basename(ctx.odblPath); }
+    return { buildings: found.length, origin: s.map.origin, bearing: a.bearing || 0, dataFile: s.map.osm.dataFile };
   }));
 
 def('set_cutaway', 'Hide ceilings and the walls between the camera and its target (indoor scenes).', { ceilings: { type: 'boolean' }, nearWalls: { type: 'boolean' } }, [],
@@ -520,10 +536,16 @@ def('export_scene', 'Write the scene to a .toybox.json file (and the captions to
   (scene, a, ctx) => {
     const errs = validate(scene, ctx.catalogue || loadCatalogue());
     if (!a.path) return okr({ errors: errs.length, scene });
-    saveScene(a.path, scene);
-    const srtPath = a.path.replace(/(\.toybox)?\.json$/, '') + '.srt';
+    let file = a.path;
+    if (ctx.exportDir) {
+      file = resolve(ctx.exportDir, a.path);
+      const rel = relative(ctx.exportDir, file);
+      if (!rel || rel.startsWith('..') || isAbsolute(rel) || !file.endsWith('.toybox.json')) throw new Fail('bad_path', `path must be a .toybox.json file inside ${ctx.exportDir}.`);
+    }
+    saveScene(file, scene);
+    const srtPath = file.replace(/(\.toybox)?\.json$/, '') + '.srt';
     writeFileSync(srtPath, srt(scene));
-    return okr({ path: a.path, srt: srtPath, errors: errs.length });
+    return okr({ path: file, srt: srtPath, errors: errs.length });
   });
 
 const GUIDE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'guide');
@@ -542,7 +564,7 @@ export function runTool(scene, name, args, ctx) {
   return commands[name](scene, args, ctx);
 }
 export const { list_models, new_scene, get_scene, place, place_near, place_group, transform, duplicate, remove, build_room, build_stairs, place_sign,
-  set_pose, animate, move_along, set_camera, set_lighting, add_caption, add_callout, add_chapter, set_backdrop, set_cutaway, add_credit, render_preview, export_scene, guide } = commands;
+  set_pose, animate, move_along, set_camera, set_lighting, add_caption, add_callout, add_chapter, set_backdrop, import_osm, set_cutaway, add_credit, render_preview, export_scene, guide } = commands;
 export const validate_scene = commands.validate;
 
 export const READ_ONLY = new Set(['list_models', 'get_scene', 'validate', 'render_preview', 'guide', 'export_scene']);
