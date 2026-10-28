@@ -253,6 +253,32 @@ add('turnstile', 'Turnstile gate', 'furniture', [
   box([0, 0.5, 0], [0.25, 1.0, 0.9], C.steel, 'body'), box([0.35, 0.95, 0], [0.5, 0.04, 0.04], C.glass, 'arm'), box([0, 1.05, 0], [0.27, 0.08, 0.92], C.dark),
 ], ['turnstile']);
 
+// ---- outfits: colours and parts that a person wears. A part follows one bone of the body (names in
+// assets/people/skel.json). pos and rot are in the rest pose: origin between the feet, facing +z.
+const SPF = 'https://en.wikipedia.org/wiki/Uniforms_of_the_Singapore_Police_Force';
+const RIOT = 'https://en.wikipedia.org/wiki/2013_Little_India_riot';
+const SOC_KIT = 'https://www.hometeamns.sg/frontline/ensuring-safety-security-of-singapore/';
+const SOC_DRILL = 'https://www.nas.gov.sg/archivesonline/photographs/record-details/d3115385-1161-11e3-83d5-0050568939ad';
+const gear = (bone, prim, pos, size, color, rot) => ({ bone, ...part(prim, pos, size, color, null, rot) });
+const helmet = (color) => gear('head', 'sphere', [0, 1.655, 0.01], [0.25, 0.23, 0.27], color);
+const outfits = [];
+const outfit = (id, name, colors, parts, source, note) => outfits.push({ id, name, colors, parts, source, note });
+outfit('police', 'Singapore Police Force officer, dark blue uniform and peak cap', { shirt: '#2b3d5e', pants: '#2b3d5e' }, [
+  gear('head', 'cylinder', [0, 1.71, 0.045], [0.22, 0.07, 0.23], '#26324a'), gear('head', 'box', [0, 1.69, 0.17], [0.17, 0.02, 0.07], '#14171c'),
+], SPF, 'Dark blue shirt, trousers and peak cap. Colour shades are estimated.');
+outfit('police-shield', 'Police officer with helmet and round shield', { shirt: '#2b3d5e', pants: '#2b3d5e' }, [
+  helmet('#26324a'),
+  gear('spine03', 'cylinder', [0.05, 1.1, 0.33], [0.6, 0.03, 0.6], '#b7c3cc', [90, 0, 0]),
+], RIOT, 'The riot account names officers with helmets and shields at the bus. Shield shape and colours are estimated.');
+outfit('soc-riot', 'Special Operations Command riot officer: helmet with visor, long shield, baton', { shirt: '#1b222c', pants: '#1b222c' }, [
+  helmet('#15191f'),
+  gear('head', 'box', [0, 1.6, 0.19], [0.22, 0.15, 0.02], '#8fb0c4', [-12, 0, 0]),
+  gear('spine03', 'box', [0.06, 0.92, 0.36], [0.56, 1.1, 0.03], '#a9c0d0'),
+  gear('spine03', 'box', [0.06, 1.47, 0.36], [0.58, 0.04, 0.05], '#15191f'),
+  gear('spine03', 'box', [0.06, 0.37, 0.36], [0.58, 0.04, 0.05], '#15191f'),
+  gear('wrist.R', 'cylinder', [-0.47, 1.03, 0.4], [0.035, 0.6, 0.035], '#101215', [90, 0, 0]),
+], `${SPF} ; ${SOC_KIT} ; ${SOC_DRILL}`, 'Darker blue combat dress, helmet, tactical shield and baton. The visor, shield size and colours are estimated.');
+
 // Finish: centre every model on x and z, put its lowest point at y=0, and set size from the parts.
 function finish(m) {
   const b = modelBounds(m.parts);
@@ -269,7 +295,7 @@ const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets');
 export function buildCatalogue() {
   const index = join(ASSETS, 'models', 'index.json');
   const imported = existsSync(index) ? JSON.parse(readFileSync(index, 'utf8')) : [];
-  return { models: [...models.map(finish), ...imported] };
+  return { models: [...models.map(finish), ...imported], outfits };
 }
 
 export function writeCatalogue() {

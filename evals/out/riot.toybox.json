@@ -5051,11 +5051,8 @@
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#2f4a6b",
-    "pants": "#2f4a6b"
-   },
    "pose": "stand",
+   "outfit": "police-shield",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5079,11 +5076,8 @@
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#2f4a6b",
-    "pants": "#2f4a6b"
-   },
    "pose": "stand",
+   "outfit": "police-shield",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5107,11 +5101,8 @@
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#2f4a6b",
-    "pants": "#2f4a6b"
-   },
    "pose": "stand",
+   "outfit": "police",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5135,11 +5126,8 @@
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#2f4a6b",
-    "pants": "#2f4a6b"
-   },
    "pose": "stand",
+   "outfit": "police",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5163,11 +5151,8 @@
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#2f4a6b",
-    "pants": "#2f4a6b"
-   },
    "pose": "stand",
+   "outfit": "police",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5191,11 +5176,8 @@
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#2f4a6b",
-    "pants": "#2f4a6b"
-   },
    "pose": "stand",
+   "outfit": "police",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5248,8 +5230,8 @@
    ],
    "flip": false,
    "colors": {
-    "shirt": "#6f9a6a",
-    "pants": "#6b5b4b"
+    "shirt": "#b8765f",
+    "pants": "#3a3f47"
    },
    "pose": "stand",
    "tags": [],
@@ -5396,22 +5378,19 @@
    "model": "person",
    "variant": 0,
    "at": [
-    -3,
+    -2.7,
     0,
-    56
+    60
    ],
-   "yaw": 0,
+   "yaw": 180,
    "scale": [
     1,
     1,
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#4f7a52",
-    "pants": "#3a3f47"
-   },
    "pose": "stand",
+   "outfit": "soc-riot",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5424,22 +5403,19 @@
    "model": "person",
    "variant": 1,
    "at": [
-    -1.8,
+    -2.1,
     0,
-    56
+    60
    ],
-   "yaw": 0,
+   "yaw": 180,
    "scale": [
     1,
     1,
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#4f7a52",
-    "pants": "#3a3f47"
-   },
    "pose": "stand",
+   "outfit": "soc-riot",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5452,22 +5428,19 @@
    "model": "person",
    "variant": 3,
    "at": [
-    -0.6,
+    -1.5,
     0,
-    56
+    60
    ],
-   "yaw": 0,
+   "yaw": 180,
    "scale": [
     1,
     1,
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#4f7a52",
-    "pants": "#3a3f47"
-   },
    "pose": "stand",
+   "outfit": "soc-riot",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5480,22 +5453,19 @@
    "model": "person",
    "variant": 4,
    "at": [
-    0.6,
+    -0.9,
     0,
-    56
+    60
    ],
-   "yaw": 0,
+   "yaw": 180,
    "scale": [
     1,
     1,
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#4f7a52",
-    "pants": "#3a3f47"
-   },
    "pose": "stand",
+   "outfit": "soc-riot",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5508,22 +5478,19 @@
    "model": "person",
    "variant": 6,
    "at": [
-    1.8,
+    -0.3,
     0,
-    56
+    60
    ],
-   "yaw": 0,
+   "yaw": 180,
    "scale": [
     1,
     1,
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#4f7a52",
-    "pants": "#3a3f47"
-   },
    "pose": "stand",
+   "outfit": "soc-riot",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5536,22 +5503,119 @@
    "model": "person",
    "variant": 7,
    "at": [
-    3,
+    0.3,
     0,
-    56
+    60
    ],
-   "yaw": 0,
+   "yaw": 180,
    "scale": [
     1,
     1,
     1
    ],
    "flip": false,
-   "colors": {
-    "shirt": "#4f7a52",
-    "pants": "#3a3f47"
-   },
    "pose": "stand",
+   "outfit": "soc-riot",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "soc-7",
+   "model": "person",
+   "variant": 9,
+   "at": [
+    0.9,
+    0,
+    60
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "pose": "stand",
+   "outfit": "soc-riot",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "soc-8",
+   "model": "person",
+   "variant": 13,
+   "at": [
+    1.5,
+    0,
+    60
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "pose": "stand",
+   "outfit": "soc-riot",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "soc-9",
+   "model": "person",
+   "variant": 15,
+   "at": [
+    2.1,
+    0,
+    60
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "pose": "stand",
+   "outfit": "soc-riot",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: street layout and positions are not in a public source",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "soc-10",
+   "model": "person",
+   "variant": 22,
+   "at": [
+    2.7,
+    0,
+    60
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "pose": "stand",
+   "outfit": "soc-riot",
    "tags": [],
    "label": "",
    "parent": null,
@@ -5684,8 +5748,8 @@
    ],
    "flip": false,
    "colors": {
-    "shirt": "#3f6e9a",
-    "pants": "#4a5568"
+    "shirt": "#d9b44a",
+    "pants": "#3a3f47"
    },
    "pose": "stand",
    "tags": [],
@@ -5712,8 +5776,8 @@
    ],
    "flip": false,
    "colors": {
-    "shirt": "#3f6e9a",
-    "pants": "#3a3f47"
+    "shirt": "#8c8c86",
+    "pants": "#6b5b4b"
    },
    "pose": "stand",
    "tags": [],
@@ -5740,8 +5804,8 @@
    ],
    "flip": false,
    "colors": {
-    "shirt": "#d9b44a",
-    "pants": "#2f4a6b"
+    "shirt": "#6f9a6a",
+    "pants": "#6b5b4b"
    },
    "pose": "stand",
    "tags": [],
@@ -14169,20 +14233,20 @@
    "channel": "at",
    "keys": [
     {
-     "t": 114.4195559022686,
+     "t": 114.03203220732861,
      "v": [
-      -3,
+      -2.7,
       0,
-      56
+      60
      ],
      "ease": "linear"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": [
-      -5,
+      -5.4,
       0,
-      3.2
+      17
      ],
      "ease": "linear"
     }
@@ -14193,8 +14257,8 @@
    "channel": "yaw",
    "keys": [
     {
-     "t": 114.4195559022686,
-     "v": -177.831,
+     "t": 114.03203220732861,
+     "v": 183.593,
      "ease": "linear"
     }
    ]
@@ -14209,12 +14273,12 @@
      "ease": "step"
     },
     {
-     "t": 114.4195559022686,
+     "t": 114.03203220732861,
      "v": "run",
      "ease": "step"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": "stand",
      "ease": "step"
     }
@@ -14225,38 +14289,150 @@
    "channel": "at",
    "keys": [
     {
-     "t": 114.42532509447692,
+     "t": 114.04131985275141,
+     "v": [
+      -2.1,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
+     "v": [
+      -4.2,
+      0,
+      17
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-2",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 114.04131985275141,
+     "v": 182.796,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-2",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 114.04131985275141,
+     "v": "run",
+     "ease": "step"
+    },
+    {
+     "t": 126,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "soc-3",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 114.04829032324116,
+     "v": [
+      -1.5,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
+     "v": [
+      -3,
+      0,
+      17
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-3",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 114.04829032324116,
+     "v": 181.998,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-3",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 114.04829032324116,
+     "v": "run",
+     "ease": "step"
+    },
+    {
+     "t": 126,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "soc-4",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 114.05293956295442,
+     "v": [
+      -0.9,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
      "v": [
       -1.8,
       0,
-      56
-     ],
-     "ease": "linear"
-    },
-    {
-     "t": 127,
-     "v": [
-      -3,
-      0,
-      3.2
+      17
      ],
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-2",
+   "object": "soc-4",
    "channel": "yaw",
    "keys": [
     {
-     "t": 114.42532509447692,
-     "v": -178.698,
+     "t": 114.05293956295442,
+     "v": 181.199,
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-2",
+   "object": "soc-4",
    "channel": "pose",
    "keys": [
     {
@@ -14265,54 +14441,54 @@
      "ease": "step"
     },
     {
-     "t": 114.42532509447692,
+     "t": 114.05293956295442,
      "v": "run",
      "ease": "step"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": "stand",
      "ease": "step"
     }
    ]
   },
   {
-   "object": "soc-3",
+   "object": "soc-5",
    "channel": "at",
    "keys": [
     {
-     "t": 114.42821068338658,
+     "t": 114.05526486141848,
+     "v": [
+      -0.3,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
      "v": [
       -0.6,
       0,
-      56
-     ],
-     "ease": "linear"
-    },
-    {
-     "t": 127,
-     "v": [
-      -1,
-      0,
-      3.2
+      17
      ],
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-3",
+   "object": "soc-5",
    "channel": "yaw",
    "keys": [
     {
-     "t": 114.42821068338658,
-     "v": -179.566,
+     "t": 114.05526486141848,
+     "v": 180.4,
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-3",
+   "object": "soc-5",
    "channel": "pose",
    "keys": [
     {
@@ -14321,54 +14497,54 @@
      "ease": "step"
     },
     {
-     "t": 114.42821068338658,
+     "t": 114.05526486141848,
      "v": "run",
      "ease": "step"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": "stand",
      "ease": "step"
     }
    ]
   },
   {
-   "object": "soc-4",
+   "object": "soc-6",
    "channel": "at",
    "keys": [
     {
-     "t": 114.42821068338658,
+     "t": 114.05526486141848,
+     "v": [
+      0.3,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
      "v": [
       0.6,
       0,
-      56
-     ],
-     "ease": "linear"
-    },
-    {
-     "t": 127,
-     "v": [
-      1,
-      0,
-      3.2
+      17
      ],
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-4",
+   "object": "soc-6",
    "channel": "yaw",
    "keys": [
     {
-     "t": 114.42821068338658,
-     "v": 179.566,
+     "t": 114.05526486141848,
+     "v": 179.6,
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-4",
+   "object": "soc-6",
    "channel": "pose",
    "keys": [
     {
@@ -14377,54 +14553,54 @@
      "ease": "step"
     },
     {
-     "t": 114.42821068338658,
+     "t": 114.05526486141848,
      "v": "run",
      "ease": "step"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": "stand",
      "ease": "step"
     }
    ]
   },
   {
-   "object": "soc-5",
+   "object": "soc-7",
    "channel": "at",
    "keys": [
     {
-     "t": 114.42532509447692,
+     "t": 114.05293956295442,
+     "v": [
+      0.9,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
      "v": [
       1.8,
       0,
-      56
-     ],
-     "ease": "linear"
-    },
-    {
-     "t": 127,
-     "v": [
-      3,
-      0,
-      3.2
+      17
      ],
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-5",
+   "object": "soc-7",
    "channel": "yaw",
    "keys": [
     {
-     "t": 114.42532509447692,
-     "v": 178.698,
+     "t": 114.05293956295442,
+     "v": 178.801,
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-5",
+   "object": "soc-7",
    "channel": "pose",
    "keys": [
     {
@@ -14433,54 +14609,54 @@
      "ease": "step"
     },
     {
-     "t": 114.42532509447692,
+     "t": 114.05293956295442,
      "v": "run",
      "ease": "step"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": "stand",
      "ease": "step"
     }
    ]
   },
   {
-   "object": "soc-6",
+   "object": "soc-8",
    "channel": "at",
    "keys": [
     {
-     "t": 114.4195559022686,
+     "t": 114.04829032324116,
      "v": [
-      3,
+      1.5,
       0,
-      56
+      60
      ],
      "ease": "linear"
     },
     {
-     "t": 127,
+     "t": 126,
      "v": [
-      5,
+      3,
       0,
-      3.2
+      17
      ],
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-6",
+   "object": "soc-8",
    "channel": "yaw",
    "keys": [
     {
-     "t": 114.4195559022686,
-     "v": 177.831,
+     "t": 114.04829032324116,
+     "v": 178.002,
      "ease": "linear"
     }
    ]
   },
   {
-   "object": "soc-6",
+   "object": "soc-8",
    "channel": "pose",
    "keys": [
     {
@@ -14489,12 +14665,124 @@
      "ease": "step"
     },
     {
-     "t": 114.4195559022686,
+     "t": 114.04829032324116,
      "v": "run",
      "ease": "step"
     },
     {
-     "t": 127,
+     "t": 126,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "soc-9",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 114.04131985275141,
+     "v": [
+      2.1,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
+     "v": [
+      4.2,
+      0,
+      17
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-9",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 114.04131985275141,
+     "v": 177.204,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-9",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 114.04131985275141,
+     "v": "run",
+     "ease": "step"
+    },
+    {
+     "t": 126,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "soc-10",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 114.03203220732861,
+     "v": [
+      2.7,
+      0,
+      60
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 126,
+     "v": [
+      5.4,
+      0,
+      17
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-10",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 114.03203220732861,
+     "v": 176.407,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "soc-10",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 114.03203220732861,
+     "v": "run",
+     "ease": "step"
+    },
+    {
+     "t": 126,
      "v": "stand",
      "ease": "step"
     }
@@ -14690,9 +14978,9 @@
    "t": 0,
    "shot": "wide",
    "eye": [
-    9.646,
-    15.052,
-    16.503
+    -9.425,
+    27.612,
+    -35.895
    ],
    "target": [
     0,
@@ -14706,9 +14994,9 @@
    "t": 6,
    "shot": "wide",
    "eye": [
-    12.205,
-    14.859,
-    15.024
+    -11.925,
+    27.258,
+    -34.449
    ],
    "target": [
     0,
@@ -14818,9 +15106,9 @@
    "t": 24,
    "shot": "wide",
    "eye": [
-    3.857,
-    5.57,
-    -5.703
+    3.036,
+    8.535,
+    -7.96
    ],
    "target": [
     0.837,
@@ -14834,9 +15122,9 @@
    "t": 28.5,
    "shot": "wide",
    "eye": [
-    4.708,
-    5.57,
-    -6.064
+    3.655,
+    8.535,
+    -8.223
    ],
    "target": [
     0.837,
@@ -15170,9 +15458,9 @@
    "t": 96,
    "shot": "close",
    "eye": [
-    4.559,
-    1.592,
-    -16.318
+    5.992,
+    1.572,
+    -17.357
    ],
    "target": [
     3.655,
@@ -15186,9 +15474,9 @@
    "t": 101,
    "shot": "close",
    "eye": [
-    6.425,
-    1.575,
-    -11.416
+    7.763,
+    1.568,
+    -12.477
    ],
    "target": [
     5.23,
@@ -15234,9 +15522,9 @@
    "t": 108,
    "shot": "wide",
    "eye": [
-    3.684,
-    7.351,
-    16.542
+    1.902,
+    7.825,
+    17.939
    ],
    "target": [
     -0.25,
@@ -15250,9 +15538,9 @@
    "t": 113,
    "shot": "wide",
    "eye": [
-    3.281,
-    5.93,
-    12.512
+    2.013,
+    6.255,
+    13.651
    ],
    "target": [
     -0.59,
@@ -15298,14 +15586,14 @@
    "t": 120,
    "shot": "medium",
    "eye": [
-    -0.675,
+    -3.149,
     2.085,
-    37.144
+    33.717
    ],
    "target": [
-    -2.335,
+    -3.149,
     0.875,
-    32.585
+    38.569
    ],
    "fov": 50,
    "ease": "inout"
@@ -15314,46 +15602,46 @@
    "t": 125,
    "shot": "medium",
    "eye": [
-    -0.685,
+    -4.534,
     2.085,
-    15.955
+    15.768
    ],
    "target": [
-    -2.812,
+    -4.027,
     0.875,
-    11.594
+    20.593
    ],
    "fov": 50,
    "ease": "inout"
   },
   {
    "t": 126,
-   "shot": "wide",
+   "shot": "medium",
    "eye": [
-    6.087,
-    8.198,
-    15.146
+    0,
+    3.831,
+    8.879
    ],
    "target": [
-    1.376,
+    0,
     0.875,
-    2.203
+    17
    ],
    "fov": 50,
    "ease": "inout"
   },
   {
    "t": 131,
-   "shot": "wide",
+   "shot": "medium",
    "eye": [
-    5.94,
-    6.507,
-    9.624
+    -0.897,
+    3.997,
+    8.469
    ],
    "target": [
-    1.297,
+    0,
     0.875,
-    0.105
+    17
    ],
    "fov": 50,
    "ease": "inout"
@@ -15362,14 +15650,14 @@
    "t": 132,
    "shot": "top",
    "eye": [
-    0.034,
-    13.583,
-    -9.954
+    0,
+    54.481,
+    8.965
    ],
    "target": [
-    0.034,
+    0,
     0.875,
-    -11.066
+    4.275
    ],
    "fov": 50,
    "ease": "inout"
@@ -15378,14 +15666,14 @@
    "t": 143,
    "shot": "top",
    "eye": [
-    -19.815,
-    141.473,
-    0.417
+    0.498,
+    55.333,
+    9.013
    ],
    "target": [
-    -21.101,
+    0,
     0.875,
-    -11.817
+    4.275
    ],
    "fov": 50,
    "ease": "inout"
@@ -15394,9 +15682,9 @@
    "t": 144,
    "shot": "wide",
    "eye": [
-    13.623,
-    22.452,
-    58.671
+    -7.43,
+    23.911,
+    63.174
    ],
    "target": [
     -0.025,
@@ -15410,9 +15698,9 @@
    "t": 155,
    "shot": "wide",
    "eye": [
-    10.704,
-    14.073,
-    34.968
+    -1.826,
+    16.068,
+    41.096
    ],
    "target": [
     0.12,
@@ -15605,7 +15893,7 @@
    "end": 132,
    "title": "Special Operations Command",
    "clock": "22:50",
-   "caption": "At 22:50 the Special Operations Command arrived. Many rioters had surrendered and the crowd had become smaller.",
+   "caption": "At 22:50 the Special Operations Command arrived. Many rioters had surrendered and the crowd had become smaller. The officers shown are representative.",
    "focus": [
     "soc-1"
    ],
@@ -15710,7 +15998,7 @@
   {
    "start": 120,
    "end": 132,
-   "text": "At 22:50 the Special Operations Command arrived. Many rioters had surrendered and the crowd had become smaller."
+   "text": "At 22:50 the Special Operations Command arrived. Many rioters had surrendered and the crowd had become smaller. The officers shown are representative."
   },
   {
    "start": 132,

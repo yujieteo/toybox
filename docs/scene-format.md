@@ -34,6 +34,7 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 
 - `objects[].model` is an id from `assets/catalogue.json`, or `person`. A person has `variant` 0 to 23 and a `pose` from: `stand`, `walk`, `run`, `wave`, `point`, `cheer`, `sit`, `bend`.
 - `colors` maps a colour slot of the model (for example `body`, `roof`, `shirt`, `pants`) to a hex colour. A person uses the slots `shirt` and `pants` only. Skin, hair and eyes come from `variant`.
+- `outfit` (person only) is an id from the catalogue `outfits` list, for example `soc-riot`. The outfit sets the default `shirt` and `pants` colours and adds its parts (helmet, shield, baton). `colors` still wins over the outfit colours.
 - `parent` is an object id. `at`, `yaw` and `scale` are then local to the parent. Compound catalogue models are expanded by the viewer, so an author never needs `parent` for them.
 - `tags` may hold `wall` (with `yaw` as the outward normal direction of its front face), `ceiling`, `floor`. `cutaway` hides objects tagged `ceiling`, and walls that face the camera and sit between the camera and the camera target.
 - A track replaces the static value of its channel. Between keys the value is interpolated by the `ease` of the earlier key. A `pose` track has string values and `step` ease. The engine cross-fades poses over 0.3 s. A walk, run or wave cycle runs on the scene time.
@@ -53,6 +54,7 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 ```
 
 - `parts` are drawn by the engine. `pos` is the part centre in model space with the model origin on the ground at the middle of the footprint. `size` is the full extent in x, y, z. `rot` is Euler degrees (x, y, z). A `cylinder` has its axis along y. A `wedge` is a triangular prism with its ridge along z (a gable roof). A part with `slot` takes the object's `colors[slot]` when given, else its own `color`.
+- `outfits` is a list of `{ id, name, colors, parts, source, note }`. Each part is a part as above plus `bone`, the name of a body bone in `assets/people/skel.json`. Its `pos` and `rot` are in the rest pose of the body (origin on the ground between the feet, facing +z), and the part moves with that bone in every pose.
 - `kind` is one of: `vehicle`, `building`, `furniture`, `structure`, `prop`, `sign`, `road`, `nature`.
 - Every model has `license` and `size` (x, y, z metres of the bounding box).
 - `sign` models show text. The viewer draws the object's `label` on the model front in the caption font.

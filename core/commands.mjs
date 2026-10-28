@@ -3,7 +3,7 @@
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:path';
-import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible,
+import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, blockedViews, viewBlocks, focusAt,
   HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
 import { rotYaw } from './geom.mjs';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.mjs';
@@ -130,6 +130,7 @@ function makeObject(s, cat, a, extra = {}) {
   if (a.colors) o.colors = a.colors;
   if (person) o.pose = a.pose || 'stand';
   else if (a.pose) o.pose = a.pose;
+  if (person && a.outfit) o.outfit = a.outfit;
   o.tags = a.tags || [];
   o.label = a.label || '';
   o.parent = null;
@@ -144,6 +145,7 @@ const placeProps = {
   at: vecXZ, yaw: { type: 'number', description: 'Degrees, counter-clockwise from above. 0 faces +z (south), 90 faces +x (east), 180 faces north, 270 faces west.' },
   scale: { anyOf: [num, vec3] }, flip: { type: 'boolean' }, colors: { type: 'object', description: 'Slot to hex colour. A person uses shirt and pants.' },
   variant: { type: 'integer', minimum: 0, description: 'Person face and body, 0 to 23.' }, pose: { type: 'string', enum: POSES },
+  outfit: { type: 'string', description: 'Person uniform from list_models outfits, for example soc-riot or police. It sets the uniform colours and gear. See guide "people".' },
   ...common,
 };
 
@@ -185,6 +187,25 @@ export function frameCamera(scene, cat, ids, shot, t, opts = {}) {
   return { eye: center.map((v, i) => r2(v + dir[i] * d)), target: center.map(r2), fov, distance: r2(d) };
 }
 
+// What hides the subject from a camera at time t: [{ id, by }], plus { id: 'frame', by } when an occluder
+// covers too much of the frame. The subject is the chapter focus at t (the check that validate does), or
+// the framed objects when no chapter holds t.
+function blocksAt(scene, cat, cam, ids, t) {
+  const v = viewBlocks(scene, cat, cam, focusAt(scene, t) ?? ids, t);
+  return v.frame ? [...v.objects, { id: 'frame', by: v.frame }] : v.objects;
+}
+// Up to three view angles (with elevation) near the asked one that give a clear view of the frame.
+function clearViews(scene, cat, a) {
+  const P = SHOT_PARAMS[a.shot], v0 = a.view ?? P.az, out = [];
+  for (const el of [a.elevation ?? P.elev, Math.min(80, (a.elevation ?? P.elev) + 20)]) for (let k = 1; k <= 12 && out.length < 3; k++) for (const sg of [1, -1]) {
+    const view = (((v0 + sg * k * 15) % 360) + 360) % 360;
+    if (out.length >= 3 || out.some((o) => o.view === view && o.elevation === el)) continue;
+    const f = frameCamera(scene, cat, a.frame, a.shot, a.t, { ...a, view, elevation: el });
+    if (!blocksAt(scene, cat, f, a.frame, a.t).length) out.push({ view, elevation: el });
+  }
+  return out;
+}
+
 // ---------- key helpers
 function mergeKeys(scene, id, channel, keys, holdBefore) {
   let tr = trackOf(scene, id, channel);
@@ -210,7 +231,7 @@ function def(name, description, properties, required, fn) {
   tools.push({ name, description, inputSchema, run });
 }
 
-def('list_models', 'List catalogue models. Filter by words in the id, name or tags, and by kind. "person" is always available (variant 0 to 23).',
+def('list_models', 'List catalogue models. Filter by words in the id, name or tags, and by kind. "person" is always available (variant 0 to 23). It also lists the person outfits (uniforms) with their sources.',
   { query: str, kind: { type: 'string', enum: ['vehicle', 'building', 'furniture', 'structure', 'prop', 'sign', 'road', 'nature', 'person'] } }, [],
   (scene, a, ctx) => {
     const cat = ctx.catalogue || loadCatalogue();
@@ -218,7 +239,8 @@ def('list_models', 'List catalogue models. Filter by words in the id, name or ta
     const rows = cat.models.map((m) => ({ id: m.id, name: m.name, kind: m.kind, size: m.size, tags: m.tags || [] }));
     rows.unshift({ id: 'person', name: 'Person (variant 0 to 23, poses: ' + POSES.join(', ') + ')', kind: 'person', size: [0.5, 1.75, 0.35], tags: ['people', 'human'] });
     const out = rows.filter((m) => (!a.kind || m.kind === a.kind) && words.every((w) => `${m.id} ${m.name} ${m.tags.join(' ')}`.toLowerCase().includes(w)));
-    return okr({ count: out.length, models: out });
+    const outfits = (cat.outfits || []).map(({ id, name, source, note }) => ({ id, name, source, note }));
+    return okr({ count: out.length, models: out, outfits });
   });
 
 def('new_scene', 'Start a new empty scene. This replaces the current scene.',
@@ -282,7 +304,7 @@ def('place_group', 'Place many models in a line, grid, ring or scatter. Same see
     const ids = [];
     pts.forEach((pt, i) => {
       const v = person ? (a.variants?.length ? a.variants[Math.floor(rng() * a.variants.length)] : Math.floor(rng() * 24)) : undefined;
-      const colors = a.colors || (person ? { shirt: SHIRTS[Math.floor(rng() * SHIRTS.length)], pants: PANTS[Math.floor(rng() * PANTS.length)] } : undefined);
+      const colors = a.colors || (person && !a.outfit ? { shirt: SHIRTS[Math.floor(rng() * SHIRTS.length)], pants: PANTS[Math.floor(rng() * PANTS.length)] } : undefined);
       const pose = a.poses?.length ? a.poses[Math.floor(rng() * a.poses.length)] : a.pose;
       const o = makeObject(s, cat, { ...a, id: uniqueId(s, `${base}-${i + 1}`), variant: v, colors, pose, yaw: pt.yaw ?? a.yaw ?? 0, tags: [...(a.tags || []), `group:${base}`] }, { at: pt.p.map(r2) });
       s.objects.push(o); ids.push(o.id);
@@ -446,7 +468,7 @@ def('move_along', 'Move an object along a path of points. Writes at, yaw and pos
     return { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
   }));
 
-def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut).',
+def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
   { t: num, shot: { type: 'string', enum: SHOTS }, frame: strArr, eye: vec3, target: vec3, fov: num, ease: { type: 'string', enum: EASES },
     view: { type: 'number', description: 'Camera side in degrees: 0 looks north from the south side, 90 looks west from the east side.' }, elevation: num, margin: num, distance: num, cut: { type: 'boolean' } },
   ['t', 'shot'],
@@ -459,7 +481,10 @@ def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids
     const prev = [...s.camera].reverse().find((k) => k.t < a.t);
     if (a.cut && prev) prev.ease = 'step';
     s.camera.push(key); s.camera.sort((p, q) => p.t - q.t);
-    return { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
+    const out = { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
+    const blocked = blocksAt(s, cat, key, a.frame || [], a.t);
+    if (blocked.length) Object.assign(out, { blocked, warning: 'Something stands between the camera and the subject. Change the view before export.', ...(a.frame?.length ? { clear_views: clearViews(s, cat, a) } : {}) });
+    return out;
   }));
 
 def('set_lighting', 'Set the lighting look from time t (day, dusk, night, indoor).', { t: num, look: { type: 'string', enum: LOOKS } }, ['t', 'look'],
@@ -530,15 +555,15 @@ def('set_cutaway', 'Hide ceilings and the walls between the camera and its targe
 def('add_credit', 'Add a credit line that the export draws (for example a data licence credit).', { text: str }, ['text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => { s.credits = s.credits || []; if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; }));
 
-def('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid.', {}, [],
-  (scene, a, ctx) => { const errs = validate(scene, ctx.catalogue || loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
+def('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid. It also tests every chapter for a blocked view (code view_blocked): a building, structure or vehicle between the camera and a focus object, or in front of much of the frame, for more than 0.5 s.', {}, [],
+  (scene, a, ctx) => { const cat = ctx.catalogue || loadCatalogue(), errs = [...validate(scene, cat), ...blockedViews(scene, cat)]; return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
 
 def('render_preview', 'Render a picture of the scene at time t so you can look at it. The daemon does the rendering.', { t: num }, ['t'],
   (scene, a) => okr({ stub: true, t: a.t, message: 'Not rendered here. The Toybox daemon renders the picture and replaces this answer.' }));
 
 def('export_scene', 'Write the scene to a .toybox.json file (and the captions to a .srt file next to it). Without path it returns the scene.', { path: str }, [],
   (scene, a, ctx) => {
-    const errs = validate(scene, ctx.catalogue || loadCatalogue());
+    const cat = ctx.catalogue || loadCatalogue(), errs = [...validate(scene, cat), ...blockedViews(scene, cat)];
     if (!a.path) return okr({ errors: errs.length, scene });
     let file = a.path;
     if (ctx.exportDir) {

@@ -211,6 +211,9 @@ var g_ke: i32[>..] = [];
 var g_cur: f32[>..] = [];     // per object: x y z yaw sx sy sz poseA poseB blend
 var g_world: f32[>..] = [];   // per object: 16 floats
 var g_vis: i32[>..] = [];     // per object: bit0 visible, bit1 mirrored
+var g_bone: i32[>..] = [];    // per object: the bone of the parent person that it follows, or -1
+var g_bslot: i32[>..] = [];   // per object: the slot of its bone matrices in g_bmat, or -1
+var g_bmat: f32[>..] = [];    // per slot: 20 bone matrices of a person (320 floats)
 // camera keys: t ex ey ez tx ty tz fov ease
 var g_ct: f32[>..] = [];
 var g_cv: f32[>..] = [];
@@ -271,7 +274,7 @@ export "skel_set" fn skel_set(i: i32, parent: i32, x: f32, y: f32, z: f32) {
 export "scene_reset" fn scene_reset() {
     g_objs = []; g_n = 0; g_trks = []; g_nt = 0;
     g_kt = []; g_k0 = []; g_k1 = []; g_k2 = []; g_ke = [];
-    g_cur = []; g_world = []; g_vis = [];
+    g_cur = []; g_world = []; g_vis = []; g_bone = []; g_bslot = []; g_bmat = [];
     g_ct = []; g_cv = []; g_ce = []; g_ncam = 0;
     g_lt = []; g_ll = []; g_nlight = 0;
     g_map_on = 0; g_cut_ceil = 0; g_cut_wall = 0;
@@ -287,9 +290,19 @@ export "obj_add" fn obj_add(prim: i32, mesh: i32, parent: i32, flags: i32, varia
         r: r, g: g, b: b, r2: r2, g2: g2, b2: b2, shadow: shadow });
     for k in 10 { g_cur.push(0.0); }
     for k in 16 { g_world.push(0.0); }
-    g_vis.push(1);
+    g_vis.push(1); g_bone.push(-1); g_bslot.push(-1);
     g_n += 1;
     g_n - 1
+}
+
+// Object i follows bone b (0 to 19) of its parent, which must be a person. Its at, yaw and rot are then
+// in the rest pose of the body: origin on the ground between the feet, facing +z.
+export "obj_bone" fn obj_bone(i: i32, b: i32) {
+    let p = g_objs[i].parent;
+    if p >= 0 && g_objs[p].prim == 4 && b >= 0 && b < 20 {
+        g_bone[i] = b;
+        if g_bslot[p] < 0 { g_bslot[p] = (g_bmat.len as i32) / 320; for k in 320 { g_bmat.push(0.0); } }
+    }
 }
 
 // channel: 0 at, 1 yaw, 2 scale, 3 pose
@@ -464,10 +477,22 @@ fn world_of(i: i32) -> Mat {
     r
 }
 
-fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) {
+fn body_scale(o: Obj) -> Mat {
     let h = 0.92 + 0.016 * ((o.variant % 11) as f32);
     let wd = 0.88 + 0.025 * (((o.variant * 3) % 10) as f32);
-    let model = mul(world_of(i), scale(wd, h, wd));
+    scale(wd, h, wd)
+}
+
+// Body scale times the posed matrix of bone b of person p, from the last draw_person of p.
+fn bone_of(p: i32, b: i32) -> Mat {
+    var r = ident();
+    let base = g_bslot[p] * 320 + b * 16;
+    for k in 16 { r.m[k] = g_bmat[base + k]; }
+    mul(body_scale(g_objs[p]), r)
+}
+
+fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) {
+    let model = mul(world_of(i), body_scale(o));
     let mvp = mul(vp, model);
     let tt = t + (o.variant as f32) * 0.37;
     var pose = pose_angles(g_cur[i * 10 + 7] as i32, tt);
@@ -478,6 +503,7 @@ fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) {
     var lod: i32 = 0;
     if g_lod_on != 0 && sqrt(dx * dx + dy * dy + dz * dz) > g_lod_dist { lod = 1; }
     var bm = bone_matrices(copy(pose));
+    if g_bslot[i] >= 0 { let base = g_bslot[i] * 320; for k in 320 { g_bmat[base + k] = bm[k]; } }
     var pl = palette(o.variant, o);
     gl_front(g_vis[i] / 2);
     gl_draw_skin(lod, mvp, model, bm, pl, 1);
@@ -567,6 +593,7 @@ export "render_frame" fn render_frame(t: f64) {
         var flags = o.flags;
         var mirror = o.flip;
         if o.parent >= 0 {
+            if g_bone[i] >= 0 { local = mul(bone_of(o.parent, g_bone[i]), local); }
             local = mul(world_of(o.parent), local);
             if g_vis[o.parent] % 2 == 0 { vis = 0; }
             if (g_vis[o.parent] / 2) % 2 == 1 { mirror = 1 - mirror; }

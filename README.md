@@ -49,7 +49,7 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 
 ## Known gaps
 
-- People differ only by colour, size and hair. The body shape is the same.
+- People differ only by colour, size, hair and outfit gear (helmet, shield, baton). The body shape is the same.
 - Clothes are colour regions of the body. Feet slide a little when a person walks. A sitting person has no chair of its own.
 - The shadow is a soft disc, not a shadow map.
 - The catalogue has few Kenney and Poly Haven models. The other models are built from boxes, cylinders, spheres and wedges.

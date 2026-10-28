@@ -11,7 +11,6 @@ const R = rng(2013);
 const pick = (a) => a[Math.floor(R() * a.length)];
 const SHIRTS = ['#c8553d', '#3f6e9a', '#d9b44a', '#6f9a6a', '#a99bb8', '#e8dcc0', '#5f9ea0', '#b8765f', '#8c8c86'];
 const PANTS = ['#3a3f47', '#4a5568', '#6b5b4b', '#2f4a6b', '#55595f'];
-const NAVY = { shirt: '#2f4a6b', pants: '#2f4a6b' };
 
 export function build() {
   const b = new Builder({ title: 'Little India, 8 December 2013', author: 'Toybox eval', ground: 'street', look: 'dusk', size: [160, 160], color: '#8f9a8a' });
@@ -118,7 +117,8 @@ export function build() {
   const cops = [];
   for (let i = 0; i < 6; i++) {
     const id = `pol-${i + 1}`, car = i < 3 ? [-2.4, 9] : [1.9, 6], x = -5 + i * 2;
-    person(id, 18 + i, [car[0], 0, 60], { colors: NAVY });
+    // the two officers who later shield the bus crew wear helmets and shields (Wikipedia: "officers with helmets and shields")
+    place('person', [car[0], 0, 60], { id, variant: 18 + i, outfit: i < 2 ? 'police-shield' : 'police' });
     const exit = [car[0] + (i < 3 ? 1.5 : -1.5), car[1]];
     const t1 = 88 + (i < 3 ? 0 : 0.4) + 1;
     timed(id, [[car[0], 60], car, exit, [x, -1]], [i < 3 ? 82 : 82.4, i < 3 ? 88 : 88.4, t1, Math.round((t1 + dist([exit[0], 0, exit[1]], [x, 0, -1]) / 1.6) * 100) / 100], { pose: 'walk' });
@@ -145,12 +145,13 @@ export function build() {
   place('car-police-overturned', [-6, 0, 12], { id: 'pc3-after', yaw: 60, scale: [0.001, 0.001, 0.001] }); swap('pc3-after', 111, true);
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 112 + (i % 6) * 0.5, pose: ['cheer', 'point', 'wave'][i % 3] }));
 
-  // ---------- chapter 11: SOC arrives (22:50)
+  // ---------- chapter 11: SOC arrives (22:50). Riot officers form a shield line south of the burnt vehicles.
+  // The real troops were larger; the number, the route and the line are estimated.
   const soc = [];
-  for (let i = 0; i < 6; i++) {
-    const id = `soc-${i + 1}`, x = -5 + i * 2, far = [x * 0.6, 56], end = [x, 3.2];
-    person(id, [0, 1, 3, 4, 6, 7][i], [far[0], 0, far[1]], { colors: { shirt: '#4f7a52', pants: '#3a3f47' } });
-    leg(id, [far, end], 127 - dist([far[0], 0, far[1]], [end[0], 0, end[1]]) / 4.2, 4.2, { pose: 'run', end_pose: 'stand' });
+  for (let i = 0; i < 10; i++) {
+    const id = `soc-${i + 1}`, x = -5.4 + i * 1.2, far = [x * 0.5, 60], end = [x, 17];
+    place('person', [far[0], 0, far[1]], { id, variant: [0, 1, 3, 4, 6, 7, 9, 13, 15, 22][i], outfit: 'soc-riot', yaw: 180 });
+    leg(id, [far, end], 126 - dist([far[0], 0, far[1]], [end[0], 0, end[1]]) / 3.6, 3.6, { pose: 'run', end_pose: 'stand' });
     soc.push(id);
   }
   crowd.slice(0, 60).forEach((id, i) => b.cmd('set_pose', { id, t: 124 + (i % 8) * 0.4, pose: 'stand' }));
@@ -190,11 +191,11 @@ export function build() {
   };
   const street = ['rcr-n0', 'rcr-n1', 'junction'];
   chapter('c1', 0, 12, 'A quiet evening', '', 'Race Course Road in Little India, Singapore. The evening of 8 December 2013. Shophouses line the street and people walk home. The layout here is approximate.', ['w1', 'w2'], 'wide', 'estimated: scene of an ordinary evening, not a recorded event', true,
-    [{ t: 0, shot: 'wide', frame: street }, { t: 7, shot: 'medium', frame: ['w1', 'w3', 'chat1', 'chat2'] }]);
+    [{ t: 0, shot: 'wide', frame: street, view: 200, opts: { elevation: 45 } }, { t: 7, shot: 'medium', frame: ['w1', 'w3', 'chat1', 'chat2'] }]);
   chapter('c2', 12, 24, 'A worker leaves a bus', '', 'A private bus stops by the bus stop and a worker steps off. This is a typical scene, not a recorded one. The details are approximate.', ['bus1', 'busstop'], 'medium', 'estimated: illustrative scene', true,
     [{ t: 12, shot: 'medium', frame: ['bus1', 'busstop'] }, { t: 18.5, shot: 'close', frame: ['worker'] }]);
   chapter('c3', 24, 36, 'The accident', '21:21', 'At about 21:21 a private bus hit a pedestrian on Race Course Road, near Tekka Lane. The pedestrian died. Positions here are approximate.', ['ped'], 'wide', WIKI, false,
-    [{ t: 24, shot: 'wide', frame: ['ped', 'zebra'] }, { t: 29.5, shot: 'medium', frame: ['ped', 'bus2'] }]);
+    [{ t: 24, shot: 'wide', frame: ['ped', 'zebra'], opts: { elevation: 50 } }, { t: 29.5, shot: 'medium', frame: ['ped', 'bus2'] }]);
   chapter('c4', 36, 48, 'The first call', '21:23', 'At 21:23 the police received the first call. It reported a traffic disruption. It did not mention any violence.', ['bystander'], 'close', WIKI, false,
     [{ t: 36, shot: 'close', frame: ['bystander', 'bystander2'] }, { t: 42, shot: 'medium', frame: ['bystander', 'ped', 'bus2'] }]);
   b.cmd('add_callout', { start: 37, end: 46, text: '21:23 first call', object: 'bystander', source: WIKI, measured: true });
@@ -207,15 +208,15 @@ export function build() {
   chapter('c8', 84, 96, 'Police arrive', '', 'In all, over 300 officers were dispatched that night. The scene shows a small group of them. Their positions are approximate.', ['pc1'], 'medium', WIKI, false,
     [{ t: 84, shot: 'medium', frame: ['pc1', 'pc2'] }, { t: 90.5, shot: 'wide', frame: ['pc1', 'pc2', ...cops] }]);
   chapter('c9', 96, 108, 'Leaving the bus', '22:08', 'At 22:08 the bus driver and the timekeeper left the bus under police shield protection. The crowd attacked.', ['driver'], 'close', WIKI, false,
-    [{ t: 96, shot: 'close', frame: ['driver', 'timekeeper'] }, { t: 102, shot: 'medium', frame: ['driver', 'timekeeper', 'pol-1', 'pol-2'] }]);
+    [{ t: 96, shot: 'close', frame: ['driver', 'timekeeper'], view: 45 }, { t: 102, shot: 'medium', frame: ['driver', 'timekeeper', 'pol-1', 'pol-2'] }]);
   chapter('c10', 108, 120, 'Vehicles overturned and burnt', '22:20', 'From 22:20 to 22:40 rioters flipped six vehicles and set four on fire. The scene shows only a few of them.', ['pc1', 'amb'], 'wide', WIKI, false,
-    [{ t: 108, shot: 'wide', frame: ['pc1', 'pc2', 'amb'] }, { t: 114, shot: 'orbit', frame: ['pc1-after', 'pc2-after', 'amb-after', 'fl-1', 'fl-2'], view: 10 }]);
-  chapter('c11', 120, 132, 'Special Operations Command', '22:50', 'At 22:50 the Special Operations Command arrived. Many rioters had surrendered and the crowd had become smaller.', ['soc-1'], 'medium', WIKI, false,
-    [{ t: 120, shot: 'medium', frame: ['soc-1', 'soc-2', 'soc-3'] }, { t: 126, shot: 'wide', frame: [...soc, ...cops] }]);
+    [{ t: 108, shot: 'wide', frame: ['pc1', 'pc2', 'amb'], view: 10 }, { t: 114, shot: 'orbit', frame: ['pc1-after', 'pc2-after', 'amb-after', 'fl-1', 'fl-2'], view: 10 }]);
+  chapter('c11', 120, 132, 'Special Operations Command', '22:50', 'At 22:50 the Special Operations Command arrived. Many rioters had surrendered and the crowd had become smaller. The officers shown are representative.', ['soc-1'], 'medium', WIKI, false,
+    [{ t: 120, shot: 'medium', frame: ['soc-1', 'soc-2', 'soc-3'], view: 180 }, { t: 126, shot: 'medium', frame: soc, view: 180, opts: { elevation: 20 } }]);
   chapter('c12', 132, 144, 'The crowd disperses', '23:30', 'By 23:30 all the rioters had dispersed from Race Course Road and the streets nearby.', ['ped'], 'top', WIKI, false,
-    [{ t: 132, shot: 'top', frame: ['ped', ...crowd.slice(0, 20)] }]);
+    [{ t: 132, shot: 'top', frame: ['ped', 'junction', 'rcr-s1', ...soc] }]);
   chapter('c13', 144, 156, 'The next morning', '06:45', 'In all, 62 people were hurt: 37 police officers, 12 SCDF officers, 5 Certis officers and 8 civilians. Race Course Road fully reopened at 06:45.', ['pc1-after'], 'wide', WIKI, false,
-    [{ t: 144, shot: 'wide', frame: ['pc1-after', 'pc2-after', 'amb-after', 'clean-1', 'clean-2', 'clean-3'] }]);
+    [{ t: 144, shot: 'wide', frame: ['pc1-after', 'pc2-after', 'amb-after', 'clean-1', 'clean-2', 'clean-3'], view: 350 }]);
   chapter('c14', 156, 168, 'Committee of Inquiry', '', 'A Committee of Inquiry was appointed on 13 December 2013. It reported on 27 June 2014. It ruled out racial and labour issues as causes.', ['coi-sign'], 'medium', WIKI, false,
     [{ t: 156, shot: 'medium', frame: ['coi-sign', 'coi-1', 'coi-2', 'coi-3'] }]);
   return finish(b, 'riot');

@@ -14,6 +14,7 @@ const ONEMAP_CREDIT = 'OneMap © Singapore Land Authority';
 const ONEMAP_LOGO = 'https://www.onemap.gov.sg/web-assets/images/logo/om_logo.png';
 const SHIRTS = ['#3b5ea8', '#a84b3b', '#4b8a5a', '#c79a2e', '#7a4ea0', '#8a8f96', '#2f7f8f', '#b0507a'];
 const PANTS = ['#2b2f4a', '#3a3a3a', '#4a3b2b', '#2f4a3b'];
+const BONES = new Map();   // bone name -> engine bone index
 
 export function hexRGB(h) {
   const n = parseInt((h || '#808080').slice(1), 16);
@@ -41,6 +42,7 @@ export async function createViewer(opts) {
   {
     const sk = await (await fetch(`${assetsUrl}/people/skel.json`)).json();
     sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
+    sk.bones.forEach((b, i) => BONES.set(b.name, i));
     for (const [id, f] of [[0, 'mesh_full.bin'], [1, 'mesh_lod.bin']]) {
       const buf = new Uint8Array(await (await fetch(`${assetsUrl}/people/${f}`)).arrayBuffer());
       const nv = new Uint32Array(buf.buffer, 0, 2);
@@ -50,6 +52,7 @@ export async function createViewer(opts) {
   }
   const catalogue = await (await fetch(`${assetsUrl}/catalogue.json`)).json();
   const models = new Map(catalogue.models.map(m => [m.id, m]));
+  const outfits = new Map((catalogue.outfits || []).map(f => [f.id, f]));
   // Imported CC0 models (Kenney, Poly Haven): each colour group becomes one engine mesh, ids 16 to 511
   // (0 to 3 are the primitives, 8 to 10 the map buildings, 512 is MAX_MESH in engine/gl_shim.h).
   // File format: see tools/assets/import.mjs.
@@ -120,10 +123,15 @@ export async function createViewer(opts) {
       const structural = (o.tags || []).some(t => t === 'wall' || t === 'floor' || t === 'ceiling');
       if (o.model === 'person') {
         const n = o.variant || 0;
-        const col = o.colors || {};
+        const fit = outfits.get(o.outfit);
+        const col = { ...(fit && fit.colors), ...o.colors };
         const id = add(4, 0, parent, flags, n, POSES[o.pose || 'stand'] ?? 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc,
           hexRGB(col.shirt || SHIRTS[n % SHIRTS.length]), hexRGB(col.pants || PANTS[n % PANTS.length]), 0.32);
         v.rootIds.set(o.id, id);
+        for (const p of fit ? fit.parts : []) {
+          const prim = { box: 0, cylinder: 1, sphere: 2, wedge: 3 }[p.prim] ?? 0;
+          M._obj_bone(add(prim, 0, id, flags, 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, hexRGB(p.color), [0, 0, 0], 0), BONES.get(p.bone) ?? -1);
+        }
         return;
       }
       const m = models.get(o.model);
