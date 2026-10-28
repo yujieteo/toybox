@@ -4,8 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { rotYaw, rectCorners, overlapRatio } from './geom.mjs';
 import { narrationErrors } from './narration.mjs';
-import { MOVES } from '../web/motion.js';
-import { plain } from '../web/marks.js';
+import { MOVES, plain } from '../web/vid.js';
 
 export const POSES = ['stand', 'walk', 'run', 'wave', 'point', 'cheer', 'sit', 'bend'];
 export const SHOTS = ['wide', 'medium', 'close', 'top', 'follow', 'orbit'];
@@ -545,7 +544,7 @@ export function validate(scene, catalogue) {
     if (isNum(c.start) && isNum(c.end) && !scene.chapters.some((k) => c.start >= k.start - 1e-9 && c.end <= k.end + 1e-9))
       E('callout_outside_chapter', `callouts[${i}]`, `Callout "${c.text}" (${c.start} s to ${c.end} s) is not inside one chapter. A callout shows only in the chapter that it belongs to.`);
   });
-  // motions: words such as pop and hop (web/motion.js)
+  // motions: words such as pop and hop (engine/vid.goose)
   if (scene.motions !== undefined && !Array.isArray(scene.motions)) E('schema', 'motions', 'motions must be an array.');
   (Array.isArray(scene.motions) ? scene.motions : []).forEach((m, i) => {
     const p = `motions[${i}]`;
