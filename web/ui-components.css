@@ -122,4 +122,3 @@ kbd { padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; b
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
-
