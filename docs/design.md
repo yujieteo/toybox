@@ -162,3 +162,14 @@ Risk: the riot page names real people and shows a real death. Real events use ge
 10. README with the licences of every model and library, before and after screenshots of the page and a sample MP4 in the PR description. Publishing on the site is a separate task.
 
 Licences to list in the README: Goose (Apache 2.0), Kenney (CC0), Poly Haven (CC0), MakeHuman exports (CC0), OpenStreetMap data (ODbL), OneMap (Singapore Open Data Licence), ffmpeg (LGPL or GPL by build, separate program), the C-to-WebAssembly compiler and any library we link.
+
+## 13. UI: femahoy as the base
+
+The authoring page and the hosted viewer follow the Apple Human Interface Guidelines and the concept-ui skill, as femahoy does. The concept-ui skill is not in my skill list or in the firstmate skills folder, so I follow femahoy's written rules (`/Users/yj/src/femahoy/DESIGN.md` section 8) and copy its page patterns instead (`crates/fh/src/daemon/page.html`, `crates/viewer/src/ui.rs`, the `ui.css` components), read-only. I copy them closely and add no style of my own.
+
+- One UI layer with the only design tokens: light and dark colours, type sizes, spacing, corner radius, hit target. A new view adds no colour, size or control style of its own; a new component goes into the layer.
+- Controls the person clicks are at least 44 points high. Each HTML control has a keyboard path and a VoiceOver label. A shortcut shows its keys. Both appearances work. No animation runs with reduced motion. No state shows by colour only.
+- Layout: chat panel on the left (authoring app only), viewer in the centre, controls float over the viewer and do not push it, the person can hide panels. The hosted viewer is the viewer without the chat.
+- Fonts: the same DM Sans and Source Serif 4 under the SIL Open Font License 1.1, with their licences in the README.
+- Plain text in the chat, no Markdown (femahoy's phone finding: raw `##` and `**` showed).
+- This does not change the spike order. The UI is built after spikes 1 and 2.
