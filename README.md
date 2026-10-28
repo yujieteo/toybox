@@ -71,7 +71,7 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 | Emscripten (emcc) | MIT and University of Illinois/NCSA |
 | MakeHuman base mesh, skeleton and weights | CC0 |
 | Toybox model kit (the models in `assets/catalogue.json` without a `mesh` file) | CC0, made for this project |
-| Kenney and Poly Haven models (`assets/models/`) | CC0 1.0. Each model has its source page, author and licence in the catalogue and in `assets/ATTRIBUTION.md`. Both eval scenes use them. |
+| Kenney and Poly Haven models (`assets/models/`) | CC0 1.0. Each model has its source page, author and licence in the catalogue and in `assets/ATTRIBUTION.md`. The riot and Home Team NS eval scenes use them. |
 | OpenStreetMap footprints | ODbL. The scene shows "© OpenStreetMap contributors". A scene file that holds footprints holds ODbL data. Keep the credit with the data. |
 | OneMap tiles | Singapore Open Data Licence, with the OneMap logo and "OneMap © Singapore Land Authority". Not stored. |
 | DM Sans and Source Serif 4 fonts | SIL Open Font Licence 1.1 (`web/fonts/OFL-*.txt`) |
