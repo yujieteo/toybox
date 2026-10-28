@@ -2,10 +2,10 @@
 import { existsSync } from 'node:fs';
 import { loadScene, saveScene, newScene } from './scene.mjs';
 import { runTool, READ_ONLY } from './commands.mjs';
-import { fetchOverpass, bboxQuery } from './osm.mjs';
+import { fetchOverpass, bboxQuery, validBbox } from './osm.mjs';
 
 export async function callTool(scenePath, name, args, ctx = {}) {
-  if (name === 'import_osm' && Array.isArray(args.bbox) && args.bbox.length === 4) {
+  if (name === 'import_osm' && validBbox(args.bbox)) {
     try { ctx = { ...ctx, overpass: await fetchOverpass(bboxQuery(args.bbox)), odblPath: scenePath.replace(/(\.toybox)?\.json$/, '') + '.osm.json' }; }
     catch (e) { return { ok: false, errors: [{ code: 'osm_fetch_failed', message: `The Overpass server did not answer: ${e.message}. Try again later.` }] }; }
   }

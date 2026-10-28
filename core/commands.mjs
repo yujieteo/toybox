@@ -6,7 +6,7 @@ import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:pat
 import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible,
   HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
 import { rotYaw } from './geom.mjs';
-import { parseOverpass, toMapBlock, writeOdbl } from './osm.mjs';
+import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.mjs';
 
 class Fail extends Error { constructor(code, message) { super(message); this.code = code; } }
 const fail = (errors) => ({ ok: false, errors });
@@ -506,19 +506,23 @@ def('set_backdrop', 'Set the ground and the map. ground is grass, street, floor,
 
 def('import_osm', 'Import the OpenStreetMap building footprints inside bbox [south, west, north, east] in degrees (at most 0.01 degrees a side). The scene origin becomes the bbox centre when the scene has no origin. bearing (degrees) turns the map so that a street with that compass bearing runs along z. The scene shows the OpenStreetMap credit by itself. The tool writes the ODbL data file next to the scene.',
   { bbox: { type: 'array', items: num, minItems: 4, maxItems: 4 }, bearing: num }, ['bbox'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const [so, w, n, e] = a.bbox;
-    if (!(so < n && w < e && n - so <= 0.01 && e - w <= 0.01)) throw new Fail('bad_args', 'bbox is [south, west, north, east] with south < north, west < east and at most 0.01 degrees a side.');
-    if (!ctx.overpass) throw new Fail('no_osm_data', 'No OpenStreetMap answer. Call import_osm through the MCP server or the command line.');
-    s.map = s.map || {};
-    s.map.origin = s.map.origin || { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
-    const found = parseOverpass(ctx.overpass, s.map.origin);
-    if (!found.length) throw new Fail('no_buildings', 'OpenStreetMap has no building footprints inside this bbox.');
-    s.map.osm = toMapBlock(found, s.map.origin, a.bearing || 0);
-    if (a.bearing) s.map.bearing = a.bearing; else delete s.map.bearing;
-    if (ctx.odblPath) { writeOdbl(ctx.odblPath, found, s.map.origin, a.bearing || 0); s.map.osm.dataFile = basename(ctx.odblPath); }
-    return { buildings: found.length, origin: s.map.origin, bearing: a.bearing || 0, dataFile: s.map.osm.dataFile };
-  }));
+  (scene, a, ctx) => {
+    const r = mutate(scene, ctx, (s) => {
+      const [so, w, n, e] = a.bbox;
+      if (!validBbox(a.bbox)) throw new Fail('bad_args', 'bbox is [south, west, north, east] with south < north, west < east and at most 0.01 degrees a side.');
+      if (!ctx.overpass) throw new Fail('no_osm_data', 'No OpenStreetMap answer. Call import_osm through the MCP server or the command line.');
+      s.map = s.map || {};
+      s.map.origin = s.map.origin || { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
+      const found = parseOverpass(ctx.overpass, s.map.origin);
+      if (!found.length) throw new Fail('no_buildings', 'OpenStreetMap has no building footprints inside this bbox.');
+      s.map.osm = toMapBlock(found, s.map.origin, a.bearing || 0);
+      if (a.bearing) s.map.bearing = a.bearing; else delete s.map.bearing;
+      if (ctx.odblPath) s.map.osm.dataFile = basename(ctx.odblPath);
+      return { buildings: found.length, origin: s.map.origin, bearing: a.bearing || 0, dataFile: s.map.osm.dataFile };
+    });
+    if (r.ok && ctx.odblPath) writeSceneOdbl(scene, dirname(ctx.odblPath));
+    return r;
+  });
 
 def('set_cutaway', 'Hide ceilings and the walls between the camera and its target (indoor scenes).', { ceilings: { type: 'boolean' }, nearWalls: { type: 'boolean' } }, [],
   (scene, a, ctx) => mutate(scene, ctx, (s) => { s.cutaway = { ceilings: a.ceilings ?? true, nearWalls: a.nearWalls ?? true }; return s.cutaway; }));
@@ -545,7 +549,8 @@ def('export_scene', 'Write the scene to a .toybox.json file (and the captions to
     saveScene(file, scene);
     const srtPath = file.replace(/(\.toybox)?\.json$/, '') + '.srt';
     writeFileSync(srtPath, srt(scene));
-    return okr({ path: file, srt: srtPath, errors: errs.length });
+    const odbl = writeSceneOdbl(scene, dirname(resolve(file)));
+    return okr({ path: file, srt: srtPath, ...(odbl ? { odbl } : {}), errors: errs.length });
   });
 
 const GUIDE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'guide');

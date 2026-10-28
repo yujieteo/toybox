@@ -47,6 +47,24 @@ test('import_osm refuses a bad bbox and a missing Overpass answer', () => {
   assert.deepEqual(s.map.origin, { lat: 1.3089, lon: 103.85125 });
 });
 
+test('import_osm writes no data file when the scene change is refused', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tbref-')), odblPath = join(dir, 'x.osm.json');
+  const s = newScene({});
+  must(C.set_backdrop(s, { ground: 'map', origin: { lat: 1.30888, lon: 103.85116 }, estimated: true, source: 'estimated' }));
+  const r = C.import_osm(s, { bbox: BBOX, bearing: 35 }, { overpass, odblPath });
+  assert.equal(r.ok, false); assert.equal(r.errors[0].path, 'map.bearing');
+  assert.ok(!existsSync(odblPath)); assert.equal(s.map.osm, undefined);
+});
+
+test('export_scene writes the ODbL data file next to the exported scene', () => {
+  const src = mkdtempSync(join(tmpdir(), 'tbsrc-')), out = mkdtempSync(join(tmpdir(), 'tbout-'));
+  const s = newScene({});
+  must(C.import_osm(s, { bbox: BBOX, bearing: 35 }, { overpass, odblPath: join(src, 'li.osm.json') }));
+  const r = must(C.export_scene(s, { path: join(out, 'copy.toybox.json') }));
+  assert.equal(r.odbl, join(out, 'li.osm.json'));
+  assert.deepEqual(JSON.parse(readFileSync(r.odbl, 'utf8')), JSON.parse(readFileSync(join(src, 'li.osm.json'), 'utf8')));
+});
+
 test('export_scene keeps the MCP agent inside the scene folder', () => {
   const dir = mkdtempSync(join(tmpdir(), 'tbexp-'));
   const s = newScene({});

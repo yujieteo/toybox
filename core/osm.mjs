@@ -1,6 +1,7 @@
 // OpenStreetMap buildings (Overpass API) and OneMap tile addresses.
 // OpenStreetMap data is ODbL 1.0. Keep the credit with any data file. Never store OneMap data.
 import { writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 export const ATTRIBUTION = '© OpenStreetMap contributors';
@@ -82,6 +83,17 @@ export function writeOdbl(path, buildings, origin, bearing = 0) {
   writeFileSync(path, JSON.stringify(file, null, 1) + '\n');
   return file;
 }
+
+// Writes the ODbL data file that map.osm.dataFile names into dir, from the footprints in the scene.
+export function writeSceneOdbl(scene, dir) {
+  const osm = scene.map?.osm;
+  if (!osm?.dataFile) return null;
+  const p = join(dir, basename(osm.dataFile));
+  writeOdbl(p, osm.buildings, scene.map.origin, scene.map.bearing || 0);
+  return p;
+}
+
+export const validBbox = (b) => Array.isArray(b) && b.length === 4 && b.every(Number.isFinite) && b[0] < b[2] && b[1] < b[3] && b[2] - b[0] <= 0.01 && b[3] - b[1] <= 0.01;
 
 // OneMap raster tiles (Web Mercator, EPSG:3857). Tiles load live. Do not store them.
 export function tileXY(lat, lon, zoom) {

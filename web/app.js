@@ -80,7 +80,7 @@ $('mp4').onclick = async () => {
   $('mp4').disabled = true; status('The MP4 export runs in a separate browser. It can take a minute.');
   try {
     const r = await (await api('/api/export', { method: 'POST', body: JSON.stringify({ name: (v.scene.title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() }) })).json();
-    status(r.error ? r.error : `Done. Files: ${r.mp4}, ${r.srt}, ${r.scene}`);
+    status(r.error ? r.error : `Done. Files: ${[r.mp4, r.srt, r.scene, r.odbl].filter(Boolean).join(', ')}`);
   } catch (e) { status('The export failed: ' + e.message); }
   $('mp4').disabled = false;
 };

@@ -8,6 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { writeSceneOdbl } from '../core/osm.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -122,8 +123,9 @@ const server = http.createServer(async (req, res) => {
         const done = job.resolve; send(res, 500, e); if (done) done(e); return;
       }
       fs.copyFileSync(scenePath, job.base + '.toybox.json');
+      const odbl = writeSceneOdbl(JSON.parse(fs.readFileSync(scenePath)), outDir);
       const info = Object.fromEntries(u.searchParams); delete info.token;
-      Object.assign(info, { mp4: job.base + '.mp4', srt: job.base + '.srt', scene: job.base + '.toybox.json' });
+      Object.assign(info, { mp4: job.base + '.mp4', srt: job.base + '.srt', scene: job.base + '.toybox.json' }, odbl ? { odbl } : {});
       const done = job.resolve; send(res, 200, info); if (done) done(info); return;
     }
     if (p === '/api/frame-result') {
