@@ -263,7 +263,7 @@ export async function createViewer(opts) {
       const p = v.project(M._obj_wx(id), M._obj_wy(id) + m.size[1] * 0.6, M._obj_wz(id));
       if (!p) continue;
       const dist = Math.hypot(M._obj_wx(id) - M._cam_x(), M._obj_wy(id) - M._cam_y(), M._obj_wz(id) - M._cam_z());
-      const s = Math.max(h * 0.02, Math.min(h * 0.05, h * 1.6 / dist));
+      const s = Math.max(h * 0.02, Math.min(h * 0.032, h * 1.4 / dist));
       ctx.font = `600 ${s}px ${FONT}`;
       const tw = ctx.measureText(o.label).width;
       pill(ctx, p[0] - tw / 2 - s * 0.4, p[1] - s * 0.8, tw + s * 0.8, s * 1.4, s * 0.3, 'rgba(255,255,255,0.92)');
@@ -305,7 +305,8 @@ export async function createViewer(opts) {
       ctx.font = `500 ${fs}px ${FONT}`;
       const lines = wrap(ctx, caps.map(c => c.text).join(' '), w * 0.82), lh = fs * 1.25;
       const bw = Math.max(...lines.map(l => ctx.measureText(l).width)) + fs, bh = lines.length * lh + fs * 0.5;
-      const x = (w - bw) / 2, y = h - bh - h * 0.05;
+      const nCred = (sc.credits || []).length + (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length ? 1 : 0) + (sc.map && sc.map.onemap && v.mapImage ? 1 : 0);
+      const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
       pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       lines.forEach((l, i) => ctx.fillText(l, w / 2, y + fs * 0.25 + i * lh));

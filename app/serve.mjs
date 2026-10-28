@@ -36,11 +36,12 @@ function runBrowser(query, timeoutMs) {
   const child = spawn(chrome, ['--headless=new', `--user-data-dir=${profile}`, '--no-first-run', '--enable-unsafe-swiftshader', '--window-size=1920,1080', '--hide-scrollbars',
     `${origin}/headless.html?token=${token}&${query}`], { stdio: 'ignore' });
   pids.add(child.pid);
+  const mine = job;
   return new Promise((resolve) => {
-    job.resolve = (v) => { clearTimeout(timer); stop(); resolve(v); };
+    mine.resolve = (v) => { clearTimeout(timer); stop(); resolve(v); };
     const stop = () => { try { process.kill(child.pid); } catch {} pids.delete(child.pid); setTimeout(() => fs.rmSync(profile, { recursive: true, force: true }), 500); };
-    const timer = setTimeout(() => job && job.resolve({ error: 'The browser job took too long.' }), timeoutMs);
-    child.on('exit', () => { if (job && job.resolve) setTimeout(() => job && job.resolve && job.resolve({ error: 'The browser stopped before the job ended.' }), 300); });
+    const timer = setTimeout(() => mine.resolve({ error: 'The browser job took too long.' }), timeoutMs);
+    child.on('exit', () => setTimeout(() => { if (job === mine) mine.resolve({ error: 'The browser stopped before the job ended.' }); }, 300));
   });
 }
 async function oneJob(kind, query, timeoutMs) {
