@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { toolSpecs } from './commands.mjs';
 import { callTool } from './session.mjs';
+import { VERSION } from './version.mjs';
 
 export const PROTOCOL = '2025-06-18';
 
@@ -42,7 +43,7 @@ export async function handle(opts, msg) {
   if (id === undefined) return null; // notification
   switch (method) {
     case 'initialize':
-      return reply({ protocolVersion: PROTOCOL, capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'toybox', version: '0.1.0' },
+      return reply({ protocolVersion: PROTOCOL, capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'toybox', version: VERSION },
         instructions: 'Build animated 3D explainer scenes. Call guide("overview") first.' });
     case 'ping': return reply({});
     case 'tools/list': return reply({ tools: toolSpecs });

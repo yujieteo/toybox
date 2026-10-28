@@ -1,6 +1,6 @@
-# Scene file format (`.toybox.json`, schema version 1)
+# Scene file format (`.toybox.json`, format 1)
 
-This file is the only source of truth for a scene. The engine, the viewer, the MP4 export and the MCP tools all read it. Units are metres and seconds. The y axis points up, x points east (right) and z points south (toward the viewer in the default camera). A person faces +z when `yaw` is 0. `yaw` is in degrees, counter-clockwise seen from above.
+This file is the only source of truth for a scene. The engine, the viewer, the MP4 export and the MCP tools all read it. The `toybox` field is the format number (`FORMAT` in `web/format.js`). Toybox loads a scene of an older format and upgrades it, and refuses a scene of a newer format. A change that an older scene does not satisfy increments the format and adds an upgrade step in `web/format.js`. Units are metres and seconds. The y axis points up, x points east (right) and z points south (toward the viewer in the default camera). A person faces +z when `yaw` is 0. `yaw` is in degrees, counter-clockwise seen from above.
 
 ```json
 {

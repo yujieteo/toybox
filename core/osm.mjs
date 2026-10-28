@@ -2,6 +2,7 @@
 // OpenStreetMap data is ODbL 1.0. Keep the credit with any data file. Never store OneMap data.
 import { writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { VERSION } from './version.mjs';
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 export const ATTRIBUTION = '© OpenStreetMap contributors';
@@ -40,7 +41,7 @@ export function parseOverpass(json, origin) {
 }
 
 export async function fetchOverpass(query, { endpoint = OVERPASS_URL, fetchImpl = fetch } = {}) {
-  const res = await fetchImpl(endpoint, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'toybox/0.1' }, body: 'data=' + encodeURIComponent(query) });
+  const res = await fetchImpl(endpoint, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': `toybox/${VERSION}` }, body: 'data=' + encodeURIComponent(query) });
   if (!res.ok) throw new Error(`Overpass answered ${res.status}`);
   return res.json();
 }

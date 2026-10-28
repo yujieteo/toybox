@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { rotYaw, rectCorners, overlapRatio } from './geom.mjs';
 import { narrationErrors } from './narration.mjs';
 import { MOVES, plain } from '../web/vid.js';
+import { FORMAT, upgradeScene } from '../web/format.js';
 
 export const POSES = ['stand', 'walk', 'run', 'wave', 'point', 'cheer', 'sit', 'bend'];
 export const SHOTS = ['wide', 'medium', 'close', 'top', 'follow', 'orbit'];
@@ -12,7 +13,7 @@ export const LOOKS = ['day', 'dusk', 'night', 'indoor'];
 export const GROUNDS = ['grass', 'street', 'floor', 'plain', 'map'];
 export const CHANNELS = ['at', 'yaw', 'scale', 'pose'];
 export const EASES = ['linear', 'inout', 'step'];
-export { MOVES };
+export { MOVES, FORMAT };
 export const PERSON_SIZE = [0.5, 1.75, 0.35];
 export const STRUCTURAL_TAGS = ['wall', 'floor', 'ceiling'];
 export const MAX_CAPTION = 280;
@@ -33,7 +34,7 @@ export function loadCatalogue(path = DEFAULT_CATALOGUE) {
 export function newScene(opts = {}) {
   const ground = opts.ground || 'grass';
   const s = {
-    toybox: 1,
+    toybox: FORMAT,
     title: opts.title || 'Untitled',
     author: opts.author || '',
     duration: opts.duration || 0,
@@ -45,7 +46,7 @@ export function newScene(opts = {}) {
   return s;
 }
 
-export function loadScene(path) { return JSON.parse(readFileSync(path, 'utf8')); }
+export function loadScene(path) { return upgradeScene(JSON.parse(readFileSync(path, 'utf8'))); }
 export function saveScene(path, scene) {
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify(scene, null, 1) + '\n');
@@ -427,7 +428,7 @@ export function validate(scene, catalogue) {
   const errs = [];
   const E = (code, path, message) => errs.push({ code, path, message });
   if (!scene || typeof scene !== 'object') { E('schema', '', 'Scene is not an object.'); return errs; }
-  if (scene.toybox !== 1) E('schema', 'toybox', 'toybox must be 1.');
+  if (scene.toybox !== FORMAT) E('schema', 'toybox', `toybox must be ${FORMAT}.`);
   for (const k of ['objects', 'tracks', 'camera', 'chapters', 'captions', 'callouts']) {
     if (!Array.isArray(scene[k])) { E('schema', k, `${k} must be an array.`); scene = { ...scene, [k]: [] }; }
   }
