@@ -9,6 +9,11 @@ Toybox is a tool where **an agent builds an animated 3D explainer scene for you*
 - **(a) an MP4 video** with the scene animation and text captions, or
 - **(b) the scene file** (`.toybox.json`), which Toybox opens to regenerate the same scene and animation.
 
+Toybox has **two surfaces** that share one engine and one file format:
+
+1. **Authoring app on localhost**, like femahoy. The agent builds scenes and animations through the local MCP server. A person can also build and edit scenes by hand there (place, move, scale, rotate, flip, delete, duplicate, camera, timeline).
+2. **Viewer hosted on teoyujie.org.** It opens scene files. Visitors can manipulate an opened scene (camera, and the per-object edits: move, scale, rotation, flip, delete, duplicate). The site has no MCP and no agent, and no server. Whether visitors can save their changed file is OPEN 10.
+
 The reference for the interface is femahoy (section 2). Real examples that Toybox must build: the Little India riot (a street scene, from the Committee of Inquiry facts) and an indoor walk at HomeTeamNS Punggol from the entrance up to the ballroom. The Straits Times "Little India riot, 10 years on" page is the quality target (section 11).
 
 ## 2. Reference: how femahoy works (read from /Users/yj/src/femahoy, read-only)
@@ -36,8 +41,8 @@ The reference for the interface is femahoy (section 2). Real examples that Toybo
 
 - **toybox core**: one program that edits and validates the scene file. Its commands are the MCP tools (section 8).
 - **MCP server**: a local stdio server that exposes the same commands (the MCP specification defines stdio and Streamable HTTP: https://modelcontextprotocol.io/specification/2025-06-18/basic/transports ).
-- **Page and viewer**: the engine compiled to WebAssembly, shown beside the chat, with a timeline scrubber and play button. It reloads when the scene file changes.
-- **Daemon**: femahoy's pattern. It binds 127.0.0.1 only, uses a token, rejects other origins, and starts the agent with the owner's login. Nothing is hosted.
+- **Page and viewer**: the engine compiled to WebAssembly, shown beside the chat, with a timeline scrubber and play button. It reloads when the scene file changes. The same wasm viewer, without the chat and the daemon, is the **hosted viewer**: a static page that opens a scene file (by `?scene=<url>`, by file open, or by drag and drop) and fetches the models that the file lists.
+- **Daemon** (authoring app only): femahoy's pattern. It binds 127.0.0.1 only, uses a token, rejects other origins, and starts the agent with the owner's login. Nothing is hosted.
 
 ## 4. Engine
 
@@ -68,16 +73,16 @@ Earlier rounds said "no animation". The owner now wants animation, so:
 ### (b) The scene file
 
 - `.toybox.json` is the only source of truth: header (title, author, backdrop, model ids and content hashes, tool version), objects, timeline keyframes, chapters, captions, callouts, lighting, camera, `source` text for claims, and `estimated` flags. It is validated by a JSON Schema kept in the repo.
-- Toybox opens it to regenerate the scene and the animation, and can export the MP4 from it. The model files are referenced by id and hash and fetched from the Toybox asset set, so the file stays small.
+- Toybox opens it to regenerate the scene and the animation, and can export the MP4 from it. The hosted viewer opens the same file. If visitors change the scene and the site has no server, the change can be saved only as a file download (OPEN 10). The model files are referenced by id and hash and fetched from the Toybox asset set, so the file stays small.
 - **Round trip test:** load a file, export frames, compare 3 chosen frames to stored pictures with a fixed tolerance. A file written by an older version still loads (the header has a schema version and a migration step).
 
 ## 7. What the new words make unnecessary or lower priority
 
 | Earlier part | Now |
 |---|---|
-| Visitor sandbox with Build mode, orbit and pinch gestures, tap to pick backdrop, undo, localStorage autosave, share sheet | **Lower priority.** The author is an agent plus the owner. Keep a simple orbit and pan with the mouse or trackpad in the viewer. Touch gestures, undo and backdrop pictures wait for a later task. |
-| Public visitors, accounts, hosting | **Not needed.** Everything runs on the owner's computer, as in femahoy. The hosted site can show exported MP4 files and scene files later. |
-| Phone spike bars (30 frames per second, 2 MB wasm on a throttled phone) | **Replaced.** The bar becomes: a 60-second 1080p MP4 exports in a stated time on this computer, and the viewer plays at 30 frames per second on a laptop. The `.wasm` size bar stays loose (below 5 MB). |
+| Visitor sandbox: orbit and pinch gestures, per-object edits, undo, localStorage autosave | **Moves to the hosted viewer (surface 2) and stays lower priority than the agent path.** The viewer needs orbit, pan, zoom, select, move, scale, rotate, flip, delete, duplicate. Touch gestures matter there, because visitors may use phones. Undo and autosave are optional there. Tap-to-pick backdrop pictures and the share sheet wait for a later task. |
+| Public visitors, accounts, hosting | **Only the viewer is hosted**, as static files on teoyujie.org. No accounts, no server, no agent, no MCP on the site. The authoring app and the MCP server run on the owner's computer. |
+| Phone spike bars (30 frames per second, 2 MB wasm on a throttled phone) | **Split.** Authoring and export: a 60-second 1080p MP4 exports in a stated time on this computer, and the authoring viewer plays at 30 frames per second on a laptop. Hosted viewer: it loads and plays a scene at 30 frames per second on a throttled phone, `.wasm` below 2 MB (the earlier bar), but this check runs after spikes 1 and 2, not before. |
 | Scroll playback on the phone | **Lower priority.** Playback is the timeline plus the exported video. A scroll-driven web player is an optional later view of the same file. |
 | Phone layout, share sheet, PNG share | **Lower priority.** PNG still exports a single frame from the command. |
 | Local MCP server writing `story.json` | **Kept, extended** to scene plus timeline, and now the main interface. |
@@ -119,7 +124,7 @@ Out: Polyfork (a public scene builder is redistribution that needs the paid Plat
 1. **Export spike (highest risk).** Goose to C to emcc to WebAssembly with WebGL2; render one lit model with an outline pass at `t`; open it in headless Chrome; capture frames; encode with ffmpeg; time it. Pass: a deterministic 10-second 1080p clip at 30 frames per second, repeated runs give identical frames (within a stated tolerance), and the time for a 60-second clip is reported. If headless Chrome has no usable GL, report that and the options (software GL, a native renderer, or WebCodecs).
 2. **Animation and people spike.** 24 MakeHuman people with the default skeleton, 8 bone-angle poses, a walk cycle, a crowd of 50, skinned in the vertex shader, at 30 frames per second in the viewer. Fallback: Kenney figures, with limits stated.
 3. **Scene-file round trip.** Write a file, load it, export frames, compare.
-4. The earlier phone-first spike is dropped. A phone viewer is a later task.
+4. **Hosted viewer check** (after 1 and 2): the static viewer opens a scene file on a throttled phone profile, edits an object by touch, and plays at 30 frames per second with `.wasm` below 2 MB.
 
 Stop and report after spikes 1 and 2 before the rest of the build.
 
