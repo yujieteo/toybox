@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Toybox export spike</title>
+<canvas id="canvas"></canvas>
+<pre id="log"></pre>
+<script src="toybox.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const W = +q.get('w') || 1920, H = +q.get('h') || 1080, FPS = +q.get('fps') || 30;
+const SECONDS = +q.get('seconds') || 10, PEOPLE = +q.get('people') || 50, RINGS = +q.get('rings') || 24;
+const NAME = q.get('name') || 'clip', MODE = q.get('mode') || 'export';
+const log = s => { document.getElementById('log').textContent += s + '\n'; };
+function fnv(a) { let h = 2166136261 >>> 0; for (let i = 0; i < a.length; i += 97) { h ^= a[i]; h = Math.imul(h, 16777619) >>> 0; } return h; }
+(async () => {
+  const M = await ToyboxModule();
+  const gl = document.getElementById('canvas').getContext('webgl2');
+  const dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'unknown';
+  M._scene_init(W, H, PEOPLE, RINGS);
+  const MODEQ = +q.get('scene') || 0;
+  if (MODEQ > 0) {
+    const sk = await (await fetch('skel.json')).json();
+    sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
+    const buf = new Uint8Array(await (await fetch('mesh.bin')).arrayBuffer());
+    const ptr = M._toybox_skin_buf(); M.HEAPU8.set(buf, ptr);
+    const nv = new Uint32Array(buf.buffer, 0, 2);
+    M._toybox_load_skin(ptr + 8, nv[0], ptr + 8 + nv[0] * 60, nv[1]);
+    M._scene_mode(MODEQ);
+  }
+  const n = FPS * SECONDS;
+  const result = { name: NAME, renderer, w: W, h: H, fps: FPS, frames: n, people: PEOPLE, rings: RINGS };
+  if (MODE === 'bench') {          // render only, no readback: draw time
+    const t0 = performance.now();
+    for (let i = 0; i < n; i++) M._render_frame(i / FPS);
+    M._toybox_read_pixels();       // force the GPU to finish
+    result.render_only_ms_per_frame = (performance.now() - t0) / n;
+    window.RESULT = result; log(JSON.stringify(result));
+    await fetch('/result?' + new URLSearchParams(Object.fromEntries(Object.entries(result).map(([k, v]) => [k, String(v)])))); return;
+  }
+  if (MODE === 'codec') {          // encode in the browser (WebCodecs), post only small chunks
+    await fetch(`/start?w=${W}&h=${H}&fps=${FPS}&name=${NAME}&codec=1`);
+    const canvas = document.getElementById('canvas');
+    let chain = Promise.resolve(); let bytes = 0;
+    const enc = new VideoEncoder({
+      output: chunk => { const b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); bytes += b.length;
+        chain = chain.then(() => fetch('/chunk', { method: 'POST', body: b })); },
+      error: e => log('enc error ' + e) });
+    enc.configure({ codec: 'avc1.640028', width: W, height: H, bitrate: 12e6, framerate: FPS,
+      avc: { format: 'annexb' }, latencyMode: 'quality' });
+    const hashes = []; let tRender = 0, tEnc = 0; const T0 = performance.now();
+    for (let i = 0; i < n; i++) {
+      let a = performance.now(); M._render_frame(i / FPS); let b = performance.now();
+      if (i % 30 === 0) hashes.push(fnv(M.HEAPU8.subarray(M._toybox_read_pixels(), M._toybox_read_pixels() + W * H * 4)));
+      const f = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / FPS) });
+      enc.encode(f, { keyFrame: i % 60 === 0 }); f.close();
+      while (enc.encodeQueueSize > 4) await new Promise(r => setTimeout(r, 1));
+      tRender += b - a; tEnc += performance.now() - b;
+    }
+    await enc.flush(); await chain;
+    result.loop_ms = performance.now() - T0; result.ms_per_frame = result.loop_ms / n;
+    result.render_ms_per_frame = tRender / n; result.encode_ms_per_frame = tEnc / n;
+    result.h264_bytes = bytes; result.hashes = hashes.join(',');
+    const r = await (await fetch('/end?' + new URLSearchParams(Object.fromEntries(Object.entries(result).map(([k, v]) => [k, String(v)]))))).json();
+    window.RESULT = r; log(JSON.stringify(r)); return;
+  }
+  await fetch(`/start?w=${W}&h=${H}&fps=${FPS}&name=${NAME}`);
+  const hashes = []; let tRender = 0, tRead = 0, tPost = 0;
+  const T0 = performance.now();
+  for (let i = 0; i < n; i++) {
+    let a = performance.now(); M._render_frame(i / FPS);
+    let b = performance.now(); const ptr = M._toybox_read_pixels();
+    let c = performance.now();
+    const px = M.HEAPU8.subarray(ptr, ptr + W * H * 4);
+    if (i % 30 === 0) hashes.push(fnv(px));
+    await fetch('/frame', { method: 'POST', body: px });
+    let d = performance.now();
+    tRender += b - a; tRead += c - b; tPost += d - c;
+  }
+  result.loop_ms = performance.now() - T0;
+  result.ms_per_frame = result.loop_ms / n;
+  result.render_ms_per_frame = tRender / n; result.read_ms_per_frame = tRead / n; result.post_ms_per_frame = tPost / n;
+  result.hashes = hashes.join(',');
+  const r = await (await fetch('/end?' + new URLSearchParams(Object.fromEntries(Object.entries(result).map(([k, v]) => [k, String(v)]))))).json();
+  window.RESULT = r; log(JSON.stringify(r));
+})();
+</script>
