@@ -12,7 +12,7 @@ extern fn gl_mesh(id: i32, data: f32[:]);
 extern fn gl_begin(r: f32, g: f32, b: f32);
 extern fn gl_draw(mesh: i32, mvp: Mat&, model: Mat&, r: f32, g: f32, b: f32, outline: i32);
 
-extern fn gl_draw_skin(mvp: Mat&, model: Mat&, bones: f32[:], pal: f32[:], outline: i32);
+extern fn gl_draw_skin(lod: i32, mvp: Mat&, model: Mat&, bones: f32[:], pal: f32[:], outline: i32);
 
 let PI32: f32 = 3.14159265;
 
@@ -167,6 +167,9 @@ fn part(vp: Mat, base: Mat, mesh: i32, sx: f32, sy: f32, sz: f32, ox: f32, oy: f
 
 // ---- Spike 2: skinned people. 20 bones, the pose is Euler angles per bone (degrees).
 var g_mode: i32 = 0;
+var g_lod_on: i32 = 1;
+var g_lod_dist: f32 = 7.0;
+export "scene_lod" fn scene_lod(on: i32, dist: f32) { g_lod_on = on; g_lod_dist = dist; }
 var g_par: i32[>..] = [];
 var g_hx: f32[>..] = [];
 var g_hy: f32[>..] = [];
@@ -264,23 +267,41 @@ fn palette(p: i32) -> f32[>..] {
     let d = p % 4;
     o.push(0.18 + 0.05 * (d as f32)); o.push(0.18 + 0.03 * (d as f32)); o.push(0.28);
     o.push(0.12); o.push(0.10); o.push(0.10);
-    o.push(0.2); o.push(0.15); o.push(0.1);
+    // hair: black, brown, grey, blond
+    let hc = (p * 3) % 4;
+    if hc == 0 { o.push(0.08); o.push(0.07); o.push(0.07); }
+    if hc == 1 { o.push(0.30); o.push(0.18); o.push(0.10); }
+    if hc == 2 { o.push(0.62); o.push(0.60); o.push(0.58); }
+    if hc == 3 { o.push(0.75); o.push(0.60); o.push(0.30); }
+    o.push(0.97); o.push(0.97); o.push(0.95);                      // eye white
+    o.push(sr * 0.88 + 0.02); o.push(sg * 0.68); o.push(sb * 0.66);  // lips
+    o.push(0.10); o.push(0.08); o.push(0.07);                      // pupil
     o
 }
 
-fn draw_person(vp: Mat, base: Mat, p: i32, pose: f32[>..]) {
+fn draw_person(vp: Mat, base: Mat, p: i32, pose: f32[>..], cx: f32, cy: f32, cz: f32) {
+    let dx = base.m[12] - cx; let dy = base.m[13] - cy; let dz = base.m[14] - cz;
+    var lod: i32 = 0;
+    if g_lod_on != 0 && sqrt(dx * dx + dy * dy + dz * dz) > g_lod_dist { lod = 1; }
     let h = 0.92 + 0.016 * ((p % 11) as f32);
     let wd = 0.88 + 0.025 * (((p * 3) % 10) as f32);
     let model = mul(base, scale(wd, h, wd));
     let mvp = mul(vp, model);
     var bm = bone_matrices(copy(pose));
     var pl = palette(p);
-    gl_draw_skin(mvp, model, bm, pl, 1);
+    gl_draw_skin(lod, mvp, model, bm, pl, 1);
 }
 
 fn render_people(tf: f32) {
     gl_begin(0.93, 0.91, 0.86);
     let proj = perspective(0.9, (g_w as f32) / (g_h as f32), 0.1, 100.0);
+    if g_mode == 3 {
+        // Face close-up of one person (people = person number).
+        let view = look_at(0.15, 1.62, 1.0, 0.0, 1.58, 0.0);
+        let vp = mul(proj, view);
+        draw_person(vp, ident(), g_people, pose_angles(0, tf), 0.15, 1.62, 1.0);
+        return;
+    }
     if g_mode == 2 {
         // Pose sheet: 24 different people, 8 poses, 3 rows. Static camera.
         let view = look_at(0.0, 2.2, 10.5, 0.0, 0.9, 0.0);
@@ -292,7 +313,7 @@ fn render_people(tf: f32) {
             let p = pp as i32;
             let row = p / 8; let col = p % 8;
             let base = translate(((col as f32) - 3.5) * 1.5, 0.0, ((row as f32) - 1.0) * 1.8);
-            draw_person(vp, base, p, pose_angles(col, tf));
+            draw_person(vp, base, p, pose_angles(col, tf), 0.0, 2.2, 10.5);
         }
         return;
     }
@@ -310,7 +331,7 @@ fn render_people(tf: f32) {
         let base = mul(translate(cos(a) * ring, 0.0, sin(a) * ring), rot_y(PI32 - a));
         var pose = pose_angles(1, tf + pf * 0.37);
         if p % 6 == 0 { pose = mix_pose(pose_angles(1, tf + pf), pose_angles(3, tf + pf), 0.5 + 0.5 * sin(tf * 0.7 + pf)); }
-        draw_person(vp, base, p % 24, copy(pose));
+        draw_person(vp, base, p % 24, copy(pose), sin(ang) * 14.0, 6.0, cos(ang) * 14.0);
     }
 }
 

@@ -50,6 +50,14 @@ Known gaps (not hidden):
 ## Reproduce
 
 1. Fetch MakeHuman `base.obj`, `default.mhskel`, `default_weights.mhw` from github.com/makehumancommunity/makehuman (`makehuman/data`).
-2. `python3 -I spikes/people/prep.py MHDIR OUTDIR` writes `mesh.bin` and `skel.json`.
-3. `GOOSE=/path/to/goose spikes/export/build.sh BUILDDIR` (emsdk active). Copy `mesh.bin` and `skel.json` into BUILDDIR.
-4. `node spikes/export/serve.mjs OUTDIR BUILDDIR`, then open `/?mode=codec&scene=1&seconds=10&fps=30&w=1920&h=1080&people=50&name=clip` in Chrome. Modes: `bench`, `export` (raw frames), `codec`. Scenes: 0 box people, 1 crowd, 2 pose sheet.
+2. `python3 -I tools/people/prep.py MHDIR OUTDIR` writes `mesh.bin` and `skel.json`.
+3. `GOOSE=/path/to/goose engine/build.sh BUILDDIR` (emsdk active). Copy `mesh.bin` and `skel.json` into BUILDDIR.
+4. `node engine/serve.mjs OUTDIR BUILDDIR`, then open `/?mode=codec&scene=1&seconds=10&fps=30&w=1920&h=1080&people=50&name=clip` in Chrome. Modes: `bench`, `export` (raw frames), `codec`. Scenes: 0 box people, 1 crowd, 2 pose sheet.
+
+## Follow-up after the owner chose option A (LOD, eyes, hair)
+
+- `tools/people/prep.py` now writes a full body (27,380 triangles, 988 KB) and a LOD body (4,148 triangles, 149 KB, vertex clustering keyed by position and main bone). Both have eye spheres with a pupil, lips and a hair region on the scalp. Hair colour, skin tone and clothes colour come from a per-person palette.
+- A person closer than 7 m to the camera uses the full body. A person farther away uses the LOD body.
+- Crowd of 50, 1080p, render only, this M5: full bodies 9.3 ms per frame, LOD 3.4 ms per frame. 200 people with LOD: 11.8 ms. A phone-size canvas (1170 by 2532) with 50 people and LOD: 3.5 ms.
+- Faces: close-up frame `face-closeup.png` in the proof folder shows eyes with pupils, nose, lips and hair. The 24 people differ by skin tone, hair colour, clothes colour, height and width.
+- Phone frame rate is still not measured on a phone. The throttled-CPU profile does not slow the GPU, so the headless profile cannot answer it. The check stays on the owner's phone.

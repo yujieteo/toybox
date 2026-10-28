@@ -21,11 +21,14 @@ function fnv(a) { let h = 2166136261 >>> 0; for (let i = 0; i < a.length; i += 9
   if (MODEQ > 0) {
     const sk = await (await fetch('skel.json')).json();
     sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
-    const buf = new Uint8Array(await (await fetch('mesh.bin')).arrayBuffer());
-    const ptr = M._toybox_skin_buf(); M.HEAPU8.set(buf, ptr);
-    const nv = new Uint32Array(buf.buffer, 0, 2);
-    M._toybox_load_skin(ptr + 8, nv[0], ptr + 8 + nv[0] * 60, nv[1]);
+    for (const [id, f] of [[0, 'mesh_full.bin'], [1, 'mesh_lod.bin']]) {
+      const buf = new Uint8Array(await (await fetch(f)).arrayBuffer());
+      const ptr = M._toybox_skin_buf(); M.HEAPU8.set(buf, ptr);
+      const nv = new Uint32Array(buf.buffer, 0, 2);
+      M._toybox_load_skin(id, ptr + 8, nv[0], ptr + 8 + nv[0] * 60, nv[1]);
+    }
     M._scene_mode(MODEQ);
+    M._scene_lod(q.get('lod') === '0' ? 0 : 1, +q.get('loddist') || 7);
   }
   const n = FPS * SECONDS;
   const result = { name: NAME, renderer, w: W, h: H, fps: FPS, frames: n, people: PEOPLE, rings: RINGS };

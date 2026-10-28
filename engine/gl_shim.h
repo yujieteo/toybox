@@ -75,7 +75,7 @@ static void gl_begin(float r, float g, float b) {
     glUseProgram(g_prog);
 }
 
-static GLuint g_skin, g_skin_vao, g_skin_n;
+static GLuint g_skin, g_skin_vao[2], g_skin_n[2];
 static GLint su_mvp, su_model, su_bones, su_pal, su_pass;
 static void gl_draw(int32_t mesh, Mat_g *mvp, Mat_g *model, float r, float g, float b, int32_t outline) {
     glUseProgram(g_prog);
@@ -95,7 +95,8 @@ EMSCRIPTEN_KEEPALIVE unsigned char *toybox_read_pixels(void) {
 /* ---- skinned people (spike 2): one shared mesh, 20 bones, 4 weights per vertex ---- */
 static unsigned char g_skin_buf[1 << 21];
 EMSCRIPTEN_KEEPALIVE unsigned char *toybox_skin_buf(void) { return g_skin_buf; }
-EMSCRIPTEN_KEEPALIVE void toybox_load_skin(const float *v, int nv, const unsigned short *idx, int ni) {
+EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, const float *v, int nv, const unsigned short *idx, int ni) {
+  if (!g_skin) {
     const char *vs =
       "#version 300 es\n"
       "layout(location=0) in vec3 p; layout(location=1) in vec3 n; layout(location=2) in float reg;\n"
@@ -107,12 +108,12 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(const float *v, int nv, const unsigne
       "  vec4 q = s*vec4(p,1.0); vec3 nn = mat3(s)*n; vreg = int(reg+0.5);\n"
       "  vn = normalize(mat3(model)*nn);\n"
       "  vec4 c = mvp*q;\n"
-      "  if(pass>0.5){ vec4 d = mvp*vec4(nn,0.0); c.xy += normalize(d.xy+1e-6)*0.004*c.w; }\n"
+      "  if(pass>0.5){ vec4 d = mvp*vec4(nn,0.0); c.xy += normalize(d.xy+1e-6)*0.0028*c.w; }\n"
       "  gl_Position = c; }\n";
     const char *fs =
       "#version 300 es\nprecision highp float;\n"
-      "in vec3 vn; flat in int vreg; uniform vec3 pal[5]; uniform float pass; out vec4 o;\n"
-      "void main(){ if(pass>0.5){ o=vec4(0.08,0.07,0.1,1.0); return; }\n"
+      "in vec3 vn; flat in int vreg; uniform vec3 pal[8]; uniform float pass; out vec4 o;\n"
+      "void main(){ if(pass>0.5){ if(vreg==5||vreg==7) discard; o=vec4(0.08,0.07,0.1,1.0); return; }\n"
       "  float l = max(dot(normalize(vn), normalize(vec3(0.4,0.8,0.5))),0.0);\n"
       "  float q = l<0.2?0.55:(l<0.55?0.78:1.0);\n"
       "  o = vec4(pal[vreg]*q,1.0); }\n";
@@ -124,8 +125,9 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(const float *v, int nv, const unsigne
     su_mvp = glGetUniformLocation(g_skin, "mvp"); su_model = glGetUniformLocation(g_skin, "model");
     su_bones = glGetUniformLocation(g_skin, "bones"); su_pal = glGetUniformLocation(g_skin, "pal");
     su_pass = glGetUniformLocation(g_skin, "pass");
+  }
     GLuint vbo, ebo;
-    glGenVertexArrays(1, &g_skin_vao); glBindVertexArray(g_skin_vao);
+    glGenVertexArrays(1, &g_skin_vao[id]); glBindVertexArray(g_skin_vao[id]);
     glGenBuffers(1, &vbo); glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, (size_t)nv * 60, v, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0); glVertexAttribPointer(0, 3, GL_FLOAT, 0, 60, (void*)0);
@@ -135,16 +137,16 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(const float *v, int nv, const unsigne
     glEnableVertexAttribArray(4); glVertexAttribPointer(4, 4, GL_FLOAT, 0, 60, (void*)44);
     glGenBuffers(1, &ebo); glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (size_t)ni * 2, idx, GL_STATIC_DRAW);
-    g_skin_n = ni;
+    g_skin_n[id] = ni;
 }
 
-static void gl_draw_skin(Mat_g *mvp, Mat_g *model, sl_f32 bones, sl_f32 pal, int32_t outline) {
+static void gl_draw_skin(int32_t lod, Mat_g *mvp, Mat_g *model, sl_f32 bones, sl_f32 pal, int32_t outline) {
     glUseProgram(g_skin);
-    glBindVertexArray(g_skin_vao);
+    glBindVertexArray(g_skin_vao[lod]);
     glUniformMatrix4fv(su_mvp, 1, 0, mvp->m_g.e);
     glUniformMatrix4fv(su_model, 1, 0, model->m_g.e);
     glUniformMatrix4fv(su_bones, 20, 0, bones.data);
-    glUniform3fv(su_pal, 5, pal.data);
-    if (outline) { glUniform1f(su_pass, 1.0f); glCullFace(GL_FRONT); glDrawElements(GL_TRIANGLES, g_skin_n, GL_UNSIGNED_SHORT, 0); }
-    glUniform1f(su_pass, 0.0f); glCullFace(GL_BACK); glDrawElements(GL_TRIANGLES, g_skin_n, GL_UNSIGNED_SHORT, 0);
+    glUniform3fv(su_pal, 8, pal.data);
+    if (outline) { glUniform1f(su_pass, 1.0f); glCullFace(GL_FRONT); glDrawElements(GL_TRIANGLES, g_skin_n[lod], GL_UNSIGNED_SHORT, 0); }
+    glUniform1f(su_pass, 0.0f); glCullFace(GL_BACK); glDrawElements(GL_TRIANGLES, g_skin_n[lod], GL_UNSIGNED_SHORT, 0);
 }
