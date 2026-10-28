@@ -140,11 +140,12 @@ Stop and report after spikes 1 and 2 before the rest of the build.
 | b. People | at least 10 distinct people with readable faces, 8 poses, a walk cycle |
 | c. Lighting | day and night looks; one 1024 by 1024 shadow map |
 | d. Style | outline of 1 pixel at 1080 pixels high, no flicker between frames |
-| e. Camera | a shot in every chapter; moves of at most 1.5 s between shots; no hidden focus object; no blocked view (a ray test from the camera to each focus object and across the frame); at least 3 shot types in a 12-chapter story |
+| e. Camera | a shot in every chapter; moves of at most 1.5 s between shots; no hidden focus object; no blocked view (a ray test from the camera to each focus object and across the frame), cleared by moving the camera and never by hiding an object; at least 3 shot types in a 12-chapter story |
 | f. Layout | each named dimension has a `source` and sits within 1 metre of it; estimates are labelled |
 | g. Text | captions up to 280 characters, on screen long enough to read (at least 0.06 s per character, my proposal), text at least 4% of the frame height, contrast at least 4.5 to 1 |
 | h. Export | a 60-second 1080p MP4 exports in a stated time on this computer (set after spike 1); the viewer plays at 30 frames per second on a laptop |
 | i. Accessibility | captions also written to an `.srt` file next to the MP4 |
+| j. Motion | sampled every 0.25 s: no object passes into another (people, vehicles, props and buildings); people and vehicles stand on the ground, a floor or stairs; moving vehicles keep to their lane |
 
 Risk: the riot page names real people and shows a real death. Real events use generic faces from the pool, no names on figures, and a `source` on every claim in a caption.
 

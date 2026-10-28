@@ -276,6 +276,120 @@ export function blockedViews(scene, catalogue) {
   return errs;
 }
 
+// ---------- motion: solid objects must not pass into each other, people and vehicles stand on something,
+// and moving vehicles keep to their lane. Sampled every VIEW_STEP over the whole scene.
+export const TOUCH = 0.1;          // two footprints may share at most this part of the smaller one
+export const PERSON_CORE = 0.3;    // the footprint side of a body in metres (arms and gear may touch)
+export const MIN_SPEED = 1;        // m/s: a vehicle slower than this is parked, not driving
+const MOVE_CHANNELS = new Set(['at', 'yaw', 'scale']);
+// The footprint of o: the core of a person, the model base (trunk, pole) when the catalogue gives one, else the bounds.
+function footprint(o, b, m) {
+  if (o.model === 'person') return rectCorners(b.at[0], b.at[2], PERSON_CORE, PERSON_CORE, b.yaw);
+  if (!m?.base) return b.corners;
+  const sx = b.size[0] / m.size[0], sz = b.size[2] / m.size[2], [x0, z0, x1, z1] = m.base;
+  const c = rotYaw([((x0 + x1) / 2) * sx, 0, ((z0 + z1) / 2) * sz], b.yaw);
+  return rectCorners(b.at[0] + c[0], b.at[2] + c[2], (x1 - x0) * sx, (z1 - z0) * sz, b.yaw);
+}
+// The solid objects at time t: no roads, floors, ceilings, effects or doors, nothing scaled to nothing.
+function solidsAt(scene, cat, models, t) {
+  const bt = objectBounds(scene, cat, t), out = [];
+  for (const o of scene.objects) {
+    const b = bt[o.id], m = models.get(o.model), tags = o.tags || [];
+    if (!b || o.hidden || o.parent || Math.min(...b.size) < 0.05 || (m && m.kind === 'road')) continue;
+    if (tags.includes('floor') || tags.includes('ceiling') || (m?.tags || []).includes('effect') || o.model === 'door') continue;
+    const poly = footprint(o, b, m), xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
+    const pose = o.model === 'person' ? (trackOf(scene, o.id, 'pose') ? valueAt(trackOf(scene, o.id, 'pose').keys, t) : o.pose) : null;
+    out.push({ o, b, kind: o.model === 'person' ? 'person' : m?.kind, tags: [...tags, ...(m?.tags || [])], poly, y0: b.min[1], y1: b.max[1], pose,
+      box: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)] });
+  }
+  return { bt, solids: out };
+}
+// A pair that may share space: a seated person and a seat, a person on stairs.
+function mayShare(a, b) {
+  for (const [p, q] of [[a, b], [b, a]]) {
+    if (p.kind !== 'person') continue;
+    if (p.pose === 'sit' && (q.kind === 'furniture' || q.kind === 'prop')) return true;
+    if (q.tags.includes('stairs') || q.o.model === 'escalator') return true;
+  }
+  return false;
+}
+// True when more than TOUCH of the smaller footprint lies inside an OpenStreetMap footprint: the centre
+// or a corner pulled 30 percent toward the centre is inside.
+function inFootprint(s, poly) {
+  const c = s.poly.reduce((a, p) => [a[0] + p[0] / s.poly.length, a[1] + p[1] / s.poly.length], [0, 0]);
+  return [c, ...s.poly.map((p) => [p[0] * 0.7 + c[0] * 0.3, p[1] * 0.7 + c[1] * 0.3])].some((p) => inPoly(p, poly));
+}
+// [{ code, path, message }] for collision (two solids pass into each other), off_ground (a person or a
+// vehicle floats or sinks) and wrong_lane (a driving vehicle is on the wrong side of the road). Each
+// problem is reported once, with the time span in which it holds.
+export function motionErrors(scene, catalogue, opts = {}) {
+  const cat = catalogue || loadCatalogue(), models = new Map(cat.models.map((m) => [m.id, m]));
+  const movers = new Set((scene.tracks || []).filter((k) => MOVE_CHANNELS.has(k.channel)).map((k) => k.object));
+  const only = opts.only ? new Set(opts.only) : null;
+  const osm = (scene.map?.osm?.buildings || []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9));
+  const drive = scene.drive || 'left';
+  const roads = scene.objects.filter((o) => ['road-straight', 'road-zebra'].includes(o.model) && !o.parent);
+  const runs = new Map(), errs = [];
+  const seen = (key, t, make) => {
+    const rs = runs.get(key) || runs.set(key, []).get(key), r = rs.at(-1);
+    if (r && t - r.t1 <= VIEW_STEP + 1e-9) r.t1 = t; else rs.push({ t0: t, t1: t, make });
+  };
+  const t0 = opts.from ?? 0, t1 = opts.to ?? scene.duration ?? 0, n = Math.max(0, Math.round((t1 - t0) / VIEW_STEP));
+  let prev = null;
+  for (let k = 0; k <= n; k++) {
+    const t = Math.min(t1, t0 + k * VIEW_STEP), { bt, solids } = solidsAt(scene, cat, models, t);
+    const mine = (s) => !only || only.has(s.o.id);
+    // collisions: sweep along x
+    const order = [...solids].sort((a, b) => a.box[0] - b.box[0]);
+    for (let i = 0; i < order.length; i++) {
+      const A = order[i];
+      for (let j = i + 1; j < order.length && order[j].box[0] < A.box[2]; j++) {
+        const B = order[j];
+        if (!mine(A) && !mine(B)) continue;
+        if (!movers.has(A.o.id) && !movers.has(B.o.id) && A.kind !== 'person' && B.kind !== 'person') continue; // the overlap check of validate
+        if (B.box[1] >= A.box[3] || A.box[1] >= B.box[3] || A.y0 >= B.y1 || B.y0 >= A.y1 || mayShare(A, B)) continue;
+        if (overlapRatio(A.poly, B.poly) <= TOUCH) continue;
+        const [p, q] = [A.o.id, B.o.id].sort();
+        seen(`c|${p}|${q}`, t, (r) => `${p} and ${q} pass into each other from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Change a path or a time so that they keep apart: another lane, a gap, a wait, or a way round.`);
+      }
+    }
+    for (const S of solids) {
+      if (!mine(S)) continue;
+      if (S.kind === 'person' || S.kind === 'vehicle') {
+        for (const b of osm) if (S.box[2] > b.box[0] && S.box[0] < b.box[2] && S.box[3] > b.box[1] && S.box[1] < b.box[3] && S.y0 < b.y1 && inFootprint(S, b.poly))
+          seen(`c|${S.o.id}|${b.id}`, t, (r) => `${S.o.id} is inside the building ${b.id} from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Keep people and vehicles out of building footprints.`);
+        // ground contact: the ground (y 0), or the top of a floor, a structure or furniture under the centre
+        const y = S.y0, c = [S.b.at[0], S.b.at[2]];
+        if (Math.abs(y) > 0.05) {
+          const held = scene.objects.some((o) => {
+            const b = bt[o.id], m = models.get(o.model);
+            if (!b || o.id === S.o.id || o.model === 'person' || !inPoly(c, b.corners)) return false;
+            if ((o.tags || []).includes('stairs') || (m?.tags || []).includes('stairs') || o.model === 'escalator') return y >= b.min[1] - 0.05 && y <= b.max[1] + 0.05;
+            return Math.abs(b.max[1] - y) <= 0.1;
+          });
+          if (!held) seen(`g|${S.o.id}`, t, (r) => `${S.o.id} ${y > 0 ? 'floats above' : 'sinks into'} the ground from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s (y ${y.toFixed(2)} m). Put it on the ground, a floor or stairs.`);
+        }
+      }
+      // lanes: a driving vehicle on a straight road keeps to the side of the road given by scene.drive
+      if (S.kind === 'vehicle' && movers.has(S.o.id) && prev?.[S.o.id]) {
+        const a = prev[S.o.id].at, v = [S.b.at[0] - a[0], S.b.at[2] - a[2]], sp = Math.hypot(...v) / VIEW_STEP;
+        const road = sp >= MIN_SPEED && roads.find((r) => bt[r.id] && inPoly(c2(S.b.at), bt[r.id].corners));
+        if (road) {
+          const rb = bt[road.id], ax = rotYaw([0, 0, 1], rb.yaw), along = v[0] * ax[0] + v[1] * ax[2];
+          const dir = along >= 0 ? [ax[0], ax[2]] : [-ax[0], -ax[2]], right = [-dir[1], dir[0]];
+          const side = (S.b.at[0] - rb.at[0]) * right[0] + (S.b.at[2] - rb.at[2]) * right[1];
+          if (Math.abs(along) > 0.5 * Math.hypot(...v) && (drive === 'left' ? side > 0.3 : side < -0.3))
+            seen(`l|${S.o.id}`, t, (r) => `${S.o.id} drives on the ${drive === 'left' ? 'right' : 'left'} side of ${road.id} from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Traffic keeps ${drive} (scene drive "${drive}"): move the path to the ${drive} lane for its direction.`);
+        }
+      }
+    }
+    prev = bt;
+  }
+  for (const [key, rs] of runs) for (const r of rs) errs.push({ code: { c: 'collision', g: 'off_ground', l: 'wrong_lane' }[key[0]], path: 'objects', message: r.make(r) });
+  return errs;
+}
+const c2 = (at) => [at[0], at[2]];
+
 // ---------- contrast
 function lum(hex) {
   const h = hex.replace('#', '');
@@ -421,6 +535,11 @@ export function validate(scene, catalogue) {
     if (c.measured === true && !c.source) E('measured_no_source', p, 'Callout is measured but has no source.');
     if (typeof c.source === 'string' && /^estimated/i.test(c.source) && c.estimated !== true) E('estimate_not_flagged', p, 'Callout has an estimated source but estimated is not true.');
   });
+  // a callout belongs to one chapter: it shows only inside that chapter
+  if (scene.chapters.length) scene.callouts.forEach((c, i) => {
+    if (isNum(c.start) && isNum(c.end) && !scene.chapters.some((k) => c.start >= k.start - 1e-9 && c.end <= k.end + 1e-9))
+      E('callout_outside_chapter', `callouts[${i}]`, `Callout "${c.text}" (${c.start} s to ${c.end} s) is not inside one chapter. A callout shows only in the chapter that it belongs to.`);
+  });
   if (isNum(scene.duration) && scene.duration + 1e-9 < maxT) E('duration_too_short', 'duration', `duration is ${scene.duration} s but the last time in the scene is ${maxT} s.`);
 
   if (scene.chapters.length >= 12) {
@@ -446,6 +565,29 @@ export function validate(scene, catalogue) {
     const ratio = overlapRatio(ba.corners, bb.corners);
     if (ratio > 0.2) E('overlap', `objects[${scene.objects.indexOf(B)}]`, `Objects ${A.id} and ${B.id} overlap by ${(ratio * 100).toFixed(0)} percent of the smaller footprint.`);
   }
+  // real objects stay in the scene: nothing is hidden, and no building, structure or vehicle disappears
+  // to clear a camera view. A vehicle may be swapped for another one (a car that burns) at the same place.
+  scene.objects.forEach((o, i) => { if (o.hidden) E('object_hidden', `objects[${i}]`, `Object ${o.id} is hidden. Do not hide an object to clear a view: move the camera. Remove an object only when it does not belong in the scene.`); });
+  const kindOf = (o) => models.get(o.model)?.kind;
+  const tiny = (v) => Math.min(...(typeof v === 'number' ? [v] : v)) < 0.05;
+  const changes = (o, grow) => (trackOf(scene, o.id, 'scale')?.keys || []).filter((k, j, ks) => j > 0 && tiny(ks[j - 1].v) === grow && tiny(k.v) !== grow).map((k) => k.t);
+  scene.objects.forEach((o, i) => {
+    const kind = kindOf(o);
+    if (!['building', 'structure', 'vehicle'].includes(kind)) return;
+    const first = trackOf(scene, o.id, 'scale')?.keys?.[0];
+    if (kind !== 'vehicle' && ((o.scale !== undefined && tiny(o.scale)) || (first && tiny(first.v))))
+      E('object_vanishes', `objects[${i}]`, `${kind[0].toUpperCase()}${kind.slice(1)} ${o.id} is too small to see (scale below 0.05). A real object does not disappear: move the camera to clear a view.`);
+    for (const t of changes(o, false)) {
+      const here = stateAt(scene, o, t - 0.01).at;
+      const swap = kind === 'vehicle' && scene.objects.some((q) => q !== o && kindOf(q) === 'vehicle'
+        && changes(q, true).some((u) => Math.abs(u - t) <= 1 && Math.hypot(stateAt(scene, q, u + 0.01).at[0] - here[0], stateAt(scene, q, u + 0.01).at[2] - here[2]) <= 3));
+      if (!swap) E('object_vanishes', `objects[${i}]`, `${kind[0].toUpperCase()}${kind.slice(1)} ${o.id} shrinks to nothing at ${t} s. A real object does not disappear: move the camera to clear a view. Only a vehicle may be swapped for another vehicle at the same place and time.`);
+    }
+  });
+  if (scene.cutaway) scene.objects.forEach((o, i) => {
+    if ((o.tags || []).some((t) => t === 'wall' || t === 'ceiling') && ['building', 'vehicle', 'nature'].includes(kindOf(o)))
+      E('cutaway_outdoor', `objects[${i}].tags`, `${o.id} is a ${kindOf(o)} with a wall or ceiling tag, so the cutaway hides it. The cutaway is for room walls and ceilings from build_room only.`);
+  });
   // focus visibility at chapter start
   scene.chapters.forEach((c, i) => {
     if (!c.focus?.length || !isNum(c.start)) return;
@@ -460,6 +602,12 @@ export function validate(scene, catalogue) {
     }
   });
   return errs;
+}
+
+// Every check: validate, blocked views and motion. The validate tool, export_scene and the eval report use it.
+export function checkScene(scene, catalogue) {
+  const cat = catalogue || loadCatalogue();
+  return [...validate(scene, cat), ...blockedViews(scene, cat), ...motionErrors(scene, cat)];
 }
 
 // Colours the export uses for caption text and its plate. The eval checks their contrast.

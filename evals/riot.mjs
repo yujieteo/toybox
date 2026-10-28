@@ -35,7 +35,8 @@ export function build() {
   b.cmd('add_credit', { text: `Facts: ${WIKI}` });
   b.cmd('add_credit', { text: 'Street layout and figure positions are approximate. Faces are generic.' });
 
-  // ---------- the street (all layout is estimated)
+  // ---------- the street (all layout is estimated). Traffic keeps left: on Race Course Road (along z) a
+  // vehicle that goes north (to -z) uses the west lane (x -2.2), one that goes south uses the east lane (x 2.2).
   place('road-junction', [0, 0], { id: 'junction' });
   for (let k = 0; k < 4; k++) for (const [s, sg] of [['n', -1], ['s', 1]]) place('road-straight', [0, 0, sg * (9 + 10 * k)], { id: `rcr-${s}${k}` });
   for (let k = 0; k < 3; k++) place('road-straight', [-(9 + 10 * k), 0, 0], { id: `hamp-w${k}`, yaw: 90 });
@@ -43,100 +44,111 @@ export function build() {
   for (const [x, z0, id] of [[4.15, -43, 'k-en'], [4.15, 7, 'k-es'], [-4.15, -43, 'k-wn'], [-4.15, 7, 'k-ws']]) b.cmd('place_group', { model: 'kerb', count: 19, pattern: 'line', at: [x, 0, z0], angle: 270, spacing: 2, yaw: 90, id, ...L });
   for (const z of [-37, 18, 34, -44, 44]) { place('lamp-post', [4.8, 0, z], { yaw: 180 }); place('lamp-post', [-4.8, 0, -z], { yaw: 0 }); }
   place('traffic-light', [4.8, 0, -5], { id: 'tl-1' }); place('traffic-light', [-4.8, 0, 5], { id: 'tl-2' });
-  for (const z of [-36, -10, 24]) place('tree', [-5.8, 0, z], { scale: 0.7 });
+  for (const z of [-36, 24]) place('tree', [-5.8, 0, z], { scale: 0.7 });
   place('bus-stop', [5.5, 0, -22], { id: 'busstop', yaw: 270 });
   place('bench', [5.8, 0, 9], { id: 'bench', yaw: 270 });
   place('bin', [5.0, 0, -27]); place('bin', [-5.0, 0, 20]);
   // imported CC0 models (Kenney, Poly Haven): parked cars, a road barrier, trees and coffee-shop chairs
-  place('kenney-sedan', [-28, 0, 2.2], { id: 'parked-1', yaw: 270 }); place('kenney-sedan', [-21, 0, -2.2], { id: 'parked-2', yaw: 90, colors: { body: '#4a79a5' } });
-  place('kenney-road-barrier', [-12, 0, -1.2], { id: 'barrier-w1' }); place('kenney-road-barrier', [-12, 0, 1.2], { id: 'barrier-w2' });
+  place('kenney-sedan', [-28, 0, 2.2], { id: 'parked-1', yaw: 270 }); place('kenney-sedan', [-21, 0, -3.6], { id: 'parked-2', yaw: 90, colors: { body: '#4a79a5' } });
+  place('kenney-road-barrier', [-12, 0, 1.2], { id: 'barrier-w1' });
   place('kenney-tree-oak', [6.0, 0, 40], { scale: 0.7 }); place('kenney-tree-oak', [-6.0, 0, 32], { scale: 0.7 });
   place('polyhaven-monobloc-chair', [6.4, 0, -29.5], { yaw: 270 }); place('polyhaven-monobloc-chair', [6.4, 0, -30.6], { yaw: 250 });
-  b.cmd('place_sign', { text: 'Race Course Road', at: [5.9, 0, 5.5], yaw: 270, ...L });
-  b.cmd('place_sign', { text: 'Hampshire Road', at: [10, 0, -5.6], yaw: 0, ...L });
+  b.cmd('place_sign', { text: 'Race Course Road', at: [5.9, 0, 5.5], yaw: 270, ...L, id: 'sign-rcr' });
+  b.cmd('place_sign', { text: 'Hampshire Road', at: [10, 0, -5.6], yaw: 0, ...L, id: 'sign-hamp' });
+  // A person who rides in a vehicle does not show. It appears beside the door when the vehicle stops.
+  const appear = (id, t) => b.cmd('animate', { id, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] });
 
-  // ---------- chapter 1: quiet evening
-  const walkers = [['w1', 0, [5.5, -30], [5.5, -12], 1.2], ['w2', 1, [-5.5, -12], [-5.5, -33], 1.3], ['w3', 3, [5.5, -9], [5.5, -33], 1.1], ['w4', 4, [-5.5, -30], [-5.5, -10], 1.2], ['w5', 6, [5.5, 30], [5.5, 10], 1.3], ['w6', 7, [-5.5, 12], [-5.5, 32], 1.2]];
+  // ---------- chapter 1: quiet evening. Pavement walkers keep apart: opposite directions use lines 0.6 m apart.
+  const walkers = [['w1', 0, [8.8, -30], [8.8, -12], 1.2], ['w2', 1, [-6.4, -12], [-6.4, -33], 1.3], ['w3', 3, [9.4, -9], [9.4, -33], 1.1], ['w4', 4, [-7.0, -30], [-7.0, -16], 1.2], ['w5', 6, [8.8, 30], [8.8, 10], 1.3], ['w6', 7, [-6.6, 12], [-6.6, 30], 1.2]];
   for (const [id, v, a, z, sp] of walkers) { person(id, v, a); leg(id, [a, z], 0.5, sp, { pose: 'walk' }); }
   person('sitter', 9, [5.8, 0, 9], { pose: 'sit', yaw: 270 });
   person('chat1', 10, [-5.0, -21.3], { pose: 'stand', yaw: 90 }); person('chat2', 12, [-4.3, -21.3], { pose: 'wave', yaw: 270 });
-  place('car-taxi', [-2, 0, 60], { id: 'taxi' }); leg('taxi', [[-2, 60], [-2, -60]], 1, 10);
-  place('bus-private', [2.2, 0, -60], { id: 'bus1' }); place('car-sedan', [2.2, 0, 70], { id: 'sedan1' });
-  leg('sedan1', [[2.2, 70], [2.2, -70]], 2, 12);
+  // through traffic drives on to points beyond the street and stops there, one behind the other
+  place('car-taxi', [-2, 0, 60], { id: 'taxi', yaw: 180 }); leg('taxi', [[-2, 60], [-2, -100]], 1, 10);
+  place('bus-private', [2.2, 0, -60], { id: 'bus1' }); place('car-sedan', [2.2, 0, -50], { id: 'sedan1' });
+  leg('sedan1', [[2.2, -50], [2.2, 420]], 0.5, 12);
 
   // ---------- chapter 2: a worker leaves a bus
   b.cmd('set_lighting', { t: 12, look: 'night' });
   const busT = leg('bus1', [[2.2, -60], [2.2, -22]], 3, 5);
-  person('worker', 5, [2.2, 0, -60], { colors: { shirt: '#6f9a6a', pants: '#3a3f47' } });
-  timed('worker', [[2.2, -60], [2.2, -22], [3.7, -21], [5.8, -17.5]], [3, busT.at(-1), busT.at(-1) + 1.5, busT.at(-1) + 4.5], { pose: 'walk', end_pose: 'stand' });
-  leg('bus1', [[2.2, -22], [2.2, 80]], 24, 7);
+  person('worker', 5, [3.75, 0, -21], { colors: { shirt: '#6f9a6a', pants: '#3a3f47' } });
+  appear('worker', busT.at(-1) + 0.5);
+  timed('worker', [[3.75, -21], [4.5, -19.5], [7.6, -16]], [busT.at(-1) + 0.6, busT.at(-1) + 2, busT.at(-1) + 5], { pose: 'walk', end_pose: 'stand' });
+  leg('bus1', [[2.2, -22], [2.2, 390]], 24, 7);
 
   // ---------- chapter 3: the accident (about 21:21)
-  place('bus-private', [2.2, 0, -70], { id: 'bus2' });
-  const b2 = timed('bus2', [[2.2, -70], [2.2, -21]], [24, 31.5]);
+  place('bus-private', [2.2, 0, -78], { id: 'bus2' });
+  timed('bus2', [[2.2, -78], [2.2, -21]], [24, 31.5]);
   person('ped', 11, [5.5, 0, -15.2], { colors: { shirt: '#d9b44a', pants: '#4a5568' } });
   leg('ped', [[5.5, -15.2], [2.2, -15.2]], 28.5, 1.45, { pose: 'walk', end_pose: 'bend' });
 
   // ---------- chapter 4: first call at 21:23
-  person('bystander', 2, [6.3, 0, -11], { yaw: 270, colors: { shirt: '#3f6e9a', pants: '#3a3f47' } });
-  person('bystander2', 13, [5.2, 0, -11.8], { yaw: 270 });
+  person('bystander', 2, [8.4, 0, -11], { yaw: 270, colors: { shirt: '#3f6e9a', pants: '#3a3f47' } });
+  person('bystander2', 13, [7.4, 0, -11.8], { yaw: 270 });
   b.cmd('set_pose', { id: 'bystander', t: 38.5, pose: 'point' });
   b.cmd('set_pose', { id: 'bystander2', t: 40, pose: 'wave' });
   b.cmd('set_pose', { id: 'bystander', t: 44, pose: 'stand' });
 
-  // ---------- chapters 5 to 7: the crowd gathers (figures are representative only)
+  // ---------- chapters 5 to 7: the crowd gathers (figures are representative only).
+  // Each person has its own place, 0.6 m or more from the next. Nobody stands on the paths of the
+  // paramedics. Everybody walks in from the west along the line of its own place, and the person with the
+  // place furthest east arrives first, so no path crosses a person who already stands there.
+  const segDist = ([px, pz], [ax, az], [bx, bz]) => { const dx = bx - ax, dz = bz - az, u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(px - ax - u * dx, pz - az - u * dz); };
+  const paraPaths = [[[-0.65, 2.0], [0.6, -3]], [[0.6, -3], [1.2, -13.8]], [[-0.65, 3.6], [1.4, -3]], [[1.4, -3], [3.2, -13.8]]];
+  const spots = [];
+  while (spots.length < 60) {
+    const p = [-6.2 + R() * 10.5, -13.0 + R() * 8.2];
+    if (spots.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.6) || paraPaths.some(([a, z]) => segDist(p, a, z) < 0.7)) continue;
+    spots.push(p);
+  }
+  spots.sort((p, q) => q[0] - p[0]);
   const crowd = [];
-  const addCrowd = (count, a0, a1) => {
-    for (let i = 0; i < count; i++) {
-      const id = `cr-${crowd.length + 1}`, th = (R() * 2 - 1) * 1.35, rad = 2.8 + R() * 9;
-      const tgt = [Math.max(-6.5, Math.min(6.5, 2.2 + Math.sin(th) * rad * 1.1)), -15.2 + Math.cos(th) * rad * 0.9];
-      tgt[1] = Math.max(tgt[1], -14.2);
-      const far = pick([[-70, 1.5], [1.5, -70], [1.5, 70], [-1.5, 72], [-2.5, -72], [-72, -2.5]]);
-      const arrive = a0 + R() * (a1 - a0), tStart = Math.max(0.2, arrive - dist([far[0], 0, far[1]], [tgt[0], 0, tgt[1]]) / 1.9);
-      person(id, Math.floor(R() * 24), far);
-      leg(id, [far, tgt], tStart, 1.9, { pose: 'walk' });
-      crowd.push(id);
-    }
-  };
-  addCrowd(20, 49, 59); addCrowd(20, 61, 71); addCrowd(20, 73, 82);
+  spots.forEach((tgt, i) => {
+    const id = `cr-${i + 1}`, wave = Math.floor(i / 20), k = i % 20;
+    const arrive = [49, 72, 78][wave] + k * [0.5, 0.25, 0.25][wave], from = [-70 - i * 0.5, tgt[1]];
+    person(id, Math.floor(R() * 24), [from[0], 0, from[1]], { yaw: 90 });
+    leg(id, [from, tgt], Math.round((arrive - (tgt[0] - from[0]) / 1.9) * 100) / 100, 1.9, { pose: 'walk' });
+    crowd.push(id);
+  });
 
-  // ---------- chapter 6: SCDF arrives (21:39)
-  place('ambulance-scdf', [-2, 0, 40], { id: 'amb' });
-  const ambT = [58, 62];
-  timed('amb', [[-2, 40], [-2, 3]], ambT);
-  person('para1', 14, [-2, 0, 40], { colors: { shirt: '#b5483c', pants: '#3a3f47' } }); person('para2', 20, [-2, 0, 40], { colors: { shirt: '#b5483c', pants: '#3a3f47' } });
-  timed('para1', [[-2, 40], [-2, 3], [-3.6, 3], [0, -8], [1.2, -13.8]], [58, 62, 63, 69, 71], { pose: 'walk', end_pose: 'bend' });
-  timed('para2', [[-2, 40], [-2, 3], [-3.7, 3.8], [-0.4, -7.5], [3.2, -13.8]], [58, 62, 63, 69, 71], { pose: 'walk', end_pose: 'bend' });
+  // ---------- chapter 6: SCDF arrives (21:39). The paramedics step out on the free side of the ambulance.
+  place('ambulance-scdf', [-2, 0, 78], { id: 'amb', yaw: 180 });
+  timed('amb', [[-2, 78], [-2, 3]], [55, 62]);
+  person('para1', 14, [-0.65, 0, 2.0], { colors: { shirt: '#b5483c', pants: '#3a3f47' } }); person('para2', 20, [-0.65, 0, 3.6], { colors: { shirt: '#b5483c', pants: '#3a3f47' } });
+  for (const id of ['para1', 'para2']) appear(id, 62.5);
+  timed('para1', [[-0.65, 2.0], [0.6, -3], [1.2, -13.8]], [62.6, 66, 71], { pose: 'walk', end_pose: 'bend' });
+  timed('para2', [[-0.65, 3.6], [1.4, -3], [3.2, -13.8]], [62.6, 66.5, 71], { pose: 'walk', end_pose: 'bend' });
 
   // ---------- chapter 7: tension. Some of the crowd reacts.
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 74 + (i % 7) * 0.6, pose: ['point', 'cheer', 'wave', 'stand'][i % 4] }));
 
-  // ---------- chapter 8: police arrive
-  place('car-police', [-2, 0, 60], { id: 'pc1' }); place('car-police', [2.2, 0, 60], { id: 'pc2' });
-  timed('pc1', [[-2.4, 60], [-2.4, 9]], [82, 88]); timed('pc2', [[1.9, 60], [1.9, 6]], [82.4, 88.4]);
+  // ---------- chapter 8: police arrive. Both cars come up the west lane, one behind the other, and stop behind the ambulance.
+  place('car-police', [-2.4, 0, 95], { id: 'pc1', yaw: 180 }); place('car-police', [-2.2, 0, 101], { id: 'pc2', yaw: 180 });
+  timed('pc1', [[-2.4, 95], [-2.4, 9]], [82, 88]); timed('pc2', [[-2.2, 101], [-2.2, 16]], [82.4, 88.4]);
+  // the two officers who shield the bus crew wear helmets and shields (Wikipedia: "officers with helmets and shields").
+  // They walk on the east pavement to the bus door. The other four form a line between the crowd and the vehicles.
   const cops = [];
-  for (let i = 0; i < 6; i++) {
-    const id = `pol-${i + 1}`, car = i < 3 ? [-2.4, 9] : [1.9, 6], x = -5 + i * 2;
-    // the two officers who later shield the bus crew wear helmets and shields (Wikipedia: "officers with helmets and shields")
-    place('person', [car[0], 0, 60], { id, variant: 18 + i, outfit: i < 2 ? 'police-shield' : 'police' });
-    const exit = [car[0] + (i < 3 ? 1.5 : -1.5), car[1]];
-    const t1 = 88 + (i < 3 ? 0 : 0.4) + 1;
-    timed(id, [[car[0], 60], car, exit, [x, -1]], [i < 3 ? 82 : 82.4, i < 3 ? 88 : 88.4, t1, Math.round((t1 + dist([exit[0], 0, exit[1]], [x, 0, -1]) / 1.6) * 100) / 100], { pose: 'walk' });
+  const cop = (i, door, t, pts, speed) => {
+    const id = `pol-${i + 1}`;
+    place('person', [door[0], 0, door[1]], { id, variant: 18 + i, outfit: i < 2 ? 'police-shield' : 'police', yaw: 90 });
+    appear(id, t);
+    leg(id, [door, ...pts], t + 0.1, speed, { pose: 'walk' });
     cops.push(id);
-  }
+  };
+  cop(0, [-1.15, 7.6], 88.6, [[5.6, 2.0], [5.6, -17.4], [4.5, -17.4]], 2.5);
+  cop(1, [-1.15, 9.0], 88.6, [[6.3, 2.6], [6.3, -18.4], [4.5, -19.7]], 2.5);
+  cop(2, [-1.15, 10.4], 88.6, [[0.4, 10.4], [0.4, -1.5], [-4, -1]], 1.6);
+  [[14.6, -2], [16.0, 0], [17.4, 2]].forEach(([z, x], k) => cop(3 + k, [-0.95, z], 89.0, [[0.4, z], [0.4, -1.5], [x, -1]], 1.6));
 
-  // ---------- chapter 9: the bus driver and timekeeper leave under police shield (22:08)
-  person('driver', 17, [2.2, 0, -70], { colors: { shirt: '#e8dcc0', pants: '#3a3f47' } }); person('timekeeper', 8, [2.2, 0, -70]);
-  for (const id of ['driver', 'timekeeper']) timed(id, [[2.2, -70], [2.2, -21]], [24, 31.5], { pose: 'walk' });
-  timed('driver', [[2.2, -21], [3.7, -19.4], [6.2, -10], [6.2, -3]], [31.6, 98, 103.5, 107], { pose: 'walk' });
-  timed('timekeeper', [[2.2, -21], [3.7, -19.9], [6.8, -10.5], [6.8, -3]], [31.6, 98, 103.5, 107], { pose: 'walk' });
-  // the first two officers walk from the line to the bus door, then escort
-  timed('pol-1', [[-5, -1], [4.6, -18.5], [4.8, -17.5], [7.0, -10], [7.0, -3]], [93.2, 97.6, 98, 103.5, 107], { pose: 'walk' });
-  timed('pol-2', [[-3, -1], [4.9, -19.6], [5.1, -18.6], [7.6, -11], [7.6, -3]], [93.2, 97.6, 98, 103.5, 107], { pose: 'walk' });
-  crowd.slice(0, 30).forEach((id, i) => b.cmd('set_pose', { id, t: 99 + (i % 5) * 0.5, pose: ['cheer', 'point', 'run'][i % 3] }));
+  // ---------- chapter 9: the bus driver and timekeeper leave under police shield (22:08). They walk in a file on the east pavement.
+  person('driver', 17, [3.8, 0, -18.4], { colors: { shirt: '#e8dcc0', pants: '#3a3f47' } }); person('timekeeper', 8, [3.8, 0, -19.2]);
+  for (const id of ['driver', 'timekeeper']) appear(id, 103);
+  const file = [['pol-1', [4.5, -17.4], -3.0, 104], ['driver', [3.8, -18.4], -3.9, 104], ['timekeeper', [3.8, -19.2], -4.8, 104], ['pol-2', [4.5, -19.7], -5.7, 105.5]];
+  for (const [id, at, z, t] of file) leg(id, [at, id === 'pol-2' ? [5.6, -18.5] : [5.6, at[1]], [5.6, z]], t, 1.8, { pose: 'walk' });
+  crowd.slice(0, 30).forEach((id, i) => b.cmd('set_pose', { id, t: 99 + (i % 5) * 0.5, pose: ['cheer', 'point', 'wave'][i % 3] }));
 
-  // ---------- chapter 10: vehicles overturned and burnt (22:20 to 22:40)
-  const vehicles = [['pc1', 'car-police-overturned', [-2.4, 9], 110], ['pc2', 'car-police-burnt', [1.9, 6], 112], ['amb', 'ambulance-scdf-burnt', [-2, 3], 114]];
+  // ---------- chapter 10: vehicles overturned and burnt (22:20 to 22:40). Each wreck takes the place of its vehicle.
+  const vehicles = [['pc1', 'car-police-overturned', [-2.4, 9], 110], ['pc2', 'car-police-burnt', [-2.2, 16], 112], ['amb', 'ambulance-scdf-burnt', [-2, 3], 114]];
   for (const [id, model, p, t] of vehicles) {
     place(model, [p[0], 0, p[1]], { id: `${id}-after`, yaw: 180, scale: [0.001, 0.001, 0.001] });
     swap(`${id}-after`, t, true); swap(id, t, false);
@@ -145,36 +157,48 @@ export function build() {
   place('car-police-overturned', [-6, 0, 12], { id: 'pc3-after', yaw: 60, scale: [0.001, 0.001, 0.001] }); swap('pc3-after', 111, true);
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 112 + (i % 6) * 0.5, pose: ['cheer', 'point', 'wave'][i % 3] }));
 
-  // ---------- chapter 11: SOC arrives (22:50). Riot officers form a shield line south of the burnt vehicles.
-  // The real troops were larger; the number, the route and the line are estimated.
+  // ---------- chapter 11: SOC arrives (22:50). Riot officers walk in from the south and form a shield line south of the burnt vehicles.
+  // A long shield needs a walk, not a run. The real troops were larger; the number, the route and the line are estimated.
   const soc = [];
   for (let i = 0; i < 10; i++) {
-    const id = `soc-${i + 1}`, x = -5.4 + i * 1.2, far = [x * 0.5, 60], end = [x, 17];
+    const id = `soc-${i + 1}`, x = -5.4 + i * 1.2, far = [x * 0.5, 105], end = [x, 22];
     place('person', [far[0], 0, far[1]], { id, variant: [0, 1, 3, 4, 6, 7, 9, 13, 15, 22][i], outfit: 'soc-riot', yaw: 180 });
-    leg(id, [far, end], 126 - dist([far[0], 0, far[1]], [end[0], 0, end[1]]) / 3.6, 3.6, { pose: 'run', end_pose: 'stand' });
+    const t0 = Math.round((126 - dist([far[0], 0, far[1]], [end[0], 0, end[1]]) / 2.8) * 100) / 100;
+    appear(id, t0);
+    leg(id, [far, end], t0, 2.8, { pose: 'walk', end_pose: 'stand' });
     soc.push(id);
   }
   crowd.slice(0, 60).forEach((id, i) => b.cmd('set_pose', { id, t: 124 + (i % 8) * 0.4, pose: 'stand' }));
 
-  // ---------- chapter 12: the crowd disperses (23:30)
-  crowd.forEach((id, i) => {
-    const o = b.scene.objects.find((x) => x.id === id), tr = b.scene.tracks.find((t) => t.object === id && t.channel === 'at');
-    const here = tr.keys.at(-1).v, far = [[-70, 1.5], [2.5, -70], [1.5, 70], [-1.5, 72]][i % 4];
-    leg(id, [[here[0], here[2]], far], 132.2 + (i % 10) * 0.4, 4.5, { pose: 'run', end_pose: 'stand' });
+  // ---------- chapter 12: the crowd disperses (23:30). Everybody runs west at the same time and speed, so nobody meets.
+  crowd.forEach((id) => {
+    const here = b.scene.tracks.find((t) => t.object === id && t.channel === 'at').keys.at(-1).v;
+    leg(id, [[here[0], here[2]], [here[0] - 70, here[2]]], 132.2, 4.5, { pose: 'run', end_pose: 'stand' });
   });
-  cops.forEach((id) => null);
 
-  // ---------- chapter 13: aftermath (06:45 on 9 December)
+  // ---------- chapter 13: aftermath (06:45 on 9 December). A clean-up crew walks in from the west in a file.
   b.cmd('set_lighting', { t: 144, look: 'day' });
-  [['clean-1', 12, [-3, 40], [-3, 12]], ['clean-2', 15, [3, 41], [3.5, 12.5]], ['clean-3', 19, [-1, 42], [-5, 3]]].forEach(([id, v, a, z], i) => {
-    person(id, v, [a[0], 0, a[1]], { colors: { shirt: '#d98a3d', pants: '#3a3f47' } });
-    leg(id, [a, z], 143 + i * 0.7, 1.5, { pose: 'walk', end_pose: 'bend' });
+  // Each cleaner walks along its own line to the side of one wreck.
+  [['clean-1', 12, 17], ['clean-2', 15, 8.5], ['clean-3', 19, 3]].forEach(([id, v, z], i) => {
+    person(id, v, [-24, 0, z], { colors: { shirt: '#d98a3d', pants: '#3a3f47' }, yaw: 90 });
+    leg(id, [[-24, z], [-3.8, z]], 142 + i * 0.7, 1.8, { pose: 'walk', end_pose: 'bend' });
   });
 
-  // ---------- chapter 14: the Committee of Inquiry
-  b.cmd('place_sign', { text: 'Committee of Inquiry, 13 Dec 2013 to 27 Jun 2014', at: [-10, 0, -6.3], model: 'sign-large', yaw: 0, ...L, id: 'coi-sign' });
-  [['coi-1', 3, [-12, -4.8]], ['coi-2', 6, [-10, -4.5]], ['coi-3', 21, [-8, -4.8]]].forEach(([id, v, a]) => person(id, v, a, { yaw: 0, pose: 'stand' }));
-  b.cmd('set_pose', { id: 'coi-2', t: 158, pose: 'point' });
+  // ---------- chapter 14: the Committee of Inquiry met in a building, not on the street. It gets its own room,
+  // far from the street and outside the OpenStreetMap footprints, and the camera cuts to it.
+  const ROOM = [320, 0, 0];
+  b.cmd('build_room', { id: 'coi-room', at: ROOM, size: [10, 8, 3.5], doors: [{ wall: 's', at: 8 }], ...L });
+  for (const dx of [-1.2, 0, 1.2]) place('table', [ROOM[0] + dx, 0, ROOM[2] - 1.6], { ...L });
+  b.cmd('place_sign', { text: 'Committee of Inquiry', at: [ROOM[0], 0, ROOM[2] - 3.6], model: 'sign-large', yaw: 0, ...L, id: 'coi-sign' });
+  [['coi-1', 3, -1.2], ['coi-2', 6, 0], ['coi-3', 21, 1.2]].forEach(([id, v, dx]) => {
+    place('chair', [ROOM[0] + dx, 0, ROOM[2] - 2.4], { ...L });
+    person(id, v, [ROOM[0] + dx, 0, ROOM[2] - 2.4], { yaw: 0, pose: 'sit' });
+  });
+  place('table', [ROOM[0], 0, ROOM[2] + 1.0], { ...L, id: 'coi-witness-table' });
+  place('chair', [ROOM[0], 0, ROOM[2] + 1.8], { ...L, yaw: 180 });
+  person('coi-witness', 16, [ROOM[0], 0, ROOM[2] + 1.8], { yaw: 180, pose: 'sit' });
+  b.cmd('set_cutaway', { ceilings: true, nearWalls: true });
+  b.cmd('set_lighting', { t: 156, look: 'indoor' });
 
   // ---------- camera and chapters
   const VIEW0 = { wide: 20, medium: 20, close: 15, top: 0, orbit: 0 };
@@ -217,8 +241,8 @@ export function build() {
     [{ t: 132, shot: 'top', frame: ['ped', 'junction', 'rcr-s1', ...soc] }]);
   chapter('c13', 144, 156, 'The next morning', '06:45', 'In all, 62 people were hurt: 37 police officers, 12 SCDF officers, 5 Certis officers and 8 civilians. Race Course Road fully reopened at 06:45.', ['pc1-after'], 'wide', WIKI, false,
     [{ t: 144, shot: 'wide', frame: ['pc1-after', 'pc2-after', 'amb-after', 'clean-1', 'clean-2', 'clean-3'], view: 350 }]);
-  chapter('c14', 156, 168, 'Committee of Inquiry', '', 'A Committee of Inquiry was appointed on 13 December 2013. It reported on 27 June 2014. It ruled out racial and labour issues as causes.', ['coi-sign'], 'medium', WIKI, false,
-    [{ t: 156, shot: 'medium', frame: ['coi-sign', 'coi-1', 'coi-2', 'coi-3'] }]);
+  chapter('c14', 156, 168, 'Committee of Inquiry', '', 'A Committee of Inquiry was appointed on 13 December 2013. It reported on 27 June 2014. It ruled out racial and labour issues as causes. The hearing room here is approximate.', ['coi-sign'], 'medium', WIKI, false,
+    [{ t: 156, shot: 'medium', frame: ['coi-sign', 'coi-1', 'coi-2', 'coi-3'], opts: { cut: true } }]);
   return finish(b, 'riot');
 }
 

@@ -1,0 +1,24 @@
+MOTION
+
+Things in the scene are solid. Plan every path so that nothing passes into anything else. validate samples the whole scene every 0.25 s and reports each problem with its time span.
+- collision: two objects pass into each other. People, vehicles, props, furniture, walls and OpenStreetMap buildings all count. People count too: two people must not stand in one place.
+- off_ground: a person or a vehicle floats above or sinks into the ground. Put it on the ground, a floor, a stage or stairs.
+- wrong_lane: a moving vehicle drives on the wrong side of the road.
+move_along answers with "collisions" when its new path runs into something. Fix it at once.
+
+Vehicles.
+- Traffic keeps left in Singapore. On a road along z, a vehicle that goes north (to -z) keeps to the west lane (x below the road centre). A vehicle that goes south (to +z) keeps to the east lane. set_backdrop drive "right" changes the side.
+- One vehicle in a lane at a time, or keep a gap. A car is about 4.6 m long and a bus 10 to 12 m. Two vehicles in one lane need the same speed and a gap of at least 2 m, or the faster one goes first.
+- A vehicle that waits off screen waits outside the paths of the others, for example beyond the end of the street. A vehicle that leaves drives on to a point off screen. It never disappears.
+- A vehicle never drives through a person. Time the crossing so that the person is on the pavement when the vehicle passes.
+- A wreck that takes the place of a vehicle (a car that burns) appears at the same place and time as the vehicle goes (scale swap). Nothing else may vanish.
+
+People.
+- A person keeps about 0.5 m from the next person. A crowd needs a space for each person. Give the people in a crowd different end points.
+- People who walk the same line go the same way at the same speed, one after the other. People who walk in opposite directions use lines at least 0.6 m apart.
+- Plan crowds so that no path crosses a person who already stands still. For example, the first person to arrive takes the place furthest along the path.
+- A person in a car does not show while the car drives. The person appears beside the door when the car stops (animate scale from 0.001 to 1 at that time), then walks away from the car. Never walk a person through the side of a vehicle.
+- Leave a free path for people who must walk through a crowd (paramedics, police).
+- Walk round street furniture: lamp posts, trees, bins, benches and bus stops.
+
+Held gear. A shield or a baton follows the hand. A person who carries a long shield walks (3 m/s or slower). A run swings the shield flat.

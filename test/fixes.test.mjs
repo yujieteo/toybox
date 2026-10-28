@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { commands as C } from '../core/commands.mjs';
 import { newScene, valueAt, trackOf, srt as coreSrt } from '../core/scene.mjs';
 import { srt as webSrt } from '../web/export.js';
@@ -106,4 +106,13 @@ test('daemon: static files stay in their folders, host is checked, stale scene w
   const v = statSync(scene).mtimeMs;
   const ok = await fetch(`${base}/api/scene?token=${token}&v=${v}`, { method: 'POST', body });
   assert.equal(ok.status, 200); assert.equal((await ok.json()).v, statSync(scene).mtimeMs);
+});
+
+// a syntax error in a web module stops the viewer, so every render and export times out
+test('every web script parses', () => {
+  const dir = new URL('../web/', import.meta.url).pathname;
+  for (const f of ['app.js', 'controls.js', 'export.js', 'headless.js', 'viewer-app.js', 'viewer.js']) {
+    const r = spawnSync(process.execPath, ['--check', join(dir, f)], { encoding: 'utf8' });
+    assert.equal(r.status, 0, `${f}: ${r.stderr}`);
+  }
 });

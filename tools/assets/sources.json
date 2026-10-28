@@ -20,7 +20,8 @@
    "from": "kenney", "page": "https://kenney.nl/assets/nature-kit", "file": "Models/GLTF format/tree_oak.glb",
    "title": "Nature Kit: tree_oak", "author": "Kenney (www.kenney.nl)",
    "evidence": "Page: \"License: Creative Commons CC0\" (link to creativecommons.org/publicdomain/zero/1.0). License.txt in the archive: \"License: (Creative Commons Zero, CC0)\".",
-   "fit": [null, 7.0, null], "maxColors": 4
+   "fit": [null, 7.0, null], "maxColors": 4,
+   "base": [-0.3, -0.3, 0.3, 0.3], "baseNote": "The trunk footprint, read from the model. Collisions use it, not the crown."
   },
   {
    "id": "kenney-sofa", "name": "Lounge sofa (Kenney)", "kind": "furniture", "tags": ["sofa", "kenney"],

@@ -28,6 +28,10 @@ test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on fig
   assert.ok(s.chapters.every((c) => /^https:\/\/en\.wikipedia\.org/.test(c.source) || /^estimated/.test(c.source)));
   assert.ok(s.objects.filter((o) => o.model === 'person').every((o) => !o.label));
   assert.ok(s.captions.every((c) => !/victim/i.test(c.text)));
+  // the Committee of Inquiry met in a building: its chapter has its own room, far from the street
+  const coi = s.objects.find((o) => o.id === 'coi-sign');
+  assert.ok(Math.hypot(coi.at[0], coi.at[2]) > 200, JSON.stringify(coi.at));
+  assert.ok(s.chapters.at(-1).focus.includes('coi-sign') && !s.chapters.slice(0, -1).some((c) => c.focus.includes('coi-sign')));
   // uniformed figures wear their outfit: the SOC in riot gear, the police in police uniform, no civilian in either
   const people = s.objects.filter((o) => o.model === 'person');
   assert.ok(people.filter((o) => o.id.startsWith('soc-')).length >= 6);

@@ -3,7 +3,7 @@
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:path';
-import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, blockedViews, viewBlocks, focusAt,
+import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, checkScene, motionErrors, viewBlocks, focusAt,
   HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
 import { rotYaw } from './geom.mjs';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.mjs';
@@ -331,7 +331,7 @@ def('duplicate', 'Copy an object. Each copy moves by offset more than the last.'
     return { ids };
   }));
 
-def('remove', 'Remove an object, its animation tracks and its children.', { id: str }, ['id'],
+def('remove', 'Remove an object, its animation tracks and its children. Remove only an object that does not belong in the scene. Never remove a building, a structure or a vehicle to clear a camera view: move the camera.', { id: str }, ['id'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     find(s, a.id);
     const gone = new Set([a.id]);
@@ -399,7 +399,7 @@ def('build_stairs', 'Place a flight of 14 steps. from is the foot of the stairs 
     return { id: o.id, bottom: f, top: top.map(r2), path: [f, top.map(r2)] };
   }));
 
-def('place_sign', 'Place a sign model that shows text on its front.', { text: str, at: vecXZ, yaw: num, model: str, id: str, source: common.source, estimated: common.estimated, scale: placeProps.scale },
+def('place_sign', 'Place a sign model. Its text shows as a label next to it, only in the chapters that list the sign in focus (always when the scene has no chapters).', { text: str, at: vecXZ, yaw: num, model: str, id: str, source: common.source, estimated: common.estimated, scale: placeProps.scale },
   ['text', 'at'],
   (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
     if (a.text.length > 60) throw new Fail('sign_text_too_long', 'Sign text must be 60 characters or fewer.');
@@ -417,7 +417,7 @@ def('set_pose', 'Set the pose of an object at time t. Without t (or t = 0) it se
   }));
 
 const keySchema = { type: 'object', required: ['t', 'v'], properties: { t: num, v: { description: 'Value: [x,y,z] for at, a number for yaw, number or [x,y,z] for scale, a pose name for pose.' }, ease: { type: 'string', enum: EASES } } };
-def('animate', 'Write a whole animation track (replaces the track). Keys need strictly rising t.', { id: str, channel: { type: 'string', enum: CHANNELS }, keys: { type: 'array', items: keySchema, minItems: 1 } }, ['id', 'channel', 'keys'],
+def('animate', 'Write a whole animation track (replaces the track). Keys need strictly rising t. Never scale a building, a structure or a vehicle to nothing to clear a camera view (validate: object_vanishes). A vehicle may be swapped for another vehicle at the same place and time.', { id: str, channel: { type: 'string', enum: CHANNELS }, keys: { type: 'array', items: keySchema, minItems: 1 } }, ['id', 'channel', 'keys'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     find(s, a.id);
     s.tracks = s.tracks.filter((t) => !(t.object === a.id && t.channel === a.channel));
@@ -425,7 +425,7 @@ def('animate', 'Write a whole animation track (replaces the track). Keys need st
     return { id: a.id, channel: a.channel, keys: a.keys.length };
   }));
 
-def('move_along', 'Move an object along a path of points. Writes at, yaw and pose tracks. Use speed (m/s) or times (one absolute time per point). It uses the walk pose (run above 3 m/s) while it moves and stand at the end.',
+def('move_along', 'Move an object along a path of points. Writes at, yaw and pose tracks. Use speed (m/s) or times (one absolute time per point). It uses the walk pose (run above 3 m/s) while it moves and stand at the end. When the moving object passes into another object, leaves the ground or drives in the wrong lane, the answer has "collisions". See guide "motion".',
   { id: str, path: { type: 'array', items: { type: 'array', items: num, minItems: 2, maxItems: 3 }, minItems: 2 }, speed: num, times: { type: 'array', items: num }, start: num, pose: { type: 'string', enum: POSES }, end_pose: { type: 'string', enum: POSES } },
   ['id', 'path'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
@@ -465,7 +465,10 @@ def('move_along', 'Move an object along a path of points. Writes at, yaw and pos
       mergeKeys(s, o.id, 'pose', [{ t: t0, v: moving, ease: 'step' }, { t: tEnd, v: a.end_pose || 'stand', ease: 'step' }], false);
     }
     if (!trackOf(s, o.id, 'at').keys.some((k) => k.t < t0)) o.at = P[0].map(r2);
-    return { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
+    const out = { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
+    const hits = motionErrors(s, ctx.catalogue || loadCatalogue(), { only: [o.id], from: t0, to: tEnd });
+    if (hits.length) Object.assign(out, { collisions: hits.slice(0, 5).map((e) => e.message), warning: 'The path runs into something. Change the path or the times before export.' });
+    return out;
   }));
 
 def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
@@ -495,7 +498,7 @@ def('set_lighting', 'Set the lighting look from time t (day, dusk, night, indoor
 def('add_caption', 'Add a caption (up to 280 characters, at least 0.06 s per character on screen, no overlap with other captions).', { start: num, end: num, text: str }, ['start', 'end', 'text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => { s.captions.push({ start: a.start, end: a.end, text: a.text }); return { index: s.captions.length - 1, chars: a.text.length }; }));
 
-def('add_callout', 'Add a callout label tied to an object for a time range.', { start: num, end: num, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['start', 'end', 'text'],
+def('add_callout', 'Add a callout label tied to an object for a time range. The range must be inside one chapter (validate: callout_outside_chapter).', { start: num, end: num, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['start', 'end', 'text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     const c = { start: a.start, end: a.end, text: a.text }; for (const k of ['object', 'source', 'estimated', 'measured']) if (a[k] !== undefined) c[k] = a[k];
     s.callouts.push(c); return { index: s.callouts.length - 1 };
@@ -514,10 +517,12 @@ def('add_chapter', 'Add a chapter (a named time range). With caption it also add
     return { id };
   }));
 
-def('set_backdrop', 'Set the ground and the map. ground is grass, street, floor, plain or map. Ground "map" with an origin shows OneMap tiles. origin is {lat, lon}. onemap is {zoom, style} for the tiles.',
+def('set_backdrop', 'Set the ground and the map. ground is grass, street, floor, plain or map. Ground "map" with an origin shows OneMap tiles. origin is {lat, lon}. onemap is {zoom, style} for the tiles. drive is the side of the road that traffic keeps to: "left" (Singapore, the default) or "right".',
   { ground: { type: 'string', enum: GROUNDS }, size: { type: 'array', items: num, minItems: 2, maxItems: 2 }, color: str,
-    origin: { type: 'object', properties: { lat: num, lon: num }, required: ['lat', 'lon'] }, onemap: { type: 'object' }, source: str, estimated: { type: 'boolean' } }, [],
+    origin: { type: 'object', properties: { lat: num, lon: num }, required: ['lat', 'lon'] }, onemap: { type: 'object' }, source: str, estimated: { type: 'boolean' },
+    drive: { type: 'string', enum: ['left', 'right'] } }, [],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    if (a.drive) s.drive = a.drive;
     s.backdrop = { ...(s.backdrop || {}), ...(a.ground ? { ground: a.ground } : {}), ...(a.size ? { size: a.size } : {}), ...(a.color ? { color: a.color } : {}) };
     if (a.origin || a.onemap) {
       s.map = s.map || {};
@@ -549,21 +554,21 @@ def('import_osm', 'Import the OpenStreetMap building footprints inside bbox [sou
     return r;
   });
 
-def('set_cutaway', 'Hide ceilings and the walls between the camera and its target (indoor scenes).', { ceilings: { type: 'boolean' }, nearWalls: { type: 'boolean' } }, [],
+def('set_cutaway', 'Hide ceilings and the walls between the camera and its target, for rooms made with build_room only. It never hides buildings, vehicles or other objects. Outdoors, move the camera instead.', { ceilings: { type: 'boolean' }, nearWalls: { type: 'boolean' } }, [],
   (scene, a, ctx) => mutate(scene, ctx, (s) => { s.cutaway = { ceilings: a.ceilings ?? true, nearWalls: a.nearWalls ?? true }; return s.cutaway; }));
 
 def('add_credit', 'Add a credit line that the export draws (for example a data licence credit).', { text: str }, ['text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => { s.credits = s.credits || []; if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; }));
 
-def('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid. It also tests every chapter for a blocked view (code view_blocked): a building, structure or vehicle between the camera and a focus object, or in front of much of the frame, for more than 0.5 s.', {}, [],
-  (scene, a, ctx) => { const cat = ctx.catalogue || loadCatalogue(), errs = [...validate(scene, cat), ...blockedViews(scene, cat)]; return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
+def('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid. It also tests every chapter for a blocked view (code view_blocked): a building, structure or vehicle between the camera and a focus object, or in front of much of the frame, for more than 0.5 s. And it tests motion every 0.25 s: collision (two objects pass into each other), off_ground (a person or a vehicle floats or sinks) and wrong_lane (a vehicle drives on the wrong side).', {}, [],
+  (scene, a, ctx) => { const errs = checkScene(scene, ctx.catalogue || loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
 
 def('render_preview', 'Render a picture of the scene at time t so you can look at it. The daemon does the rendering.', { t: num }, ['t'],
   (scene, a) => okr({ stub: true, t: a.t, message: 'Not rendered here. The Toybox daemon renders the picture and replaces this answer.' }));
 
 def('export_scene', 'Write the scene to a .toybox.json file (and the captions to a .srt file next to it). Without path it returns the scene.', { path: str }, [],
   (scene, a, ctx) => {
-    const cat = ctx.catalogue || loadCatalogue(), errs = [...validate(scene, cat), ...blockedViews(scene, cat)];
+    const errs = checkScene(scene, ctx.catalogue || loadCatalogue());
     if (!a.path) return okr({ errors: errs.length, scene });
     let file = a.path;
     if (ctx.exportDir) {
@@ -579,7 +584,7 @@ def('export_scene', 'Write the scene to a .toybox.json file (and the captions to
   });
 
 const GUIDE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'guide');
-def('guide', 'Read a how-to guide. Start with "overview". Others: people, camera, indoor, map, explainer.', { name: str }, [],
+def('guide', 'Read a how-to guide. Start with "overview". Others: people, motion, camera, indoor, map, explainer.', { name: str }, [],
   (scene, a) => {
     const names = readdirSync(GUIDE_DIR).filter((f) => f.endsWith('.txt')).map((f) => f.slice(0, -4));
     const name = a.name || 'overview';

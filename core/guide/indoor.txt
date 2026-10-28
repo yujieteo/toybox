@@ -12,7 +12,9 @@ Stairs. Use build_stairs(from, yaw, height). It returns a path. Give the path to
 
 Lighting. Use set_lighting with look "indoor".
 
-Cutaway. Call set_cutaway. The viewer then hides ceilings and the walls between the camera and its target. Place the camera high and outside the room.
+Cutaway. Call set_cutaway. The viewer then hides ceilings and the walls between the camera and its target. Place the camera high and outside the room. The cutaway is only for room walls and ceilings from build_room. Outdoors, move the camera instead.
+
+A room for another place. When one chapter happens in a building away from the main scene (a hearing, a meeting), build the room far from the street, for example 200 m away and outside the OpenStreetMap footprints. Cut the camera to it (cut true). Use look "indoor" for that chapter.
 
 Real buildings. A layout that no public source gives is an estimate. Set estimated true and source "estimated" on every object. Say so in the caption: "Layout is approximate".
 

@@ -4,7 +4,7 @@
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { modelBounds } from './geom.mjs';
+import { modelBounds, partBounds } from './geom.mjs';
 
 const LICENSE = 'CC0 (Toybox kit)';
 const C = {
@@ -105,7 +105,7 @@ add('ambulance-scdf-overturned', 'SCDF ambulance, overturned', 'vehicle', overtu
 add('ambulance-scdf-burnt', 'SCDF ambulance, burnt', 'vehicle', burnt(byId('ambulance-scdf')), ['ambulance', 'burnt']);
 add('flame', 'Flame', 'prop', [
   wed([0, 0.5, 0], [0.7, 1.0, 0.7], C.orange), wed([0.1, 0.4, 0.05], [0.4, 0.8, 0.4], C.yellow, null, [0, 90, 0]),
-], ['fire']);
+], ['fire', 'effect']);
 
 // ---- buildings
 function shophouse(storeys, color, trim) {
@@ -260,6 +260,15 @@ const RIOT = 'https://en.wikipedia.org/wiki/2013_Little_India_riot';
 const SOC_KIT = 'https://www.hometeamns.sg/frontline/ensuring-safety-security-of-singapore/';
 const SOC_DRILL = 'https://www.nas.gov.sg/archivesonline/photographs/record-details/d3115385-1161-11e3-83d5-0050568939ad';
 const gear = (bone, prim, pos, size, color, rot) => ({ bone, ...part(prim, pos, size, color, null, rot) });
+// A part held in the left hand. pos and rot give its place in the stand pose. The part follows the left
+// forearm, so the hand and the part move together. The stand pose turns the upper arm 35 degrees down
+// round the shoulder (engine/scene.goose, pose_angles), so the rest-pose place turns 35 degrees back.
+const SHOULDER_L = [0.17, 1.37], ARM_DOWN = 35;
+const held = (prim, pos, size, color, rot = [0, 0, 0]) => {
+  const a = (ARM_DOWN * Math.PI) / 180, dx = pos[0] - SHOULDER_L[0], dy = pos[1] - SHOULDER_L[1];
+  const rest = [SHOULDER_L[0] + dx * Math.cos(a) - dy * Math.sin(a), SHOULDER_L[1] + dx * Math.sin(a) + dy * Math.cos(a), pos[2]];
+  return gear('lowerarm01.L', prim, rest, size, color, [rot[0], rot[1], rot[2] + ARM_DOWN]);
+};
 const helmet = (color) => gear('head', 'sphere', [0, 1.655, 0.01], [0.25, 0.23, 0.27], color);
 const outfits = [];
 const outfit = (id, name, colors, parts, source, note) => outfits.push({ id, name, colors, parts, source, note });
@@ -268,14 +277,14 @@ outfit('police', 'Singapore Police Force officer, dark blue uniform and peak cap
 ], SPF, 'Dark blue shirt, trousers and peak cap. Colour shades are estimated.');
 outfit('police-shield', 'Police officer with helmet and round shield', { shirt: '#2b3d5e', pants: '#2b3d5e' }, [
   helmet('#26324a'),
-  gear('spine03', 'cylinder', [0.05, 1.1, 0.33], [0.6, 0.03, 0.6], '#b7c3cc', [90, 0, 0]),
+  held('cylinder', [0.15, 1.05, 0.3], [0.6, 0.03, 0.6], '#b7c3cc', [90, 0, 0]),
 ], RIOT, 'The riot account names officers with helmets and shields at the bus. Shield shape and colours are estimated.');
 outfit('soc-riot', 'Special Operations Command riot officer: helmet with visor, long shield, baton', { shirt: '#1b222c', pants: '#1b222c' }, [
   helmet('#15191f'),
   gear('head', 'box', [0, 1.6, 0.19], [0.22, 0.15, 0.02], '#8fb0c4', [-12, 0, 0]),
-  gear('spine03', 'box', [0.06, 0.92, 0.36], [0.56, 1.1, 0.03], '#a9c0d0'),
-  gear('spine03', 'box', [0.06, 1.47, 0.36], [0.58, 0.04, 0.05], '#15191f'),
-  gear('spine03', 'box', [0.06, 0.37, 0.36], [0.58, 0.04, 0.05], '#15191f'),
+  held('box', [0.15, 0.92, 0.3], [0.56, 1.1, 0.03], '#a9c0d0'),
+  held('box', [0.15, 1.47, 0.3], [0.58, 0.04, 0.05], '#15191f'),
+  held('box', [0.15, 0.37, 0.3], [0.58, 0.04, 0.05], '#15191f'),
   gear('wrist.R', 'cylinder', [-0.47, 1.03, 0.4], [0.035, 0.6, 0.035], '#101215', [90, 0, 0]),
 ], `${SPF} ; ${SOC_KIT} ; ${SOC_DRILL}`, 'Darker blue combat dress, helmet, tactical shield and baton. The visor, shield size and colours are estimated.');
 
@@ -287,6 +296,13 @@ function finish(m) {
   const nb = modelBounds(parts);
   const out = { id: m.id, name: m.name, kind: m.kind, license: LICENSE, size: nb.size.map((v) => r(v)), parts };
   if (m.tags?.length) out.tags = m.tags;
+  // base: the footprint [x0, z0, x1, z1] of the parts that reach below 1 m, when it is smaller than the
+  // whole model (a tree trunk under its crown, a lamp post under its arm). Collisions use it.
+  const low = parts.filter((p) => partBounds(p).min[1] < 1);
+  if (low.length) {
+    const lb = modelBounds(low), base = [lb.min[0], lb.min[2], lb.max[0], lb.max[2]].map(r);
+    if (lb.size[0] < nb.size[0] - 0.05 || lb.size[2] < nb.size[2] - 0.05) out.base = base;
+  }
   return out;
 }
 
