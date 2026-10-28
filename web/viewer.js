@@ -171,9 +171,9 @@ export async function createViewer(opts) {
       const [x1, z1] = q[i], [x2, z2] = q[(i + 1) % q.length];
       const dx = x2 - x1, dz = z2 - z1, l = Math.hypot(dx, dz) || 1, nx = dz / l, nz = -dx / l;
       const v4 = [[x1, 0, z1], [x2, 0, z2], [x2, h, z2], [x1, h, z1]];
-      for (const k of [0, 1, 2, 0, 2, 3]) out.push(...v4[k], nx, 0, nz);
+      for (const k of [0, 2, 1, 0, 3, 2]) out.push(...v4[k], nx, 0, nz);
     }
-    for (const [a, c, d] of ear(q)) for (const k of [a, c, d]) out.push(q[k][0], h, q[k][1], 0, 1, 0);
+    for (const [a, c, d] of ear(q)) for (const k of [a, d, c]) out.push(q[k][0], h, q[k][1], 0, 1, 0);
   }
   function buildMap(scene) {
     const map = scene.map;
