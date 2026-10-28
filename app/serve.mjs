@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { writeSceneOdbl } from '../core/osm.mjs';
+import { FORMAT, upgradeScene } from '../web/format.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -20,7 +21,7 @@ const outDir = path.resolve(args.out || path.join(path.dirname(scenePath), 'out'
 const chrome = process.env.TOYBOX_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const token = crypto.randomBytes(16).toString('hex');
 fs.mkdirSync(outDir, { recursive: true });
-if (!fs.existsSync(scenePath)) fs.writeFileSync(scenePath, JSON.stringify({ toybox: 1, title: 'Untitled', duration: 30, backdrop: { ground: 'grass', size: [80, 80] }, objects: [], tracks: [], camera: [{ t: 0, eye: [0, 8, 16], target: [0, 1, 0], fov: 50 }], captions: [], callouts: [], chapters: [], credits: [] }, null, 2));
+if (!fs.existsSync(scenePath)) fs.writeFileSync(scenePath, JSON.stringify({ toybox: FORMAT, title: 'Untitled', duration: 30, backdrop: { ground: 'grass', size: [80, 80] }, objects: [], tracks: [], camera: [{ t: 0, eye: [0, 8, 16], target: [0, 1, 0], fov: 50 }], captions: [], callouts: [], chapters: [], credits: [] }, null, 2));
 
 const types = { '.wav': 'audio/wav', '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm', '.bin': 'application/octet-stream', '.ttf': 'font/ttf', '.png': 'image/png', '.mp4': 'video/mp4', '.txt': 'text/plain' };
 const origin = `http://127.0.0.1:${port}`;
@@ -102,7 +103,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/version') return send(res, 200, { v: fs.statSync(scenePath).mtimeMs });
     if (p === '/api/scene' && req.method === 'POST') {
       if (fs.statSync(scenePath).mtimeMs !== +u.searchParams.get('v')) return send(res, 409, { error: 'The agent changed the scene before your edit was saved. The page shows the new scene. Make the edit again.' });
-      try { const s = JSON.parse(await body(req)); if (s.toybox !== 1 || !Array.isArray(s.objects)) throw new Error('not a scene'); fs.writeFileSync(scenePath, JSON.stringify(s, null, 2)); return send(res, 200, { ok: true, v: fs.statSync(scenePath).mtimeMs }); }
+      try { const s = upgradeScene(JSON.parse(await body(req))); if (!Array.isArray(s.objects)) throw new Error('not a scene'); fs.writeFileSync(scenePath, JSON.stringify(s, null, 2)); return send(res, 200, { ok: true, v: fs.statSync(scenePath).mtimeMs }); }
       catch (e) { return send(res, 400, { error: 'The scene is not valid: ' + e.message }); }
     }
     if (p === '/api/chat' && req.method === 'POST') { const { text } = JSON.parse(await body(req)); return chat(String(text || ''), res); }

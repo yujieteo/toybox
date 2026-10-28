@@ -1,6 +1,7 @@
 // The hosted viewer page: opens a scene file, plays it, lets the visitor orbit and edit objects.
 import { createViewer } from './viewer.js';
 import { bindControls } from './controls.js';
+import { upgradeScene } from './format.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('canvas'), overlay = $('overlay');
@@ -16,7 +17,8 @@ function fit() {
 function open(scene, base = null) {   // base: the URL of the scene file. The voice files are next to it.
   try {
     v.voiceUrl = base ? f => new URL(f, base).href : null;
-    if (scene.toybox !== 1 || !Array.isArray(scene.objects)) throw new Error('This is not a Toybox scene file.');
+    scene = upgradeScene(scene);
+    if (!Array.isArray(scene.objects)) throw new Error('This is not a Toybox scene file.');
     $('err').textContent = '';
     $('title').textContent = scene.title || 'Toybox scene';
     $('seek').max = scene.duration || 60;
