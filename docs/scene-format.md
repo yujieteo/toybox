@@ -59,7 +59,7 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 ```
 
 - `parts` are drawn by the engine. `pos` is the part centre in model space with the model origin on the ground at the middle of the footprint. `size` is the full extent in x, y, z. `rot` is Euler degrees (x, y, z). A `cylinder` has its axis along y. A `wedge` is a triangular prism with its ridge along z (a gable roof). A part with `slot` takes the object's `colors[slot]` when given, else its own `color`.
-- `outfits` is a list of `{ id, name, colors, parts, source, note }`. Each part is a part as above plus `bone`, the name of a body bone in `assets/people/skel.json`. Its `pos` and `rot` are in the rest pose of the body (origin on the ground between the feet, facing +z), and the part moves with that bone in every pose. A part with `held: true` (a shield, a baton) follows a forearm or a wrist bone, so it stays with the hand.
+- `outfits` is a list of `{ id, name, colors, parts, source, note }`. Each part is a part as above plus `bone`, the name of a body bone in `assets/people/skel.json`. Its `pos` and `rot` are in the rest pose of the body (origin on the ground between the feet, facing +z), and the part moves with that bone in every pose.
 - `base` (optional) is `[x0, z0, x1, z1]`, the footprint of the parts below 1 m when it is smaller than `size` (a tree trunk, a lamp post). The collision check uses it.
 - `kind` is one of: `vehicle`, `building`, `furniture`, `structure`, `prop`, `sign`, `road`, `nature`.
 - Every model has `license` and `size` (x, y, z metres of the bounding box).

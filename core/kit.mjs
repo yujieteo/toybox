@@ -267,7 +267,7 @@ const SHOULDER_L = [0.17, 1.37], ARM_DOWN = 35;
 const held = (prim, pos, size, color, rot = [0, 0, 0]) => {
   const a = (ARM_DOWN * Math.PI) / 180, dx = pos[0] - SHOULDER_L[0], dy = pos[1] - SHOULDER_L[1];
   const rest = [SHOULDER_L[0] + dx * Math.cos(a) - dy * Math.sin(a), SHOULDER_L[1] + dx * Math.sin(a) + dy * Math.cos(a), pos[2]];
-  return { ...gear('lowerarm01.L', prim, rest, size, color, [rot[0], rot[1], rot[2] + ARM_DOWN]), held: true };
+  return gear('lowerarm01.L', prim, rest, size, color, [rot[0], rot[1], rot[2] + ARM_DOWN]);
 };
 const helmet = (color) => gear('head', 'sphere', [0, 1.655, 0.01], [0.25, 0.23, 0.27], color);
 const outfits = [];
@@ -285,7 +285,7 @@ outfit('soc-riot', 'Special Operations Command riot officer: helmet with visor, 
   held('box', [0.15, 0.92, 0.3], [0.56, 1.1, 0.03], '#a9c0d0'),
   held('box', [0.15, 1.47, 0.3], [0.58, 0.04, 0.05], '#15191f'),
   held('box', [0.15, 0.37, 0.3], [0.58, 0.04, 0.05], '#15191f'),
-  { ...gear('wrist.R', 'cylinder', [-0.47, 1.03, 0.4], [0.035, 0.6, 0.035], '#101215', [90, 0, 0]), held: true },
+  gear('wrist.R', 'cylinder', [-0.47, 1.03, 0.4], [0.035, 0.6, 0.035], '#101215', [90, 0, 0]),
 ], `${SPF} ; ${SOC_KIT} ; ${SOC_DRILL}`, 'Darker blue combat dress, helmet, tactical shield and baton. The visor, shield size and colours are estimated.');
 
 // Finish: centre every model on x and z, put its lowest point at y=0, and set size from the parts.

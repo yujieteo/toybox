@@ -330,7 +330,10 @@ export function motionErrors(scene, catalogue, opts = {}) {
   const drive = scene.drive || 'left';
   const roads = scene.objects.filter((o) => ['road-straight', 'road-zebra'].includes(o.model) && !o.parent);
   const runs = new Map(), errs = [];
-  const seen = (key, t, make) => { const r = runs.get(key); if (r && t - r.t1 <= VIEW_STEP + 1e-9) r.t1 = t; else if (!r) runs.set(key, { t0: t, t1: t, make }); };
+  const seen = (key, t, make) => {
+    const rs = runs.get(key) || runs.set(key, []).get(key), r = rs.at(-1);
+    if (r && t - r.t1 <= VIEW_STEP + 1e-9) r.t1 = t; else rs.push({ t0: t, t1: t, make });
+  };
   const t0 = opts.from ?? 0, t1 = opts.to ?? scene.duration ?? 0, n = Math.max(0, Math.round((t1 - t0) / VIEW_STEP));
   let prev = null;
   for (let k = 0; k <= n; k++) {
@@ -382,7 +385,7 @@ export function motionErrors(scene, catalogue, opts = {}) {
     }
     prev = bt;
   }
-  for (const [key, r] of runs) errs.push({ code: { c: 'collision', g: 'off_ground', l: 'wrong_lane' }[key[0]], path: 'objects', message: r.make(r) });
+  for (const [key, rs] of runs) for (const r of rs) errs.push({ code: { c: 'collision', g: 'off_ground', l: 'wrong_lane' }[key[0]], path: 'objects', message: r.make(r) });
   return errs;
 }
 const c2 = (at) => [at[0], at[2]];
@@ -571,6 +574,9 @@ export function validate(scene, catalogue) {
   scene.objects.forEach((o, i) => {
     const kind = kindOf(o);
     if (!['building', 'structure', 'vehicle'].includes(kind)) return;
+    const first = trackOf(scene, o.id, 'scale')?.keys?.[0];
+    if (kind !== 'vehicle' && ((o.scale !== undefined && tiny(o.scale)) || (first && tiny(first.v))))
+      E('object_vanishes', `objects[${i}]`, `${kind[0].toUpperCase()}${kind.slice(1)} ${o.id} is too small to see (scale below 0.05). A real object does not disappear: move the camera to clear a view.`);
     for (const t of changes(o, false)) {
       const here = stateAt(scene, o, t - 0.01).at;
       const swap = kind === 'vehicle' && scene.objects.some((q) => q !== o && kindOf(q) === 'vehicle'

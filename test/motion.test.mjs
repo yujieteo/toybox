@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { commands as C } from '../core/commands.mjs';
 import { newScene, validate, motionErrors, loadCatalogue } from '../core/scene.mjs';
+import { signLabelShown } from '../web/viewer.js';
 
 const must = (r) => { assert.ok(r.ok, JSON.stringify(r)); return r.result; };
 const cat = loadCatalogue();
@@ -61,6 +62,38 @@ test('a hidden object and a building that shrinks to nothing fail validate', () 
   assert.ok(codes(validate(s, cat)).includes('object_vanishes'));
 });
 
+test('a building that is tiny from the start fails validate', () => {
+  const s = newScene({ duration: 4 });
+  must(C.place(s, { model: 'shophouse-2', at: [0, 0, 8], id: 'house', scale: [0.001, 0.001, 0.001] }));
+  assert.ok(codes(validate(s, cat)).includes('object_vanishes'));
+  s.objects[0].scale = [1, 1, 1];
+  assert.ok(!codes(validate(s, cat)).includes('object_vanishes'));
+  must(C.animate(s, { id: 'house', channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001] }, { t: 4, v: [0.001, 0.001, 0.001] }] }));
+  assert.ok(codes(validate(s, cat)).includes('object_vanishes'));
+});
+
+test('a pair that collides twice reports both time spans', () => {
+  const s = newScene({ duration: 12 });
+  must(C.place(s, { model: 'person', at: [0, 0, -5], id: 'p', variant: 1 }));
+  must(C.place(s, { model: 'person', at: [0, 0, 0], id: 'q', variant: 2 }));
+  must(C.move_along(s, { id: 'p', path: [[0, -5], [0, 5], [0, -5]], times: [0, 5, 10] }));
+  const spans = motionErrors(s, cat).filter((e) => e.code === 'collision').map((e) => e.message.match(/from ([\d.]+) s/)[1]);
+  assert.equal(spans.length, 2, JSON.stringify(spans));
+  assert.ok(Number(spans[0]) < 5 && Number(spans[1]) > 5, JSON.stringify(spans));
+});
+
+test('a sign in a chapter focus shows only in that chapter; a sign in no focus shows in every chapter', () => {
+  const s = newScene({ duration: 8 });
+  s.objects.push({ id: 'coi', model: 'sign-board' }, { id: 'street', model: 'sign-board' });
+  s.chapters = [{ start: 0, end: 4, focus: [] }, { start: 4, end: 8, focus: ['coi'] }];
+  assert.equal(signLabelShown(s, 'coi', 1), false);
+  assert.equal(signLabelShown(s, 'coi', 5), true);
+  assert.equal(signLabelShown(s, 'street', 1), true);
+  assert.equal(signLabelShown(s, 'street', 5), true);
+  s.chapters = [];
+  assert.equal(signLabelShown(s, 'coi', 1), true);
+});
+
 test('a vehicle may be swapped for its wreck at the same place and time', () => {
   const s = newScene({ duration: 4 });
   // the car drives to the place of the wreck, then the wreck takes its place
@@ -86,8 +119,11 @@ test('a callout outside its chapter and an outdoor cutaway fail validate', () =>
 });
 
 test('held gear is on the forearm or the wrist, and the guide list has motion', () => {
-  for (const f of cat.outfits) for (const p of f.parts.filter((x) => x.held)) assert.match(p.bone, /^(lowerarm01|wrist)\.[LR]$/, `${f.id} ${p.bone}`);
-  assert.ok(cat.outfits.some((f) => f.parts.some((p) => p.held)));
+  const soc = cat.outfits.find((f) => f.id === 'soc-riot'), shield = cat.outfits.find((f) => f.id === 'police-shield');
+  const bones = (f, prim, min) => f.parts.filter((p) => p.prim === prim && Math.max(...p.size) >= min).map((p) => p.bone);
+  assert.deepEqual(bones(shield, 'cylinder', 0.5), ['lowerarm01.L']);
+  assert.deepEqual(bones(soc, 'box', 1), ['lowerarm01.L']);
+  assert.deepEqual(bones(soc, 'cylinder', 0.5), ['wrist.R']);
   const r = C.guide(newScene({}), { name: 'motion' });
   assert.ok(r.ok, JSON.stringify(r));
 });
