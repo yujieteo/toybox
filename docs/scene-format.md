@@ -63,4 +63,4 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 - `base` (optional) is `[x0, z0, x1, z1]`, the footprint of the parts below 1 m when it is smaller than `size` (a tree trunk, a lamp post). The collision check uses it.
 - `kind` is one of: `vehicle`, `building`, `furniture`, `structure`, `prop`, `sign`, `road`, `nature`.
 - Every model has `license` and `size` (x, y, z metres of the bounding box).
-- `sign` models show text. The viewer draws the object's `label` next to the model in the caption font, only in the chapters that list the sign in `focus` (always in a scene with no chapters).
+- `sign` models show text. The viewer draws the object's `label` next to the model in the caption font, only in the chapters that list the sign in `focus`. A sign that no chapter lists in `focus` (a street name) shows its label in every chapter.

@@ -21,7 +21,7 @@ Sources and estimates.
 - Say in a caption when a layout is approximate.
 
 Place. Each chapter happens at its real place. An event at another place gets its own set there, and the camera cuts to it (set_camera with cut true). For example, a committee that met in a building gets a simple room (build_room) away from the street, not a sign in the street.
-- Put a sign or a callout only where and when its fact is true. A sign label shows only in the chapters that list the sign in focus. A callout must lie inside one chapter (validate, code callout_outside_chapter).
+- Put a sign or a callout only where and when its fact is true. A sign that a chapter lists in focus shows its label only in the chapters that list it. A sign in no chapter focus (a street name) shows in every chapter. A callout must lie inside one chapter (validate, code callout_outside_chapter).
 
 Shot variety. Open each chapter with a wide or medium shot. Use a close shot for a person or a detail. Use top for a layout. At least 3 shot types in a story of 12 chapters or more.
 
