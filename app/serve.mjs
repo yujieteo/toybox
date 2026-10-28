@@ -22,7 +22,7 @@ const token = crypto.randomBytes(16).toString('hex');
 fs.mkdirSync(outDir, { recursive: true });
 if (!fs.existsSync(scenePath)) fs.writeFileSync(scenePath, JSON.stringify({ toybox: 1, title: 'Untitled', duration: 30, backdrop: { ground: 'grass', size: [80, 80] }, objects: [], tracks: [], camera: [{ t: 0, eye: [0, 8, 16], target: [0, 1, 0], fov: 50 }], captions: [], callouts: [], chapters: [], credits: [] }, null, 2));
 
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm', '.bin': 'application/octet-stream', '.ttf': 'font/ttf', '.png': 'image/png', '.mp4': 'video/mp4', '.txt': 'text/plain' };
+const types = { '.wav': 'audio/wav', '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm', '.bin': 'application/octet-stream', '.ttf': 'font/ttf', '.png': 'image/png', '.mp4': 'video/mp4', '.txt': 'text/plain' };
 const origin = `http://127.0.0.1:${port}`;
 const pids = new Set();     // the PIDs of the child processes that this daemon started
 const send = (res, code, obj) => { res.statusCode = code; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(obj)); };
@@ -49,6 +49,15 @@ async function oneJob(kind, query, timeoutMs) {
   if (job) return { error: 'Another render or export is running. Wait for it to end.' };
   job = { kind };
   try { return await runBrowser(query, timeoutMs); } finally { job = null; }
+}
+
+// The ffmpeg arguments that add the voice of the narration to the video: each sentence starts at its beat.
+function soundArgs(voice) {
+  if (!voice.length) return ['-c:v', 'copy'];
+  const inputs = voice.flatMap((n) => ['-i', path.join(path.dirname(scenePath), n.voice)]);
+  const delays = voice.map((n, k) => `[${k + 1}:a]adelay=${Math.round(n.start * 1000)}:all=1[a${k}]`).join(';');
+  return [...inputs, '-filter_complex', `${delays};${voice.map((n, k) => `[a${k}]`).join('')}amix=inputs=${voice.length}:normalize=0[a]`,
+    '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k'];
 }
 
 // ---- the chat agent: the claude CLI with only the Toybox MCP server
@@ -85,6 +94,11 @@ const server = http.createServer(async (req, res) => {
   if (p.startsWith('/api/') || p.startsWith('/export/') || p === '/result') {
     if (!authed(req, u)) return send(res, 403, { error: 'Bad token or origin.' });
     if (p === '/api/scene' && req.method === 'GET') { res.setHeader('content-type', 'application/json'); return res.end(fs.readFileSync(scenePath)); }
+    if (p === '/api/voice') {   // a voice file of the narration: voice/<id>.wav next to the scene
+      const f = u.searchParams.get('f') || '';
+      if (!/^voice\/[0-9a-f]{12}\.wav$/.test(f)) return send(res, 400, { error: 'bad voice file' });
+      return fs.readFile(path.join(path.dirname(scenePath), f), (e, d) => { if (e) return send(res, 404, { error: 'no' }); res.setHeader('content-type', 'audio/wav'); res.end(d); });
+    }
     if (p === '/api/version') return send(res, 200, { v: fs.statSync(scenePath).mtimeMs });
     if (p === '/api/scene' && req.method === 'POST') {
       if (fs.statSync(scenePath).mtimeMs !== +u.searchParams.get('v')) return send(res, 409, { error: 'The agent changed the scene before your edit was saved. The page shows the new scene. Make the edit again.' });
@@ -116,13 +130,15 @@ const server = http.createServer(async (req, res) => {
     if (p === '/export/chunk') { const b = await body(req); job.chain = job.chain.then(() => new Promise((ok) => job.h264.write(b, ok))); await job.chain; return send(res, 200, { ok: true }); }
     if (p === '/export/end') {
       await job.chain; await new Promise((ok) => job.h264.end(ok));
-      const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-r', String(job.cfg.fps), '-f', 'h264', '-i', job.base + '.h264', '-c:v', 'copy', '-movflags', '+faststart', job.base + '.mp4']);
+      const sc = JSON.parse(fs.readFileSync(scenePath)), voice = (sc.narration || []).filter((n) => /^voice\/[0-9a-f]{12}\.wav$/.test(n.voice || ''));
+      const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-r', String(job.cfg.fps), '-f', 'h264', '-i', job.base + '.h264', ...soundArgs(voice), '-movflags', '+faststart', job.base + '.mp4']);
       fs.rmSync(job.base + '.h264', { force: true });
       if (r.error || r.status !== 0) {
         const e = { error: 'ffmpeg could not make the MP4: ' + (r.error ? r.error.message : String(r.stderr).slice(0, 300)) };
         const done = job.resolve; send(res, 500, e); if (done) done(e); return;
       }
       fs.copyFileSync(scenePath, job.base + '.toybox.json');
+      for (const n of voice) { fs.mkdirSync(path.join(outDir, 'voice'), { recursive: true }); fs.copyFileSync(path.join(path.dirname(scenePath), n.voice), path.join(outDir, n.voice)); }
       const odbl = writeSceneOdbl(JSON.parse(fs.readFileSync(scenePath)), outDir);
       const info = Object.fromEntries(u.searchParams); delete info.token;
       Object.assign(info, { mp4: job.base + '.mp4', srt: job.base + '.srt', scene: job.base + '.toybox.json' }, odbl ? { odbl } : {});

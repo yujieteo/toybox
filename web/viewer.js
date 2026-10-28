@@ -2,12 +2,14 @@
 // text overlays, and handles the camera, picking and per-object edits. The authoring app and
 // the hosted viewer use this same module. The canvas must have the id "canvas" (the engine
 // finds it by that id).
+import { poseAt, seedOf } from './motion.js';
+import { marks } from './marks.js';
 
 const POSES = { stand: 0, walk: 1, run: 2, wave: 3, point: 4, cheer: 5, sit: 6, bend: 7 };
 const LOOKS = { day: 0, dusk: 1, night: 2, indoor: 3 };
 const EASE = { linear: 0, inout: 1, step: 2 };
 const GROUND = { grass: 0, street: 1, floor: 2, plain: 3, map: 3 };
-const FLAG = { hidden: 1, ceiling: 2, wall: 4 };
+const FLAG = { hidden: 1, ceiling: 2, wall: 4, eye: 8 };
 const PERSON_SIZE = [0.6, 1.7, 0.4];
 const OSM_CREDIT = '© OpenStreetMap contributors';
 const ONEMAP_CREDIT = 'OneMap © Singapore Land Authority';
@@ -91,6 +93,9 @@ export async function createViewer(opts) {
     showOverlay: true, undo: [], onchange: null, onframe: null,
     rootIds: new Map(),   // object id -> engine id
     mapImage: null, logo: null,
+    posed: [],            // the objects with motions or a life of their own: { id (engine id), motions, seed, unit, pivot }
+    voiceUrl: null,       // file -> URL of a voice file of the narration, or null for no sound
+    clips: [],            // the voice of each sentence: { start, end, audio, on }
   };
 
   v.size = () => [W, H];
@@ -154,10 +159,24 @@ export async function createViewer(opts) {
       else for (const p of m.parts) {
         const c = hexRGB((o.colors && p.slot && o.colors[p.slot]) || p.color);
         const prim = { box: 0, cylinder: 1, sphere: 2, wedge: 3 }[p.prim] ?? 0;
-        add(prim, 0, root, flags, 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, c, [0, 0, 0], 0);
+        add(prim, 0, root, flags | (p.eye ? FLAG.eye : 0), 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, c, [0, 0, 0], 0);
       }
     };
     scene.objects.forEach(addObj);
+    v.posed = [];
+    for (const o of scene.objects) {
+      const motions = (scene.motions || []).filter(m => m.object === o.id), id = v.rootIds.get(o.id);
+      const character = ((models.get(o.model) || {}).tags || []).includes('character');
+      if (id === undefined || (!motions.length && !character)) continue;
+      const size = sizeOf(o), sy = o.scale ? (Array.isArray(o.scale) ? o.scale[1] : o.scale) : 1;
+      v.posed.push({ id, motions, seed: character ? seedOf(o.id) : null, unit: size[1] * sy / 2, pivot: size[1] / 2 });
+    }
+    hush();
+    v.clips = (scene.narration || []).filter(n => n.voice && v.voiceUrl).map(n => {
+      const url = v.voiceUrl(n.voice);
+      if (!audios.has(url)) audios.set(url, Object.assign(new Audio(url), { preload: 'auto' }));
+      return { start: n.start, end: n.end, audio: audios.get(url), on: false };
+    });
     for (const tr of scene.tracks || []) {
       const id = v.rootIds.get(tr.object);
       if (id === undefined || !tr.keys.length) continue;
@@ -180,6 +199,9 @@ export async function createViewer(opts) {
     v.draw(v.t);
     if (v.onchange) v.onchange('load');
   };
+
+  const audios = new Map();   // URL -> Audio
+  function hush() { for (const c of v.clips) if (c.on) { c.audio.pause(); c.on = false; } }
 
   // ---- map: OSM footprints extruded, OneMap tiles live
   function ear(poly) {  // simple ear clipping, poly = [[x,z],...], returns triangles of indices
@@ -279,16 +301,38 @@ export async function createViewer(opts) {
   v.draw = (t) => {
     v.t = t;
     if (v.userCam) { const o = v.orbit; M._cam_user(1, o.yaw, o.pitch, o.dist, o.tx, o.ty, o.tz); } else M._cam_user(0, 0, 0, 0, 0, 0, 0);
+    for (const q of v.posed) {   // the eyes turn at most about 50 degrees to a side and up
+      const p = poseAt(q.motions, t, q.seed), lim = (x, m) => Math.max(-m, Math.min(m, x));
+      M._obj_pose(q.id, p.dx * q.unit, (p.z + p.up) * q.unit, p.tilt, p.s * p.sx, p.s * p.sz, lim(1.9 * p.ex, 0.85) + p.spin, lim(2.5 * p.ez, 0.9), p.eye, q.pivot);
+    }
     M._render_frame(t);
     if (octx) { octx.clearRect(0, 0, W, H); if (v.showOverlay) drawOverlay(octx, W, H, t); }
     if (v.onframe) v.onframe(t);
   };
 
-  function wrap(ctx, text, maxW) {
-    const words = text.split(/\s+/), lines = []; let line = '';
+  // Text with small raised and lowered parts (web/marks.js). s is the font size, weight the font weight.
+  function textW(ctx, text, s, weight) {
+    let w = 0;
+    for (const p of marks(text)) { ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`; w += ctx.measureText(p.text).width; }
+    ctx.font = `${weight} ${s}px ${FONT}`;
+    return w;
+  }
+  function fillText(ctx, text, x, y, s, weight) {
+    const align = ctx.textAlign, w = textW(ctx, text, s, weight);
+    let px = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+    ctx.textAlign = 'left';
+    for (const p of marks(text)) {
+      ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`;
+      ctx.fillText(p.text, px, y + (p.shift > 0 ? -0.4 * s : p.shift < 0 ? 0.2 * s : 0));
+      px += ctx.measureText(p.text).width;
+    }
+    ctx.font = `${weight} ${s}px ${FONT}`; ctx.textAlign = align;
+  }
+  function wrap(ctx, text, maxW, s, weight) {
+    const words = text.split(/\s+(?![^{]*\})/), lines = []; let line = '';
     for (const w of words) {
       const test = line ? line + ' ' + w : w;
-      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test;
+      if (textW(ctx, test, s, weight) > maxW && line) { lines.push(line); line = w; } else line = test;
     }
     if (line) lines.push(line);
     return lines;
@@ -318,11 +362,10 @@ export async function createViewer(opts) {
       if (!p) continue;
       const dist = Math.hypot(M._obj_wx(id) - M._cam_x(), M._obj_wy(id) - M._cam_y(), M._obj_wz(id) - M._cam_z());
       const s = Math.max(h * 0.02, Math.min(h * 0.032, h * 1.4 / dist));
-      ctx.font = `600 ${s}px ${FONT}`;
-      const tw = ctx.measureText(o.label).width;
+      const tw = textW(ctx, o.label, s, 600);
       pill(ctx, p[0] - tw / 2 - s * 0.4, p[1] - s * 0.8, tw + s * 0.8, s * 1.4, s * 0.3, 'rgba(255,255,255,0.92)');
       ctx.fillStyle = '#1c1b18'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-      ctx.fillText(o.label, p[0], p[1] - s * 0.1);
+      fillText(ctx, o.label, p[0], p[1] - s * 0.1, s, 600);
       if (o.estimated) { ctx.font = `600 ${s * 0.75}px ${FONT}`; approx(ctx, p[0] - (ctx.measureText('approximate').width + s * 0.75) / 2, p[1] + s * 0.7, s * 0.75); }
     }
     // callouts
@@ -333,40 +376,37 @@ export async function createViewer(opts) {
       if (!pos) continue;
       const p = v.project(pos[0], pos[1], pos[2]); if (!p) continue;
       const s = Math.round(h * 0.04);
-      ctx.font = `500 ${s}px ${FONT}`;
-      const lines = wrap(ctx, c.text, w * 0.28), lh = s * 1.25;
-      const bw = Math.max(...lines.map(l => ctx.measureText(l).width)) + s, bh = lines.length * lh + s * 0.6;
+      const lines = wrap(ctx, c.text, w * 0.28, s, 500), lh = s * 1.25;
+      const bw = Math.max(...lines.map(l => textW(ctx, l, s, 500))) + s, bh = lines.length * lh + s * 0.6;
       const x = Math.min(w - bw - 8, Math.max(8, p[0] - bw / 2)), y = Math.max(8, p[1] - bh - s * 1.2);
       ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(2, h / 540);
       ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], y + bh); ctx.stroke();
       pill(ctx, x, y, bw, bh, s * 0.35, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      lines.forEach((l, i) => ctx.fillText(l, x + s * 0.5, y + s * 0.3 + i * lh));
+      lines.forEach((l, i) => fillText(ctx, l, x + s * 0.5, y + s * 0.3 + i * lh, s, 500));
       if (c.estimated || (sc.objects.find(o => o.id === c.object) || {}).estimated) approx(ctx, x, Math.max(2, y - s * 0.8), s * 0.55);
     }
     // chapter title and clock
     const ch = (sc.chapters || []).find(c => t >= c.start && t < c.end);
     if (ch && (ch.clock || ch.title)) {
       const s = Math.round(h * 0.042);
-      ctx.font = `600 ${s}px ${FONT}`;
       const txt = [ch.clock, ch.title].filter(Boolean).join('  ·  ');
-      const tw = ctx.measureText(txt).width;
+      const tw = textW(ctx, txt, s, 600);
       pill(ctx, h * 0.02, h * 0.02, tw + s, s * 1.6, s * 0.4, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8);
+      fillText(ctx, txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8, s, 600);
       if (ch.estimated) approx(ctx, h * 0.02 + tw + s * 1.3, h * 0.02 + s * 0.2, s * 0.8);
     }
     // captions
     const caps = (sc.captions || []).filter(c => t >= c.start && t < c.end);
     if (caps.length) {
-      ctx.font = `500 ${fs}px ${FONT}`;
-      const lines = wrap(ctx, caps.map(c => c.text).join(' '), w * 0.82), lh = fs * 1.25;
-      const bw = Math.max(...lines.map(l => ctx.measureText(l).width)) + fs, bh = lines.length * lh + fs * 0.5;
+      const lines = wrap(ctx, caps.map(c => c.text).join(' '), w * 0.82, fs, 500), lh = fs * 1.25;
+      const bw = Math.max(...lines.map(l => textW(ctx, l, fs, 500))) + fs, bh = lines.length * lh + fs * 0.5;
       const nCred = (sc.credits || []).length + (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length ? 1 : 0) + (v.mapImage ? 1 : 0);
       const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
       pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      lines.forEach((l, i) => ctx.fillText(l, w / 2, y + fs * 0.25 + i * lh));
+      lines.forEach((l, i) => fillText(ctx, l, w / 2, y + fs * 0.25 + i * lh, fs, 500));
     }
     // credits
     const credits = [...(sc.credits || [])];
@@ -512,13 +552,22 @@ export async function createViewer(opts) {
     const dt = (now - last) / 1000; last = now;
     const dur = v.scene && v.scene.duration ? v.scene.duration : 60;
     let t = v.t + dt;
-    if (t >= dur) { t = dur; v.playing = false; if (v.onchange) v.onchange('end'); }
+    // While a sentence plays, the clock moves to the time of its sound by at most 2 ms in each frame.
+    // So the picture and the voice stay together, and the picture never jumps.
+    for (const c of v.clips) {
+      const on = t >= c.start && t < c.end;
+      if (on && !c.on) { c.audio.currentTime = t - c.start; c.audio.play().catch(() => {}); }
+      if (!on && c.on) c.audio.pause();
+      if (on && c.on && !c.audio.paused) t += Math.max(-0.002, Math.min(0.002, c.start + c.audio.currentTime - t));
+      c.on = on;
+    }
+    if (t >= dur) { t = dur; v.playing = false; hush(); if (v.onchange) v.onchange('end'); }
     v.draw(t);
     if (v.playing) requestAnimationFrame(tick);
   };
   v.play = () => { if (v.playing) return; if (v.scene && v.t >= (v.scene.duration || 60)) v.t = 0; v.playing = true; last = performance.now(); if (v.onchange) v.onchange('play'); requestAnimationFrame(tick); };
-  v.pause = () => { v.playing = false; if (v.onchange) v.onchange('pause'); };
-  v.seek = (t) => { v.draw(Math.max(0, Math.min(t, v.scene.duration || 60))); };
+  v.pause = () => { v.playing = false; hush(); if (v.onchange) v.onchange('pause'); };
+  v.seek = (t) => { hush(); v.draw(Math.max(0, Math.min(t, v.scene.duration || 60))); };
   v.download = () => {
     const blob = new Blob([JSON.stringify(v.scene, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (v.scene.title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() + '.toybox.json'; a.click();

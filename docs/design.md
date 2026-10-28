@@ -68,7 +68,7 @@ Earlier rounds said "no animation". The owner now wants animation, so:
 - Alternative inside the browser: WebCodecs `VideoEncoder` plus a JavaScript MP4 muxer. This needs no ffmpeg but needs a muxer library and a browser with WebCodecs. Not chosen as the default because headless frame capture is easier to make exact and to test.
 - Defaults: 1920 by 1080 and 1080 by 1920 (vertical) at 30 frames per second. A 60-second video is 1,800 frames. The time per frame in headless Chrome (software or GPU GL) is **unmeasured** and is the main risk (section 10).
 - Credits that licences require are drawn into the video: the OneMap logo and attribution, and "© OpenStreetMap contributors" when OpenStreetMap data is used (section 9).
-- Audio is not in scope (the owner said "text and video").
+- The first design had no audio (the owner said "text and video"). A narrated scene now adds the voice to the MP4 (`scene-format.md`, section Narration).
 
 ### (b) The scene file
 

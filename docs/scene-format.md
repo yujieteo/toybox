@@ -27,7 +27,10 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
   "chapters": [ { "id": "c1", "start": 0, "end": 8, "title": "", "clock": "21:21", "caption": "", "focus": ["p1"], "shot": "wide", "source": "" } ],
   "captions": [ { "start": 0, "end": 5, "text": "up to 280 characters" } ],
   "callouts": [ { "start": 0, "end": 5, "text": "", "object": "p1" } ],
-  "credits": [ "free text lines that the export draws" ]
+  "credits": [ "free text lines that the export draws" ],
+  "facts": [ { "id": "first", "text": "a fact as the source gives it", "source": "https://..." } ],
+  "narration": [ { "text": "1 sentence", "facts": ["first"], "pause": 0, "voice": "voice/0123456789ab.wav", "seconds": 2.1, "start": 0.5, "end": 2.6 } ],
+  "motions": [ { "object": "n", "move": "pop | out | hop | squash | blink | squint | look | glance | wave | spin", "t": 1, "d": 0.5, "h": 0.6, "x": 1, "y": 0, "deg": 360, "cue": [0, "word", 0] } ]
 }
 ```
 
@@ -50,6 +53,20 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 - `source` is a free text that names where a measured value or a claim comes from. `estimated: true` marks any value that no source gives. A measured claim needs `source`. An estimate needs `estimated: true`.
 - Time values are seconds from the start. `duration` is at least the end of every caption, chapter, callout and key.
 
+## Narration
+
+A scene without `narration`, `facts` and `motions` is valid as before. The rules below apply only when they are there. The guide `core/guide/narration.txt` gives the work order.
+
+- `narration` is 1 sentence for each beat. `voice` is the file of the spoken sentence next to the scene: `voice/<id>.wav`, 16-bit mono 24 kHz, with 50 ms of silence at each end. `id` is the first 12 hex characters of the SHA-1 of `af_heart <text>`, so a changed text needs a new file. `seconds` is the length of the voice file, or 0.066 s for each character when the sentence has no voice yet (`voice_missing`).
+- The beats: the first sentence starts at 0.5 s. A sentence starts 0.45 s after the end of the previous sentence plus its `pause`. The scene ends 0.8 s after the last sentence. `start` and `end` must agree with these numbers (`narration_timing`).
+- A narrated scene has 1 caption for each sentence, from its start to the start of the next sentence. The tools write them. `add_caption` refuses a narrated scene.
+- `facts` holds the outline. Each fact needs a `source` (`fact_no_source`). A sentence names only facts that exist (`unknown_fact`).
+- A key of a track or of `camera` or `lighting`, a motion, a chapter and a callout can have `cue` (and a chapter or a callout also `endCue`): `[sentence, "word", offset]`. The time is `start + (end - start) * k / length + offset`, where `k` is the place of the first match of `word` in the sentence text and `length` is the number of characters in the text. The cue sets `t` (or `start`), and `endCue` sets `end`. The tools write the time again when the narration changes. `move_along` with `cue` writes a cue on each key that it makes, with the offset of the key from the start of the move. A camera key from `set_camera` with `frame` keeps `frame`: `{ "ids": [...], "view", "elevation", "margin", "distance" }`. In a narrated scene the tools compute its `eye` and `target` again at its time after each change. A cue to a missing sentence or word fails (`bad_cue`). A time that does not agree with its cue fails (`narration_timing`).
+- `motions` change the look of an object for a short time: scale (`pop`, `out`, `squash`), a jump (`hop`, height `h`), a turn (`spin`, `deg`), a side to side rock (`wave`), and the eyes (`blink`, `squint`, `look` and `glance` to `x`, `y` from -1 to 1). `d` is the length in seconds. Each motion is a pure function of the scene time (`web/motion.js`). `pop` and `out` on a building, a structure or a vehicle fail (`object_vanishes`).
+- An object with motions or the tag `character` gets a pose for each frame. The engine applies it with `obj_pose` (move up and to the side, tilt, squash, and the yaw and pitch of the eye parts).
+- Text in a label, a callout, a chapter title or a sentence can have raised text `^{st}` and lowered text `_{2}` (`web/marks.js`). The braces are necessary: `^` or `_` without braces is plain text. The .srt file uses Unicode characters for these when they exist, else the plain letters or `^(...)`.
+- The export mixes the voice files at their sentence start into the MP4 (AAC). The export copies the `voice/` folder next to the exported scene file. Keep the scene file and its `voice/` folder together.
+
 ## Catalogue (`assets/catalogue.json`)
 
 ```json
@@ -60,6 +77,7 @@ This file is the only source of truth for a scene. The engine, the viewer, the M
 
 - `parts` are drawn by the engine. `pos` is the part centre in model space with the model origin on the ground at the middle of the footprint. `size` is the full extent in x, y, z. `rot` is Euler degrees (x, y, z). A `cylinder` has its axis along y. A `wedge` is a triangular prism with its ridge along z (a gable roof). A part with `slot` takes the object's `colors[slot]` when given, else its own `color`.
 - `outfits` is a list of `{ id, name, colors, parts, source, note }`. Each part is a part as above plus `bone`, the name of a body bone in `assets/people/skel.json`. Its `pos` and `rot` are in the rest pose of the body (origin on the ground between the feet, facing +z), and the part moves with that bone in every pose.
+- A part with `eye: true` is an eye. The engine turns it to the gaze of the pose and closes it in a blink (the `narrator` model has 2).
 - `base` (optional) is `[x0, z0, x1, z1]`, the footprint of the parts below 1 m when it is smaller than `size` (a tree trunk, a lamp post). The collision check uses it.
 - `kind` is one of: `vehicle`, `building`, `furniture`, `structure`, `prop`, `sign`, `road`, `nature`.
 - Every model has `license` and `size` (x, y, z metres of the bounding box).

@@ -1,6 +1,6 @@
 # Toybox core
 
-This folder holds the Node side of Toybox. It has no npm dependencies. It needs Node 24.
+This folder holds the Node side of Toybox. It has no npm dependencies. It needs Node 24. The voice is the only exception: `voice.mjs` installs its packages into `~/.cache/toybox/voice` at the first `make_voice`, not into the repo.
 
 ## Files
 
@@ -10,6 +10,8 @@ This folder holds the Node side of Toybox. It has no npm dependencies. It needs 
 - `geom.mjs` has the shared geometry maths.
 - `mcp.mjs` is a stdio MCP server. `cli.mjs` runs the same tools from a shell. `session.mjs` loads the scene, runs a tool and saves.
 - `osm.mjs` gets OpenStreetMap buildings and makes OneMap tile addresses.
+- `narration.mjs` sets the beats of the narration, resolves cues and checks the narration and the facts.
+- `voice.mjs` makes the voice files with Kokoro on this computer. `voice/` holds the package files of the voice (kokoro-js 1.2.1).
 - `guide/` holds the how-to texts for an agent.
 
 ## Run
@@ -36,4 +38,4 @@ Rebuild the catalogue after you change `kit.mjs`:
 
     node evals/run.mjs
 
-Each eval builds a scene only through the tool commands. It writes `evals/out/<name>.toybox.json` and `.srt`. It prints the quality bars. The command exits with 1 when a bar fails.
+Each eval builds a scene only through the tool commands. It writes `evals/out/<name>.toybox.json` and `.srt`. The narrated eval also uses the voice files in `evals/out/voice/`. Run `node evals/narrated.mjs` to make them again. It prints the quality bars. The command exits with 1 when a bar fails.

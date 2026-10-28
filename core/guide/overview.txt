@@ -13,6 +13,8 @@ Work in this order.
 8. Call validate. Fix every error, including view_blocked and collision. Call render_preview to look at key moments.
 9. Call export_scene.
 
+A scene with a voice. Read the guide "narration" before step 2. The narration then sets the times, and each sentence is a caption.
+
 Units. Metres and seconds. x is east. z is south. y is up. Yaw 0 faces south (+z). Yaw 90 faces east. Yaw 180 faces north.
 
 Rules the tools enforce.
@@ -27,4 +29,4 @@ Rules the tools enforce.
 - Each chapter happens at its real place. A callout shows only inside its chapter.
 - A claim from a source needs the source text. A guess needs estimated true.
 
-Read the other guides when you need them: people, motion, camera, indoor, map, explainer.
+Read the other guides when you need them: people, motion, camera, indoor, map, explainer, narration.

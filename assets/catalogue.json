@@ -5531,6 +5531,85 @@
    ]
   },
   {
+   "id": "narrator",
+   "name": "Narrator (a pink ball with 2 eyes)",
+   "kind": "prop",
+   "license": "CC0 (Toybox kit)",
+   "size": [
+    1,
+    1,
+    1.01
+   ],
+   "parts": [
+    {
+     "prim": "sphere",
+     "pos": [
+      0,
+      0.5,
+      -0.005
+     ],
+     "size": [
+      1,
+      1,
+      1
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#ff2e88",
+     "slot": "body"
+    },
+    {
+     "prim": "sphere",
+     "pos": [
+      -0.135,
+      0.525,
+      0.465
+     ],
+     "size": [
+      0.115,
+      0.25,
+      0.08
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#ffffff",
+     "slot": "eyes",
+     "eye": true
+    },
+    {
+     "prim": "sphere",
+     "pos": [
+      0.135,
+      0.525,
+      0.465
+     ],
+     "size": [
+      0.115,
+      0.25,
+      0.08
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#ffffff",
+     "slot": "eyes",
+     "eye": true
+    }
+   ],
+   "tags": [
+    "character",
+    "narrator"
+   ]
+  },
+  {
    "id": "wall-3",
    "name": "Wall segment, 3 m",
    "kind": "structure",

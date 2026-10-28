@@ -76,6 +76,13 @@ export function report(scene, name, opts = {}) {
   bar('g', `reading time at least ${MIN_SEC_PER_CHAR} s per character`, tight.length === 0, `tightest ${minRate.toFixed(3)} s per character`);
   bar('g', 'caption contrast at least 4.5 to 1', contrast_ok(CAPTION_STYLE.fg, CAPTION_STYLE.bg), `${CAPTION_STYLE.fg} on ${CAPTION_STYLE.bg}`);
 
+  // (n) narration: the voice sets the beats, and every fact of the outline has a source
+  if (scene.narration?.length) {
+    const silent = scene.narration.filter((n) => !n.voice).length, facts = scene.facts || [];
+    bar('n', 'every sentence has its voice', silent === 0, `${scene.narration.length - silent} of ${scene.narration.length}`);
+    bar('n', 'every fact has a source', facts.every((f) => f.source), `${facts.filter((f) => f.source).length} of ${facts.length}`);
+  }
+
   // (i) srt
   const text = srt(scene);
   const blocks = text.trim() ? text.trim().split(/\n\n/).length : 0;

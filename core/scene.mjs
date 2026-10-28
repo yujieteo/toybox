@@ -3,6 +3,9 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { rotYaw, rectCorners, overlapRatio } from './geom.mjs';
+import { narrationErrors } from './narration.mjs';
+import { MOVES } from '../web/motion.js';
+import { plain } from '../web/marks.js';
 
 export const POSES = ['stand', 'walk', 'run', 'wave', 'point', 'cheer', 'sit', 'bend'];
 export const SHOTS = ['wide', 'medium', 'close', 'top', 'follow', 'orbit'];
@@ -10,6 +13,7 @@ export const LOOKS = ['day', 'dusk', 'night', 'indoor'];
 export const GROUNDS = ['grass', 'street', 'floor', 'plain', 'map'];
 export const CHANNELS = ['at', 'yaw', 'scale', 'pose'];
 export const EASES = ['linear', 'inout', 'step'];
+export { MOVES };
 export const PERSON_SIZE = [0.5, 1.75, 0.35];
 export const STRUCTURAL_TAGS = ['wall', 'floor', 'ceiling'];
 export const MAX_CAPTION = 280;
@@ -408,12 +412,12 @@ function ts(sec) {
 }
 export function srt(scene) {
   return [...(scene.captions || [])].sort((a, b) => a.start - b.start)
-    .map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.text}\n`).join('\n');
+    .map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${plain(c.text)}\n`).join('\n');
 }
 
 // ---------- validation
 export const HARD_CODES = new Set(['schema', 'unknown_model', 'below_ground', 'overlap', 'time_backwards', 'caption_too_long', 'caption_too_short_on_screen',
-  'caption_overlap', 'shot_move_too_long', 'measured_no_source', 'estimate_not_flagged', 'duplicate_id', 'unknown_object']);
+  'caption_overlap', 'shot_move_too_long', 'measured_no_source', 'estimate_not_flagged', 'duplicate_id', 'unknown_object', 'fact_no_source', 'unknown_fact', 'bad_cue']);
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const isVec = (v, n = 3) => Array.isArray(v) && v.length === n && v.every(isNum);
@@ -519,8 +523,9 @@ export function validate(scene, catalogue) {
     if (!isNum(c.start) || !isNum(c.end) || typeof c.text !== 'string') { E('schema', p, 'Caption needs start, end and text.'); return; }
     seeT(c.end);
     if (c.end <= c.start) E('time_backwards', p, `Caption ends (${c.end}) before it starts (${c.start}).`);
-    if (c.text.length > MAX_CAPTION) E('caption_too_long', p, `Caption has ${c.text.length} characters. The limit is ${MAX_CAPTION}.`);
-    const need = c.text.length * MIN_SEC_PER_CHAR;
+    const chars = plain(c.text).length;
+    if (chars > MAX_CAPTION) E('caption_too_long', p, `Caption has ${chars} characters. The limit is ${MAX_CAPTION}.`);
+    const need = chars * MIN_SEC_PER_CHAR;
     if (c.end - c.start + 1e-9 < need) E('caption_too_short_on_screen', p, `Caption shows for ${(c.end - c.start).toFixed(2)} s but needs ${need.toFixed(2)} s (${MIN_SEC_PER_CHAR} s per character).`);
   });
   for (let i = 1; i < capsSorted.length; i++) {
@@ -540,6 +545,17 @@ export function validate(scene, catalogue) {
     if (isNum(c.start) && isNum(c.end) && !scene.chapters.some((k) => c.start >= k.start - 1e-9 && c.end <= k.end + 1e-9))
       E('callout_outside_chapter', `callouts[${i}]`, `Callout "${c.text}" (${c.start} s to ${c.end} s) is not inside one chapter. A callout shows only in the chapter that it belongs to.`);
   });
+  // motions: words such as pop and hop (web/motion.js)
+  if (scene.motions !== undefined && !Array.isArray(scene.motions)) E('schema', 'motions', 'motions must be an array.');
+  (Array.isArray(scene.motions) ? scene.motions : []).forEach((m, i) => {
+    const p = `motions[${i}]`;
+    if (!ids.has(m.object)) E('unknown_object', `${p}.object`, `Motion object ${m.object} does not exist.`);
+    if (!MOVES.includes(m.move)) E('schema', `${p}.move`, `move must be one of ${MOVES.join(', ')}.`);
+    if (!isNum(m.t) || m.t < 0) E('schema', `${p}.t`, 't must be a number of seconds >= 0.'); else seeT(m.t + (m.d ?? 0));
+    if (m.d !== undefined && !(isNum(m.d) && m.d > 0)) E('schema', `${p}.d`, 'd must be more than 0 seconds.');
+    for (const k of ['h', 'x', 'y', 'deg']) if (m[k] !== undefined && !isNum(m[k])) E('schema', `${p}.${k}`, `${k} must be a number.`);
+  });
+  errs.push(...narrationErrors(scene));
   if (isNum(scene.duration) && scene.duration + 1e-9 < maxT) E('duration_too_short', 'duration', `duration is ${scene.duration} s but the last time in the scene is ${maxT} s.`);
 
   if (scene.chapters.length >= 12) {
@@ -575,6 +591,8 @@ export function validate(scene, catalogue) {
     const kind = kindOf(o);
     if (!['building', 'structure', 'vehicle'].includes(kind)) return;
     const first = trackOf(scene, o.id, 'scale')?.keys?.[0];
+    if ((scene.motions || []).some((m) => m.object === o.id && (m.move === 'pop' || m.move === 'out')))
+      E('object_vanishes', `objects[${i}]`, `${kind[0].toUpperCase()}${kind.slice(1)} ${o.id} has a pop or an out motion. A real object does not appear from nothing or disappear.`);
     if (kind !== 'vehicle' && ((o.scale !== undefined && tiny(o.scale)) || (first && tiny(first.v))))
       E('object_vanishes', `objects[${i}]`, `${kind[0].toUpperCase()}${kind.slice(1)} ${o.id} is too small to see (scale below 0.05). A real object does not disappear: move the camera to clear a view.`);
     for (const t of changes(o, false)) {

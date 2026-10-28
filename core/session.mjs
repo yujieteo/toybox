@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs';
 import { loadScene, saveScene, newScene } from './scene.mjs';
 import { runTool, READ_ONLY } from './commands.mjs';
 import { fetchOverpass, bboxQuery, validBbox } from './osm.mjs';
+import { makeVoices } from './voice.mjs';
+import { dirname, resolve } from 'node:path';
 
 export async function callTool(scenePath, name, args, ctx = {}) {
   if (name === 'import_osm' && validBbox(args.bbox)) {
@@ -10,6 +12,11 @@ export async function callTool(scenePath, name, args, ctx = {}) {
     catch (e) { return { ok: false, errors: [{ code: 'osm_fetch_failed', message: `The Overpass server did not answer: ${e.message}. Try again later.` }] }; }
   }
   const scene = existsSync(scenePath) ? loadScene(scenePath) : newScene({});
+  ctx = { ...ctx, sceneDir: dirname(resolve(scenePath)) };
+  if (name === 'make_voice' && scene.narration?.length) {
+    try { await makeVoices(ctx.sceneDir, scene.narration.map((n) => n.text)); }
+    catch (e) { return { ok: false, errors: [{ code: 'voice_failed', message: `The voice did not start: ${e.message}` }] }; }
+  }
   const res = runTool(scene, name, args, ctx);
   if (res.ok && (!READ_ONLY.has(name) || !existsSync(scenePath)) && name !== 'guide') saveScene(scenePath, scene);
   return res;
