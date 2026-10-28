@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { build as riot } from '../evals/riot.mjs';
 import { build as home } from '../evals/hometeamns.mjs';
-import { loadScene, validate, blockedViews } from '../core/scene.mjs';
+import { loadScene, validate } from '../core/scene.mjs';
 
 for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', home, [8, 10]]]) {
   test(`eval ${name}: every quality bar passes`, () => {
@@ -12,7 +12,6 @@ for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', 
     assert.deepEqual(failed, []);
     const scene = loadScene(rep.file);
     assert.deepEqual(validate(scene), []);
-    assert.deepEqual(blockedViews(scene), []);
     assert.ok(scene.chapters.length >= chapters[0] && scene.chapters.length <= chapters[1]);
   });
 }

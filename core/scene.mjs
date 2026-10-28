@@ -230,6 +230,21 @@ export function frameCover(cam, occ) {
   return { part: hidden / 144, by: [...count].sort((a, b) => b[1] - a[1])[0]?.[0] || null };
 }
 
+// The focus objects that an occluder hides from the camera at time t ([{ id, by }]), and the occluder that
+// covers more than MAX_COVER of the frame in front of the target (frame, or null). The focus objects are
+// not occluders.
+export function viewBlocks(scene, cat, cam, focus, t) {
+  const bt = objectBounds(scene, cat, t), occ = occluders(scene, cat, bt, new Set(focus)), objects = [];
+  for (const id of focus) { const b = bt[id], by = b && Math.min(...b.size) >= 0.05 && blockerOf(cam, b, occ); if (by) objects.push({ id, by }); }
+  const cover = frameCover(cam, occ);
+  return { objects, frame: cover.part > MAX_COVER ? cover.by : null };
+}
+// The visible focus objects of the first chapter that holds time t, or null when no chapter holds t.
+export function focusAt(scene, t) {
+  const c = (scene.chapters || []).find((k) => k.start <= t && t <= k.end);
+  return c ? (c.focus || []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden)) : null;
+}
+
 // Every time span longer than MAX_BLOCKED in which an occluder hides a chapter focus object, or covers
 // more than MAX_COVER of the frame in front of the camera target. Sampled every VIEW_STEP.
 export function blockedViews(scene, catalogue) {
@@ -250,10 +265,9 @@ export function blockedViews(scene, catalogue) {
     for (let k = 0; k <= n; k++) {
       const t = Math.min(c.end, c.start + k * VIEW_STEP), cam = cameraAt(scene, t);
       if (!cam) return;
-      const bt = objectBounds(scene, cat, t), occ = occluders(scene, cat, bt, new Set(focus));
-      for (const f of focus) mark(f, bt[f] && Math.min(...bt[f].size) >= 0.05 && blockerOf(cam, bt[f], occ), t);
-      const cover = frameCover(cam, occ);
-      mark(FRAME, cover.part > MAX_COVER && cover.by, t);
+      const v = viewBlocks(scene, cat, cam, focus, t);
+      for (const f of focus) mark(f, v.objects.find((b) => b.id === f)?.by, t);
+      mark(FRAME, v.frame, t);
     }
     for (const f of runs.keys()) close(f, c.end);
   });

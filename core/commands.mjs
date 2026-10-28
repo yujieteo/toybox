@@ -3,7 +3,7 @@
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:path';
-import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, blockedViews, occluders, blockerOf, frameCover, MAX_COVER,
+import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, blockedViews, viewBlocks, focusAt,
   HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
 import { rotYaw } from './geom.mjs';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.mjs';
@@ -129,8 +129,8 @@ function makeObject(s, cat, a, extra = {}) {
   o.flip = !!a.flip;
   if (a.colors) o.colors = a.colors;
   if (person) o.pose = a.pose || 'stand';
-  if (person && a.outfit) o.outfit = a.outfit;
   else if (a.pose) o.pose = a.pose;
+  if (person && a.outfit) o.outfit = a.outfit;
   o.tags = a.tags || [];
   o.label = a.label || '';
   o.parent = null;
@@ -187,14 +187,12 @@ export function frameCamera(scene, cat, ids, shot, t, opts = {}) {
   return { eye: center.map((v, i) => r2(v + dir[i] * d)), target: center.map(r2), fov, distance: r2(d) };
 }
 
-// What hides the framed objects from a camera at time t: [{ id, by }], plus { id: 'frame', by } when an
-// occluder covers more than MAX_COVER of the frame in front of the target.
-function viewBlocks(scene, cat, cam, ids, t) {
-  const bt = objectBounds(scene, cat, t), occ = occluders(scene, cat, bt, new Set(ids)), out = [];
-  for (const id of ids) { const by = bt[id] && blockerOf(cam, bt[id], occ); if (by) out.push({ id, by }); }
-  const cover = frameCover(cam, occ);
-  if (cover.part > MAX_COVER) out.push({ id: 'frame', by: cover.by });
-  return out;
+// What hides the subject from a camera at time t: [{ id, by }], plus { id: 'frame', by } when an occluder
+// covers too much of the frame. The subject is the chapter focus at t (the check that validate does), or
+// the framed objects when no chapter holds t.
+function blocksAt(scene, cat, cam, ids, t) {
+  const v = viewBlocks(scene, cat, cam, focusAt(scene, t) ?? ids, t);
+  return v.frame ? [...v.objects, { id: 'frame', by: v.frame }] : v.objects;
 }
 // Up to three view angles (with elevation) near the asked one that give a clear view of the frame.
 function clearViews(scene, cat, a) {
@@ -203,7 +201,7 @@ function clearViews(scene, cat, a) {
     const view = (((v0 + sg * k * 15) % 360) + 360) % 360;
     if (out.length >= 3 || out.some((o) => o.view === view && o.elevation === el)) continue;
     const f = frameCamera(scene, cat, a.frame, a.shot, a.t, { ...a, view, elevation: el });
-    if (!viewBlocks(scene, cat, f, a.frame, a.t).length) out.push({ view, elevation: el });
+    if (!blocksAt(scene, cat, f, a.frame, a.t).length) out.push({ view, elevation: el });
   }
   return out;
 }
@@ -470,7 +468,7 @@ def('move_along', 'Move an object along a path of points. Writes at, yaw and pos
     return { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
   }));
 
-def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a framed object, or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
+def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
   { t: num, shot: { type: 'string', enum: SHOTS }, frame: strArr, eye: vec3, target: vec3, fov: num, ease: { type: 'string', enum: EASES },
     view: { type: 'number', description: 'Camera side in degrees: 0 looks north from the south side, 90 looks west from the east side.' }, elevation: num, margin: num, distance: num, cut: { type: 'boolean' } },
   ['t', 'shot'],
@@ -484,7 +482,7 @@ def('set_camera', 'Add or replace a camera key at time t. Give frame (object ids
     if (a.cut && prev) prev.ease = 'step';
     s.camera.push(key); s.camera.sort((p, q) => p.t - q.t);
     const out = { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
-    const blocked = viewBlocks(s, cat, key, a.frame || [], a.t);
+    const blocked = blocksAt(s, cat, key, a.frame || [], a.t);
     if (blocked.length) Object.assign(out, { blocked, warning: 'Something stands between the camera and the subject. Change the view before export.', ...(a.frame?.length ? { clear_views: clearViews(s, cat, a) } : {}) });
     return out;
   }));

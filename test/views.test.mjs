@@ -57,6 +57,19 @@ test('set_camera reports a blocked view and gives clear views that work', () => 
   assert.deepEqual(blockedViews(s), []);
 });
 
+test('set_camera and validate agree when a framed object is not a chapter focus', () => {
+  const s = street();
+  must(C.remove(s, { id: 'house' }));
+  must(C.place(s, { model: 'bus-private', at: [0, 0, 4], id: 'bus', yaw: 90 }));
+  const r = must(C.set_camera(s, { t: 0, shot: 'medium', frame: ['p', 'bus'], view: 0, elevation: 5 }));
+  assert.ok(r.blocked.some((b) => b.id === 'p' && b.by === 'bus'), JSON.stringify(r.blocked));
+  assert.ok(blockedViews(s).some((e) => /bus hides focus object p/.test(e.message)));
+  const { view, elevation } = r.clear_views[0];
+  const ok = must(C.set_camera(s, { t: 0, shot: 'medium', frame: ['p', 'bus'], view, elevation }));
+  assert.equal(ok.blocked, undefined);
+  assert.deepEqual(blockedViews(s), []);
+});
+
 test('outfits: listed with sources, on known bones, and checked on place', () => {
   const s = newScene({});
   const { outfits } = must(C.list_models(s, {}));
