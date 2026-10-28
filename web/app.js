@@ -29,7 +29,7 @@ async function pull() {
   const sel = v.selected;
   v.load(s);
   v.selected = s.objects.some(o => o.id === sel) ? sel : null;
-  if (v.oneMap(s) && !v.logo) v.loadLogo();
+  if (v.oneMap(s) && !v.logo) v.loadLogo().then(() => v.draw(v.t));   // the logo arrives after the first frame
   v.draw(v.t);
 }
 async function poll() {

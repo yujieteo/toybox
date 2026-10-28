@@ -162,7 +162,10 @@ static void gl_draw_ground(Mat_g *mvp) {
     glBindTexture(GL_TEXTURE_2D, g_ground_tex);
     glBindVertexArray(g_ground_vao);
     glDisable(GL_CULL_FACE);
+    /* the map lies 2 mm above the ground box: pull it forward in depth, or far cameras show the ground through it */
+    glEnable(GL_POLYGON_OFFSET_FILL); glPolygonOffset(-2.0f, -8.0f);
     glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDisable(GL_POLYGON_OFFSET_FILL);
     glEnable(GL_CULL_FACE);
 }
 
