@@ -251,6 +251,7 @@ export async function createViewer(opts) {
     const z0 = ((cy - R) - fy) * mPerTile, z1 = ((cy + R + 1) - fy) * mPerTile;
     M._ground_map(1, x0, z0, x1, z1);
     v.mapImage = true;
+    if (v.scene) v.draw(v.t);   // the tiles arrive after the first frame
   }
   v.loadLogo = () => new Promise(done => {
     const im = new Image(); im.crossOrigin = 'anonymous';

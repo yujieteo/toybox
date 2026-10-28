@@ -481,7 +481,7 @@ def('add_chapter', 'Add a chapter (a named time range). With caption it also add
   ['start', 'end', 'title'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     const id = a.id || `c${s.chapters.length + 1}`;
-    const c = { id, start: a.start, end: a.end, title: a.title, clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], shot: a.shot || '', source: a.source || '' };
+    const c = { id, start: a.start, end: a.end, title: a.title, clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
     for (const k of ['estimated', 'measured']) if (a[k] !== undefined) c[k] = a[k];
     for (const f of c.focus) find(s, f);
     s.chapters.push(c);

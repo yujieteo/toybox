@@ -21,6 +21,13 @@ test('set_pose without t sets the pose at time 0 when a later pose key exists', 
   assert.equal(valueAt(keys, 0), 'wave'); assert.equal(valueAt(keys, 2), 'wave'); assert.equal(valueAt(keys, 6), 'sit');
 });
 
+test('add_chapter without shot adds the chapter', () => {
+  const s = newScene({});
+  must(C.add_chapter(s, { start: 0, end: 5, title: 'Arrival', caption: 'A visitor arrives.', estimated: true }));
+  assert.equal(s.chapters.length, 1); assert.equal(s.chapters[0].shot, undefined);
+  assert.equal(C.add_chapter(s, { start: 5, end: 9, title: 'Bad', caption: 'x', shot: 'nope' }).ok, false);
+});
+
 test('import_osm stores real footprints, turns them, and writes the ODbL data file', () => {
   const dir = mkdtempSync(join(tmpdir(), 'tbimp-'));
   const s = newScene({});
