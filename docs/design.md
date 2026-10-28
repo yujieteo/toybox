@@ -12,7 +12,7 @@ Toybox is a tool where **an agent builds an animated 3D explainer scene for you*
 Toybox has **two surfaces** that share one engine and one file format:
 
 1. **Authoring app on localhost**, like femahoy. The agent builds scenes and animations through the local MCP server. A person can also build and edit scenes by hand there (place, move, scale, rotate, flip, delete, duplicate, camera, timeline).
-2. **Viewer hosted on teoyujie.org.** It opens scene files. Visitors can manipulate an opened scene (camera, and the per-object edits: move, scale, rotation, flip, delete, duplicate). The site has no MCP and no agent, and no server. Whether visitors can save their changed file is OPEN 10.
+2. **Viewer hosted on teoyujie.org.** It opens scene files. Visitors can manipulate an opened scene (camera, and the per-object edits: move, scale, rotation, flip, delete, duplicate). The site has no MCP and no agent, and no server. Whether visitors can save their changed file is round 5 question 9.
 
 The reference for the interface is femahoy (section 2). Real examples that Toybox must build: the Little India riot (a street scene, from the Committee of Inquiry facts) and an indoor walk at HomeTeamNS Punggol from the entrance up to the ballroom. The Straits Times "Little India riot, 10 years on" page is the quality target (section 11).
 
@@ -73,7 +73,7 @@ Earlier rounds said "no animation". The owner now wants animation, so:
 ### (b) The scene file
 
 - `.toybox.json` is the only source of truth: header (title, author, backdrop, model ids and content hashes, tool version), objects, timeline keyframes, chapters, captions, callouts, lighting, camera, `source` text for claims, and `estimated` flags. It is validated by a JSON Schema kept in the repo.
-- Toybox opens it to regenerate the scene and the animation, and can export the MP4 from it. The hosted viewer opens the same file. If visitors change the scene and the site has no server, the change can be saved only as a file download (OPEN 10). The model files are referenced by id and hash and fetched from the Toybox asset set, so the file stays small.
+- Toybox opens it to regenerate the scene and the animation, and can export the MP4 from it. The hosted viewer opens the same file. If visitors change the scene and the site has no server, the change can be saved only as a file download (round 5 question 9). The model files are referenced by id and hash and fetched from the Toybox asset set, so the file stays small.
 - **Round trip test:** load a file, export frames, compare 3 chosen frames to stored pictures with a fixed tolerance. A file written by an older version still loads (the header has a schema version and a migration step).
 
 ## 7. What the new words make unnecessary or lower priority
