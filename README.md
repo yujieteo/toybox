@@ -25,8 +25,8 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 
 ## Build and run
 
-1. Install the Goose compiler and emsdk. Then run `source emsdk_env.sh`.
-2. Build the engine: `GOOSE=/path/to/goose engine/build.sh engine-build`
+1. Install emsdk (and the Goose compiler if you change `engine/scene.goose`). Then run `source emsdk_env.sh`.
+2. Build the engine: `engine/build.sh engine-build`. The Goose-generated `engine/scene.c` and `engine/scene.h` are in the repo. Set `GOOSE=/path/to/goose` to regenerate them from `engine/scene.goose`.
 3. Start the daemon: `node app/serve.mjs --scene my.toybox.json --engine engine-build`
 4. Open the address that the daemon prints. It has a secret token and works on 127.0.0.1 only.
 
