@@ -1,0 +1,19 @@
+INDOOR SCENES
+
+Use build_room for each room. It makes the floor, the ceiling and the walls. It makes gaps for doors and windows.
+
+build_room(id, at, size [width, depth, height], doors, windows).
+- at is the floor centre.
+- width runs along x. depth runs along z.
+- A door is {wall: "n"|"s"|"e"|"w", at, width}. at is the distance in metres along the wall, from its west end (n, s) or north end (e, w).
+- Walls carry the wall tag. Floors carry floor. Ceilings carry ceiling.
+
+Stairs. Use build_stairs(from, yaw, height). It returns a path. Give the path to move_along so a person climbs.
+
+Lighting. Use set_lighting with look "indoor".
+
+Cutaway. Call set_cutaway. The viewer then hides ceilings and the walls between the camera and its target. Place the camera high and outside the room.
+
+Real buildings. A layout that no public source gives is an estimate. Set estimated true and source "estimated" on every object. Say so in the caption: "Layout is approximate".
+
+Furniture. Use table, chair, banquet-table-8, stage, sofa, reception-desk, turnstile, lift-door, escalator, plant and notice-board. Keep 0.9 m or more for a walking path.

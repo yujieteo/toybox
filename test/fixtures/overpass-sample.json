@@ -1,0 +1,6 @@
+{"version":0.6,"generator":"Overpass API (hand-made sample in the real response format, for tests; not real OpenStreetMap data)","elements":[
+{"type":"way","id":1001,"tags":{"building":"yes","height":"12 m"},"geometry":[{"lat":1.30680,"lon":103.85120},{"lat":1.30680,"lon":103.85130},{"lat":1.30690,"lon":103.85130},{"lat":1.30690,"lon":103.85120},{"lat":1.30680,"lon":103.85120}]},
+{"type":"way","id":1002,"tags":{"building":"commercial","building:levels":"3"},"geometry":[{"lat":1.30670,"lon":103.85100},{"lat":1.30670,"lon":103.85110},{"lat":1.30660,"lon":103.85110},{"lat":1.30660,"lon":103.85100},{"lat":1.30670,"lon":103.85100}]},
+{"type":"way","id":1003,"tags":{"building":"yes"},"geometry":[{"lat":1.30700,"lon":103.85140},{"lat":1.30700,"lon":103.85150},{"lat":1.30710,"lon":103.85145},{"lat":1.30700,"lon":103.85140}]},
+{"type":"way","id":1004,"tags":{"highway":"residential"},"geometry":[{"lat":1.3,"lon":103.8},{"lat":1.31,"lon":103.8}]}
+]}

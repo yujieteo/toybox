@@ -1,0 +1,16 @@
+MAPS
+
+Set the map with set_backdrop. Give origin {lat, lon}. Use ground "street" for a built street. Use ground "map" to show OneMap tiles under the scene. The tiles need the origin.
+
+Local coordinates. The origin is (0, 0). x is east. z is south. One degree of latitude is about 111 km.
+
+Real buildings. Call import_osm with bbox [south, west, north, east] to get the OpenStreetMap building footprints. Set the origin first. Without an origin, the tool uses the bbox centre. To build a street along z, give bearing: the compass bearing of the real street. The map then turns so that the street runs along z. Ground "map" cannot turn, so use ground "street" with a bearing.
+
+Data rules.
+- OneMap tiles load live in the viewer. Never store OneMap data in the scene.
+- OpenStreetMap footprints are ODbL data. The scene shows "© OpenStreetMap contributors" by itself. Do not call add_credit for it. import_osm writes the ODbL data file next to the scene. Keep the two files together.
+- A layout that is not in a source is an estimate. Set estimated true. Use source "estimated, from <what>".
+
+Street layout. Use road-straight (8 m by 10 m, along z), road-junction (8 m by 8 m) and road-zebra. Rotate a road tile with yaw 90 to run along x. Put kerb pieces on the edges. Put shophouses beside the road with the front facing it. Do not put a model on an imported footprint.
+
+Facing. A building front faces +z at yaw 0. A building on the north side of an east-west road faces south, so yaw 0. A building on the south side faces north, so yaw 180.

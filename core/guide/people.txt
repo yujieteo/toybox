@@ -1,0 +1,17 @@
+PEOPLE
+
+Use the model "person". It has variant 0 to 23. The variant sets the face, hair and skin. It has these poses: stand, walk, run, wave, point, cheer, sit, bend.
+
+Quality bar. A scene uses at least 10 different variants and at least 8 different poses. At least one person walks.
+
+Rules.
+- Use generic faces. Never put a name on a figure.
+- For a real event, never name a victim. Write "a pedestrian".
+- A person colours only shirt and pants. Use calm colours.
+- Give each important person a fixed variant. Do not let the tool choose, or the person changes between scenes.
+
+Crowds. Use place_group with pattern scatter, ring or line. Give a seed so the same call gives the same crowd. Give a list of variants and a list of poses. A crowd may overlap itself.
+
+Motion. Use move_along with a path and a speed. A walk is 1.4 m/s. A run is 3.5 m/s or more. The person uses walk or run while it moves and stands at the end. Use set_pose for waves, points and cheers at a time.
+
+Scale. A person is about 1.75 m tall. A shophouse storey is about 3 m. Keep these sizes true.

@@ -1,0 +1,21 @@
+CAMERA
+
+Use set_camera(t, shot, frame). The frame list gives object ids. The tool finds the eye and the target so every listed object fits with a margin.
+
+Shot types.
+- wide: the whole place. Use it to open a chapter.
+- medium: a small group or one vehicle.
+- close: one person or one detail.
+- top: a plan view from above. Good for layout and routes.
+- follow: behind a moving object. Frame the mover.
+- orbit: a slow turn. Use two keys with different view angles.
+
+Rules.
+- Every chapter has a camera key at or just before its start.
+- Two keys with different shots may be at most 1.5 s apart. A long gap between different shots fails.
+- To hold a shot and then change, use cut true on the next key. The old shot holds, then the picture cuts.
+- To hold a shot while the scene plays, add a second key of the same shot later.
+- A story with 12 chapters or more uses at least 3 shot types.
+- Each focus object of a chapter must be in view at the chapter start. validate checks this with a 16:9 frame.
+
+Options. view turns the camera round the target in degrees. elevation sets the height angle. margin and distance change the fit.

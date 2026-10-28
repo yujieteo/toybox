@@ -1,0 +1,34 @@
+BUILDING AN EXPLAINER
+
+Plan before you place. Write the chapter list first. A good explainer has 8 to 14 chapters of 10 to 15 s each. The total is 1.5 to 3 minutes.
+
+Chapter structure.
+1. Set the scene: place, time, normal life.
+2. One chapter for each step of the event, in time order.
+3. A closing chapter for what followed and what people learned.
+
+For each chapter call add_chapter with title, clock, caption, focus, shot and source.
+- title: 2 to 5 words.
+- clock: the time of day when you know it, for example "21:21".
+- caption: one to three short sentences. At most 280 characters. A 10 s chapter fits about 160 characters. Every character needs 0.06 s on screen.
+- focus: the objects the viewer must see.
+- source: the URL or document name for the claim.
+
+Sources and estimates.
+- Every measured fact needs a source. Mark it measured true and give source.
+- Every distance, layout, count or time without a source is an estimate. Set estimated true. Start its source with "estimated".
+- Never invent a source. Say "estimated" when you do not know.
+- Say in a caption when a layout is approximate.
+
+Shot variety. Open each chapter with a wide or medium shot. Use a close shot for a person or a detail. Use top for a layout. At least 3 shot types in a story of 12 chapters or more.
+
+Text. Use plain words and short sentences. Contrast between text and its background is at least 4.5 to 1.
+
+Real events. Use generic faces. Put no names on figures. Do not name victims. Use cautious words for contested facts.
+
+Quality bars checked by validate and by the eval.
+- 10 or more people variants and 8 poses. A walk cycle.
+- A shot in every chapter. No hidden focus object.
+- Every object has a source or the estimated flag.
+- Captions are short enough and stay long enough on screen.
+- Captions are also written to an .srt file by export_scene.
