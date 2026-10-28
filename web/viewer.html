@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toybox viewer</title>
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="ui-components.css">
+<style>
+  main { max-width: 1100px; margin: 0 auto; padding: var(--space-4); }
+  h1 { font-size: var(--title); margin: 0 0 var(--space-2); }
+  .stage { aspect-ratio: 16 / 9; width: 100%; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Toybox viewer</h1>
+  <p class="note">Open a <code>.toybox.json</code> scene file. The file stays in your browser. Nothing is sent to a server.</p>
+  <div class="bar">
+    <label for="file" class="note">Scene file</label>
+    <input id="file" type="file" accept=".json,application/json">
+    <span id="err" class="err" role="alert"></span>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="canvas" tabindex="0" aria-label="3D scene. Drag to orbit, scroll to zoom, shift and drag to pan. Arrow keys orbit."></canvas>
+    <canvas id="overlay" aria-hidden="true"></canvas>
+  </div>
+  <div class="bar">
+    <button id="play" class="primary" aria-label="Play">Play</button>
+    <input id="seek" type="range" min="0" max="60" step="0.05" value="0" aria-label="Time">
+    <span id="time" class="time" aria-live="off">0.0 / 0.0 s</span>
+    <button id="story">Story camera</button>
+    <button id="save">Save scene file</button>
+  </div>
+  <div class="panel" id="panel" hidden>
+    <span class="name" id="pname"></span>
+    <button data-op="left">Left</button><button data-op="right">Right</button>
+    <button data-op="fwd">Back</button><button data-op="back">Forward</button>
+    <button data-op="bigger">Bigger</button><button data-op="smaller">Smaller</button>
+    <button data-op="rotl">Turn left</button><button data-op="rotr">Turn right</button>
+    <button data-op="flip">Flip</button><button data-op="duplicate">Duplicate</button>
+    <button data-op="delete">Delete</button><button data-op="undo">Undo</button>
+    <span class="src" id="psrc"></span>
+  </div>
+  <p class="note">Scene data credit lines are drawn in the scene. Models: CC0. Engine: Goose (Apache 2.0).</p>
+</main>
+<script type="module" src="viewer-app.js"></script>
+</body>
+</html>
