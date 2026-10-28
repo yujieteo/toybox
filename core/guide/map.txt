@@ -13,4 +13,6 @@ Data rules.
 
 Street layout. Use road-straight (8 m by 10 m, along z), road-junction (8 m by 8 m) and road-zebra. Rotate a road tile with yaw 90 to run along x. Put kerb pieces on the edges. Put shophouses beside the road with the front facing it. Do not put a model on an imported footprint.
 
+Traffic. Singapore traffic keeps left. set_backdrop drive sets the side ("left" is the default). Guide "motion" tells how to plan the lanes.
+
 Facing. A building front faces +z at yaw 0. A building on the north side of an east-west road faces south, so yaw 0. A building on the south side faces north, so yaw 180.

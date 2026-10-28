@@ -18,8 +18,8 @@ Uniformed forces. Police, riot police, firefighters, paramedics and soldiers mus
 - Never give a civilian a uniform colour or an outfit. Give each force its own look, so the viewer can tell the police, the SOC, the SCDF and civilians apart.
 - Use the number and the arrival time that a source gives. When the scene shows fewer figures than the real number, say so in the caption and mark the figures estimated.
 
-Crowds. Use place_group with pattern scatter, ring or line. Give a seed so the same call gives the same crowd. Give a list of variants and a list of poses. A crowd may overlap itself.
+Crowds. Use place_group with pattern scatter, ring or line. Give a seed so the same call gives the same crowd. Give a list of variants and a list of poses. Keep about 0.5 m between people: validate reports two people in one place (collision).
 
-Motion. Use move_along with a path and a speed. A walk is 1.4 m/s. A run is 3.5 m/s or more. The person uses walk or run while it moves and stands at the end. Use set_pose for waves, points and cheers at a time.
+Motion. Read the guide "motion": people must not walk into each other, into vehicles or into street furniture. Use move_along with a path and a speed. A walk is 1.4 m/s. A run is 3.5 m/s or more. The person uses walk or run while it moves and stands at the end. Use set_pose for waves, points and cheers at a time.
 
 Scale. A person is about 1.75 m tall. A shophouse storey is about 3 m. Keep these sizes true.

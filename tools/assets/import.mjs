@@ -237,6 +237,7 @@ function convert(a, tris) {
     groups: groups.map((g, i) => ({ color: g.color, ...(slots[i] ? { slot: slots[i] } : {}), tris: g.tris.length })),
   };
   if (a.tags?.length) entry.tags = a.tags;
+  if (a.base) entry.base = a.base;
   return { entry, bin: Buffer.concat([head, body]) };
 }
 

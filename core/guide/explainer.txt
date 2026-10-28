@@ -20,6 +20,9 @@ Sources and estimates.
 - Never invent a source. Say "estimated" when you do not know.
 - Say in a caption when a layout is approximate.
 
+Place. Each chapter happens at its real place. An event at another place gets its own set there, and the camera cuts to it (set_camera with cut true). For example, a committee that met in a building gets a simple room (build_room) away from the street, not a sign in the street.
+- Put a sign or a callout only where and when its fact is true. A sign label shows only in the chapters that list the sign in focus. A callout must lie inside one chapter (validate, code callout_outside_chapter).
+
 Shot variety. Open each chapter with a wide or medium shot. Use a close shot for a person or a detail. Use top for a layout. At least 3 shot types in a story of 12 chapters or more.
 
 Text. Use plain words and short sentences. Contrast between text and its background is at least 4.5 to 1.
@@ -28,7 +31,8 @@ Real events. Use generic faces. Put no names on figures. Do not name victims. Us
 
 Quality bars checked by validate and by the eval.
 - 10 or more people variants and 8 poses. A walk cycle.
-- A shot in every chapter. No hidden focus object. No blocked view: nothing stands between the camera and the subject.
+- A shot in every chapter. No hidden focus object. No blocked view: nothing stands between the camera and the subject. Clear a view only by moving the camera.
+- No collision, no figure off the ground, no vehicle in the wrong lane (guide "motion").
 - Uniformed forces wear the right outfit or sourced uniform colours (guide "people").
 - Every object has a source or the estimated flag.
 - Captions are short enough and stay long enough on screen.

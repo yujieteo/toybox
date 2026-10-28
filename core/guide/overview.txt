@@ -7,10 +7,10 @@ Work in this order.
 2. Call new_scene. Set the ground and the lighting.
 3. Call list_models to find models. Use "person" for people.
 4. Place the set first: roads, buildings, rooms. Then place vehicles, props and people.
-5. Add motion with move_along, set_pose and animate.
+5. Add motion with move_along, set_pose and animate. Read the guide "motion" first: plan lanes and gaps.
 6. Add one chapter for each step of the story. Give each chapter a caption, a source and a focus.
 7. Set the camera for each chapter.
-8. Call validate. Fix every error, including view_blocked. Call render_preview to look at key moments.
+8. Call validate. Fix every error, including view_blocked and collision. Call render_preview to look at key moments.
 9. Call export_scene.
 
 Units. Metres and seconds. x is east. z is south. y is up. Yaw 0 faces south (+z). Yaw 90 faces east. Yaw 180 faces north.
@@ -18,11 +18,13 @@ Units. Metres and seconds. x is east. z is south. y is up. Yaw 0 faces south (+z
 Rules the tools enforce.
 - A model id must exist in the catalogue.
 - An object must not go below the ground.
-- Two solid objects must not overlap by more than 20 percent. People may overlap each other in a crowd.
+- Two solid objects that stand still must not overlap by more than 20 percent when you place them.
 - Times must go forward.
 - A caption has 280 characters or fewer. It stays on screen at least 0.06 s for each character.
 - Every chapter needs a caption. Its focus objects must be in the camera view at its start.
-- No building, structure or vehicle may stand between the camera and a focus object (validate, code view_blocked).
+- No building, structure or vehicle may stand between the camera and a focus object (validate, code view_blocked). Move the camera to fix it. Never hide or remove an object to clear a view.
+- Solid objects never pass into each other. People and vehicles stand on the ground. Vehicles keep to their lane (validate, codes collision, off_ground, wrong_lane).
+- Each chapter happens at its real place. A callout shows only inside its chapter.
 - A claim from a source needs the source text. A guess needs estimated true.
 
-Read the other guides when you need them: people, camera, indoor, map, explainer.
+Read the other guides when you need them: people, motion, camera, indoor, map, explainer.

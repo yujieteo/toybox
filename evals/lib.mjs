@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { newScene, validate, srt, saveScene, contrast_ok, CAPTION_STYLE, loadCatalogue, blockedViews, MAX_CAPTION, MIN_SEC_PER_CHAR, MAX_SHOT_MOVE } from '../core/scene.mjs';
+import { newScene, validate, srt, saveScene, contrast_ok, CAPTION_STYLE, loadCatalogue, blockedViews, motionErrors, MAX_CAPTION, MIN_SEC_PER_CHAR, MAX_SHOT_MOVE } from '../core/scene.mjs';
 import { runTool } from '../core/commands.mjs';
 
 export const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), 'out');
@@ -20,7 +20,7 @@ export class Builder {
 // Deterministic random numbers for scripts (the tools have their own seeds).
 export function rng(seed) { let a = seed; return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-// Quality bars b, e, f, g, i from docs/design.md section 11, computed from the scene file.
+// Quality bars b, e, f, g, i, j from docs/design.md section 11, computed from the scene file.
 export function report(scene, name, opts = {}) {
   const rows = [];
   const bar = (id, label, ok, detail) => rows.push({ bar: id, label, ok: !!ok, detail });
@@ -51,6 +51,13 @@ export function report(scene, name, opts = {}) {
   bar('e', 'no hidden focus object', hidden.length === 0, hidden.map((e) => e.message).join(' ; ') || 'all focus objects in view');
   const blocked = blockedViews(scene);
   bar('e', 'no blocked view (ray test on every chapter)', blocked.length === 0, blocked.map((e) => e.message.split('. Move')[0]).join(' ; ') || 'clear');
+
+  // (j) motion, every 0.25 s
+  const motion = motionErrors(scene);
+  for (const [code, label] of [['collision', 'no object passes into another'], ['off_ground', 'people and vehicles stay on the ground'], ['wrong_lane', 'vehicles keep to their lane']]) {
+    const bad = motion.filter((e) => e.code === code);
+    bar('j', label, bad.length === 0, bad.length ? `${bad.length}: ${bad.slice(0, 3).map((e) => e.message.split('. ')[0]).join(' ; ')}` : 'none');
+  }
 
   // (f) layout sources
   const unsourced = scene.objects.filter((o) => !o.source && o.estimated !== true);

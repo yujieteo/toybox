@@ -302,10 +302,13 @@ export async function createViewer(opts) {
   function drawOverlay(ctx, w, h, t) {
     const sc = v.scene; if (!sc) return;
     const fs = Math.round(h * 0.045);
-    // sign labels
+    // sign labels: only in the chapters that focus on the sign (always when the scene has no chapters)
+    const cs = sc.chapters || [];
+    const signCh = cs.find(c => c.start <= t && t < c.end) || cs.find(c => c.start <= t && t <= c.end);
     for (const o of sc.objects) {
       const m = models.get(o.model);
       if (!m || m.kind !== 'sign' || !o.label) continue;
+      if (cs.length && !(signCh && (signCh.focus || []).includes(o.id))) continue;
       const id = v.rootIds.get(o.id); if (id === undefined) continue;
       const p = v.project(M._obj_wx(id), M._obj_wy(id) + m.size[1] * 0.6, M._obj_wz(id));
       if (!p) continue;
