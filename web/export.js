@@ -20,7 +20,7 @@ export async function exportVideo(v, { width = 1920, height = 1080, fps = 30, na
   const enc = new VideoEncoder({
     output: chunk => { const b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); bytes += b.length; chain = chain.then(() => fetch(`${base}/export/chunk?token=${token}`, { method: 'POST', body: b })); },
     error: e => { throw e; } });
-  enc.configure({ codec: width * height > 1280 * 720 ? 'avc1.640028' : 'avc1.64001f', width, height, bitrate: 12e6, framerate: fps, avc: { format: 'annexb' }, latencyMode: 'quality' });
+  enc.configure({ codec: width * height > 1280 * 720 ? 'avc1.640028' : 'avc1.64001f', width, height, bitrate: 6e6, framerate: fps, avc: { format: 'annexb' }, latencyMode: 'quality' });
   const hashes = [];
   const t0 = performance.now();
   for (let i = 0; i < n; i++) {
