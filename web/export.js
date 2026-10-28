@@ -1,7 +1,7 @@
 // MP4 export in the page: render each frame, draw the captions into it, encode with WebCodecs
 // (H.264), and post the chunks to the local server. The server muxes them with ffmpeg.
 // Same scene and same time always give the same pixels. The server adds the voice of the narration.
-import { plain } from './marks.js';
+import { plain } from './vid.js';
 
 export function srt(scene) {
   const ts = s => { const ms = Math.round(s * 1000), p = (n, l = 2) => String(n).padStart(l, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`; };

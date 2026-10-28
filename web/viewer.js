@@ -2,8 +2,7 @@
 // text overlays, and handles the camera, picking and per-object edits. The authoring app and
 // the hosted viewer use this same module. The canvas must have the id "canvas" (the engine
 // finds it by that id).
-import { poseAt, seedOf } from './motion.js';
-import { marks } from './marks.js';
+import { poseAt, seedOf, marks } from './vid.js';
 
 const POSES = { stand: 0, walk: 1, run: 2, wave: 3, point: 4, cheer: 5, sit: 6, bend: 7 };
 const LOOKS = { day: 0, dusk: 1, night: 2, indoor: 3 };
@@ -310,7 +309,7 @@ export async function createViewer(opts) {
     if (v.onframe) v.onframe(t);
   };
 
-  // Text with small raised and lowered parts (web/marks.js). s is the font size, weight the font weight.
+  // Text with small raised and lowered parts (engine/vid.goose). s is the font size, weight the font weight.
   function textW(ctx, text, s, weight) {
     let w = 0;
     for (const p of marks(text)) { ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`; w += ctx.measureText(p.text).width; }

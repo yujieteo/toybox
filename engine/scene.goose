@@ -309,7 +309,7 @@ export "obj_bone" fn obj_bone(i: i32, b: i32) {
     }
 }
 
-// The motion pose of object i for the next render_frame (web/motion.js computes it from the time).
+// The motion pose of object i for the next render_frame (engine/vid.goose computes it from the time).
 // dx and up move it to its side and up (metres), tilt rocks it round its front axis (degrees), hs and vs
 // scale its width and height. Its children with FLAG_EYE turn round the point at height pivot (metres,
 // in the model) by eyaw and epitch (radians, to the right and up), and eye scales their height.

@@ -15,7 +15,7 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 
 | Folder | Content |
 | --- | --- |
-| `engine/` | The renderer, written in [Goose](https://aardappel.github.io/goose/). It compiles to C and then to WebAssembly with emcc. |
+| `engine/` | The renderer and the vid utilities (motion words, marks, narration times), written in [Goose](https://aardappel.github.io/goose/). It compiles to C and then to WebAssembly with emcc. |
 | `core/` | The scene schema, the checks, the model kit, the MCP server and the guides for the agent. |
 | `app/serve.mjs` | The local daemon. It serves the page, runs the chat agent and renders pictures and videos in a headless browser. |
 | `web/` | The chat page (`app.html`), the static viewer (`viewer.html`), the export code and the style. |
@@ -28,8 +28,8 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 
 ## Build and run
 
-1. Install emsdk (and the Goose compiler if you change `engine/scene.goose`). Then run `source emsdk_env.sh`.
-2. Build the engine: `engine/build.sh engine-build`. The Goose-generated `engine/scene.c` and `engine/scene.h` are in the repo. Set `GOOSE=/path/to/goose` to regenerate them from `engine/scene.goose`.
+1. Install emsdk (and the Goose compiler if you change `engine/scene.goose` or `engine/vid.goose`). Then run `source emsdk_env.sh`.
+2. Build the engine: `engine/build.sh engine-build`. The Goose-generated `engine/scene.c`, `engine/scene.h`, `engine/vid.c` and `engine/vid.h` are in the repo. Set `GOOSE=/path/to/goose` to regenerate them from the `.goose` files. The script also builds `web/vid.wasm` (the motion words, the raised and lowered text and the narration times). This file is in the repo, so the tests and the tools in `core/` run without emsdk.
 3. Start the daemon: `node app/serve.mjs --scene my.toybox.json --engine engine-build`
 4. Open the address that the daemon prints. It has a secret token and works on 127.0.0.1 only.
 

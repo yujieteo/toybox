@@ -5,8 +5,7 @@ import { newScene, validate, srt } from '../core/scene.mjs';
 import { runTool } from '../core/commands.mjs';
 import { timeline, cueTime, LEAD, GAP, TAIL, STAND_IN } from '../core/narration.mjs';
 import { voiceFile } from '../core/voice.mjs';
-import { MOVES, poseAt } from '../web/motion.js';
-import { marks, plain } from '../web/marks.js';
+import { MOVES, poseAt, marks, plain } from '../web/vid.js';
 
 const OUT = fileURLToPath(new URL('../evals/out', import.meta.url));
 const codes = (s) => validate(s).map((e) => e.code);
