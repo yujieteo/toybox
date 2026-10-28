@@ -58,7 +58,7 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 
 | Item | Licence |
 | --- | --- |
-| Toybox code | See the licence file of this repository |
+| Toybox code | The owner has not chosen a licence yet |
 | Goose (compiler and runtime) | Apache 2.0 |
 | Emscripten (emcc) | MIT and University of Illinois/NCSA |
 | MakeHuman base mesh, skeleton and weights | CC0 |
