@@ -140,6 +140,126 @@ export function boundsVisible(cam, b) {
   return pts.some((p) => { const q = project(cam, p); return q && Math.abs(q.x) <= 1 && Math.abs(q.y) <= 1; });
 }
 
+// ---------- blocked views: rays from the camera eye to an object, tested against buildings,
+// structures and vehicles (OpenStreetMap footprints and catalogue models).
+export const VIEW_STEP = 0.25;      // seconds between samples
+export const MAX_BLOCKED = 0.5;     // a focus object may be hidden for at most this long
+export const MAX_COVER = 0.2;       // at most this part of the frame may be an occluder in front of the target
+const OCCLUDER_KINDS = new Set(['building', 'structure', 'vehicle']);
+function prism(id, poly, y0, y1) {
+  const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
+  return { id, poly, y0, y1, box: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)] };
+}
+export function occluders(scene, cat, bt, skip = new Set()) {
+  const out = (scene.map?.osm?.buildings || []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9));
+  const kinds = new Map(cat.models.map((m) => [m.id, m.kind]));
+  const cut = scene.cutaway || {};
+  for (const o of scene.objects) {
+    const b = bt[o.id], tags = o.tags || [];
+    if (!b || o.hidden || skip.has(o.id) || !OCCLUDER_KINDS.has(kinds.get(o.model)) || tags.includes('floor')) continue;
+    if ((cut.nearWalls && tags.includes('wall')) || (cut.ceilings && tags.includes('ceiling'))) continue;
+    if (b.size[0] < 0.05 || b.size[1] < 0.05 || b.size[2] < 0.05) continue; // scaled to nothing (swapped out)
+    out.push(prism(o.id, b.corners, b.min[1], b.max[1]));
+  }
+  return out;
+}
+function inPoly([x, z], poly) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i], [xj, zj] = poly[j];
+    if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c;
+  }
+  return c;
+}
+function segsCross(p, q, a, b) {
+  const o = (u, v, w) => Math.sign((v[0] - u[0]) * (w[1] - u[1]) - (v[1] - u[1]) * (w[0] - u[0]));
+  return o(p, q, a) !== o(p, q, b) && o(a, b, p) !== o(a, b, q);
+}
+// True when the segment a-b ([x, y, z]) passes through the prism.
+export function segmentHits(a, b, o) {
+  let s0 = 0, s1 = 1;
+  const dy = b[1] - a[1];
+  if (Math.abs(dy) < 1e-9) { if (a[1] < o.y0 || a[1] > o.y1) return false; }
+  else {
+    let u = (o.y0 - a[1]) / dy, w = (o.y1 - a[1]) / dy;
+    if (u > w) [u, w] = [w, u];
+    s0 = Math.max(s0, u); s1 = Math.min(s1, w);
+    if (s0 >= s1) return false;
+  }
+  const P = [a[0] + (b[0] - a[0]) * s0, a[2] + (b[2] - a[2]) * s0], Q = [a[0] + (b[0] - a[0]) * s1, a[2] + (b[2] - a[2]) * s1];
+  if (Math.max(P[0], Q[0]) < o.box[0] || Math.min(P[0], Q[0]) > o.box[2] || Math.max(P[1], Q[1]) < o.box[1] || Math.min(P[1], Q[1]) > o.box[3]) return false;
+  if (inPoly(P, o.poly) || inPoly(Q, o.poly)) return true;
+  for (let i = 0; i < o.poly.length; i++) if (segsCross(P, Q, o.poly[i], o.poly[(i + 1) % o.poly.length])) return true;
+  return false;
+}
+// The occluder that hides object bounds b from the camera, or null. Six points of the object are tested
+// (centre, top and four corners). Only points inside the frame count. The object is hidden when more
+// than half of those points are behind an occluder.
+export function blockerOf(cam, b, occ) {
+  const c = b.corners.reduce((s, p) => [s[0] + p[0] / 4, s[1] + p[1] / 4], [0, 0]);
+  const midY = (b.min[1] + b.max[1]) / 2;
+  const pts = [[c[0], midY, c[1]], [c[0], b.min[1] + 0.9 * (b.max[1] - b.min[1]), c[1]],
+    ...b.corners.map((p) => [p[0] * 0.7 + c[0] * 0.3, midY, p[1] * 0.7 + c[1] * 0.3])];
+  let seen = 0, hidden = 0, by = null;
+  for (const p of pts) {
+    const q = project(cam, p);
+    if (!q || Math.abs(q.x) > 1 || Math.abs(q.y) > 1) continue;
+    seen++;
+    // an occluder that holds the point (a person on stairs or in a doorway) does not hide it
+    const hit = occ.find((o) => !(p[1] >= o.y0 && p[1] <= o.y1 && inPoly([p[0], p[2]], o.poly)) && segmentHits(cam.eye, p, o));
+    if (hit) { hidden++; by = by || hit.id; }
+  }
+  return seen && hidden * 2 > seen ? by : null;
+}
+// The part of the frame (a 16 by 9 grid of rays) where an occluder stands between the camera and the
+// depth of its target, and the occluder that covers the most of it. Each ray ends at the target depth,
+// or on the ground. A ray that ends inside the footprint of the occluder that it meets only sees that
+// building (a roof in a top shot), so it does not count.
+export function frameCover(cam, occ) {
+  const f = norm(sub(cam.target, cam.eye)), r = norm(cross(f, [0, 1, 0])), u = cross(r, f);
+  const th = Math.tan((cam.fov * Math.PI) / 360), depth = Math.hypot(...sub(cam.target, cam.eye));
+  const count = new Map();
+  let hidden = 0;
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 16; i++) {
+    const x = (-1 + (i + 0.5) / 8) * th * ASPECT, y = (1 - (j + 0.5) / 4.5) * th;
+    const p = [0, 1, 2].map((k) => cam.eye[k] + (f[k] + r[k] * x + u[k] * y) * depth);
+    if (p[1] < 0 && cam.eye[1] > 0) { const s = cam.eye[1] / (cam.eye[1] - p[1]); for (let k = 0; k < 3; k++) p[k] = cam.eye[k] + (p[k] - cam.eye[k]) * s; }
+    const hit = occ.find((o) => !inPoly([p[0], p[2]], o.poly) && segmentHits(cam.eye, p, o));
+    if (hit) { hidden++; count.set(hit.id, (count.get(hit.id) || 0) + 1); }
+  }
+  return { part: hidden / 144, by: [...count].sort((a, b) => b[1] - a[1])[0]?.[0] || null };
+}
+
+// Every time span longer than MAX_BLOCKED in which an occluder hides a chapter focus object, or covers
+// more than MAX_COVER of the frame in front of the camera target. Sampled every VIEW_STEP.
+export function blockedViews(scene, catalogue) {
+  const cat = catalogue || loadCatalogue();
+  const errs = [];
+  (scene.chapters || []).forEach((c, i) => {
+    const focus = (c.focus || []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden));
+    if (!(c.end > c.start)) return;
+    const FRAME = '\u0000frame', runs = new Map([...focus, FRAME].map((f) => [f, null]));
+    const close = (f, t) => {
+      const r = runs.get(f);
+      if (r && t - r.t0 > MAX_BLOCKED + 1e-9) errs.push({ code: 'view_blocked', path: `chapters[${i}]`,
+        message: `Chapter ${c.id}: ${r.by} ${f === FRAME ? `covers more than ${MAX_COVER * 100} percent of the frame in front of the camera target` : `hides focus object ${f}`} from ${r.t0.toFixed(2)} s to ${t.toFixed(2)} s. Move the camera (another view angle, a higher elevation, or a shot along the street) so nothing stands between the camera and the subject.` });
+      runs.set(f, null);
+    };
+    const mark = (f, by, t) => { if (by && !runs.get(f)) runs.set(f, { t0: t, by }); else if (!by) close(f, t); };
+    const n = Math.max(1, Math.round((c.end - c.start) / VIEW_STEP));
+    for (let k = 0; k <= n; k++) {
+      const t = Math.min(c.end, c.start + k * VIEW_STEP), cam = cameraAt(scene, t);
+      if (!cam) return;
+      const bt = objectBounds(scene, cat, t), occ = occluders(scene, cat, bt, new Set(focus));
+      for (const f of focus) mark(f, bt[f] && Math.min(...bt[f].size) >= 0.05 && blockerOf(cam, bt[f], occ), t);
+      const cover = frameCover(cam, occ);
+      mark(FRAME, cover.part > MAX_COVER && cover.by, t);
+    }
+    for (const f of runs.keys()) close(f, c.end);
+  });
+  return errs;
+}
+
 // ---------- contrast
 function lum(hex) {
   const h = hex.replace('#', '');
@@ -201,6 +321,7 @@ export function validate(scene, catalogue) {
     if (o.model === 'person') {
       if (!Number.isInteger(o.variant ?? 0) || (o.variant ?? 0) < 0 || (o.variant ?? 0) > 23) E('schema', `${p}.variant`, 'Person variant must be 0 to 23.');
       if (o.colors) for (const k of Object.keys(o.colors)) if (!['shirt', 'pants'].includes(k)) E('schema', `${p}.colors.${k}`, 'A person uses the slots shirt and pants only.');
+      if (o.outfit !== undefined && !(cat.outfits || []).some((f) => f.id === o.outfit)) E('schema', `${p}.outfit`, `Unknown outfit "${o.outfit}". Outfits: ${(cat.outfits || []).map((f) => f.id).join(', ')}.`);
     }
     if (o.pose !== undefined && !POSES.includes(o.pose)) E('schema', `${p}.pose`, `pose must be one of ${POSES.join(', ')}.`);
     if (o.tags !== undefined && !Array.isArray(o.tags)) E('schema', `${p}.tags`, 'tags must be an array.');

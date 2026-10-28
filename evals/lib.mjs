@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { newScene, validate, srt, saveScene, contrast_ok, CAPTION_STYLE, loadCatalogue, MAX_CAPTION, MIN_SEC_PER_CHAR, MAX_SHOT_MOVE } from '../core/scene.mjs';
+import { newScene, validate, srt, saveScene, contrast_ok, CAPTION_STYLE, loadCatalogue, blockedViews, MAX_CAPTION, MIN_SEC_PER_CHAR, MAX_SHOT_MOVE } from '../core/scene.mjs';
 import { runTool } from '../core/commands.mjs';
 
 export const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), 'out');
@@ -49,6 +49,8 @@ export function report(scene, name, opts = {}) {
   bar('e', 'at least 3 shot types when 12 chapters or more', ch.length < 12 || shotTypes.size >= 3, `${shotTypes.size} types: ${[...shotTypes].join(', ')}`);
   const hidden = errs.filter((e) => e.code === 'focus_out_of_view');
   bar('e', 'no hidden focus object', hidden.length === 0, hidden.map((e) => e.message).join(' ; ') || 'all focus objects in view');
+  const blocked = blockedViews(scene);
+  bar('e', 'no blocked view (ray test on every chapter)', blocked.length === 0, blocked.map((e) => e.message.split('. Move')[0]).join(' ; ') || 'clear');
 
   // (f) layout sources
   const unsourced = scene.objects.filter((o) => !o.source && o.estimated !== true);

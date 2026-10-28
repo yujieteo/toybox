@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { build as riot } from '../evals/riot.mjs';
 import { build as home } from '../evals/hometeamns.mjs';
-import { loadScene, validate } from '../core/scene.mjs';
+import { loadScene, validate, blockedViews } from '../core/scene.mjs';
 
 for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', home, [8, 10]]]) {
   test(`eval ${name}: every quality bar passes`, () => {
@@ -12,6 +12,7 @@ for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', 
     assert.deepEqual(failed, []);
     const scene = loadScene(rep.file);
     assert.deepEqual(validate(scene), []);
+    assert.deepEqual(blockedViews(scene), []);
     assert.ok(scene.chapters.length >= chapters[0] && scene.chapters.length <= chapters[1]);
   });
 }
@@ -28,6 +29,14 @@ test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on fig
   assert.ok(s.chapters.every((c) => /^https:\/\/en\.wikipedia\.org/.test(c.source) || /^estimated/.test(c.source)));
   assert.ok(s.objects.filter((o) => o.model === 'person').every((o) => !o.label));
   assert.ok(s.captions.every((c) => !/victim/i.test(c.text)));
+  // uniformed figures wear their outfit: the SOC in riot gear, the police in police uniform, no civilian in either
+  const people = s.objects.filter((o) => o.model === 'person');
+  assert.ok(people.filter((o) => o.id.startsWith('soc-')).length >= 6);
+  for (const o of people) {
+    if (o.id.startsWith('soc-')) assert.equal(o.outfit, 'soc-riot', o.id);
+    else if (o.id.startsWith('pol-')) assert.match(o.outfit, /^police/, o.id);
+    else assert.equal(o.outfit, undefined, o.id);
+  }
 });
 
 test('hometeamns scene: every object is labelled as estimated', () => {

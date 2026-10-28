@@ -10,6 +10,14 @@ Rules.
 - A person colours only shirt and pants. Use calm colours.
 - Give each important person a fixed variant. Do not let the tool choose, or the person changes between scenes.
 
+Uniformed forces. Police, riot police, firefighters, paramedics and soldiers must look like the real force, and never like a civilian.
+- Call list_models and read "outfits". An outfit sets the uniform colours and the gear: place a person with outfit, for example outfit "soc-riot". Each outfit gives its source.
+- soc-riot: Special Operations Command riot officer of the Singapore Police Force. Darker blue combat dress, helmet with visor, long shield, baton. Use it for riot police and the SOC.
+- police: Singapore Police Force officer in dark blue with a peak cap. police-shield: the same officer with a helmet and a round shield.
+- For a force with no outfit (for example SCDF or the army), find its uniform in a public source (an official page, Wikipedia or a news photo). Set shirt and pants to those colours and give the source. If no source gives the colours, set estimated true.
+- Never give a civilian a uniform colour or an outfit. Give each force its own look, so the viewer can tell the police, the SOC, the SCDF and civilians apart.
+- Use the number and the arrival time that a source gives. When the scene shows fewer figures than the real number, say so in the caption and mark the figures estimated.
+
 Crowds. Use place_group with pattern scatter, ring or line. Give a seed so the same call gives the same crowd. Give a list of variants and a list of poses. A crowd may overlap itself.
 
 Motion. Use move_along with a path and a speed. A walk is 1.4 m/s. A run is 3.5 m/s or more. The person uses walk or run while it moves and stands at the end. Use set_pose for waves, points and cheers at a time.

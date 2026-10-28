@@ -17,5 +17,12 @@ Rules.
 - To hold a shot while the scene plays, add a second key of the same shot later.
 - A story with 12 chapters or more uses at least 3 shot types.
 - Each focus object of a chapter must be in view at the chapter start. validate checks this with a 16:9 frame.
+- Nothing may stand between the camera and the subject. validate casts rays from the camera to each focus object and across the frame, every 0.25 s of each chapter. It reports view_blocked when a building, structure or vehicle hides a focus object, or covers more than 20 percent of the frame in front of the camera target, for more than 0.5 s. Imported OpenStreetMap buildings count.
+- set_camera answers with "blocked" when its view is blocked at its own time, and gives "clear_views" (view and elevation) to try. Use one of them, then call validate again. Check the hold keys too: the camera and the people move.
+
+Choosing a view on a street.
+- Look along the street, not across it. On a street that runs along z, use view near 0 (from the south) or 180 (from the north). A view across the street puts the camera behind the buildings on the far side.
+- Raise the camera (elevation 35 to 60) when buildings or buses stand close to the subject. A top shot is never blocked by a building beside the street.
+- A bus or a lorry hides the people behind it. Put the camera on the side of the vehicle where the subject is.
 
 Options. view turns the camera round the target in degrees. elevation sets the height angle. margin and distance change the fit.

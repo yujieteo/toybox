@@ -7781,5 +7781,243 @@
     "polyhaven"
    ]
   }
+ ],
+ "outfits": [
+  {
+   "id": "police",
+   "name": "Singapore Police Force officer, dark blue uniform and peak cap",
+   "colors": {
+    "shirt": "#2b3d5e",
+    "pants": "#2b3d5e"
+   },
+   "parts": [
+    {
+     "bone": "head",
+     "prim": "cylinder",
+     "pos": [
+      0,
+      1.71,
+      0.045
+     ],
+     "size": [
+      0.22,
+      0.07,
+      0.23
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#26324a"
+    },
+    {
+     "bone": "head",
+     "prim": "box",
+     "pos": [
+      0,
+      1.69,
+      0.17
+     ],
+     "size": [
+      0.17,
+      0.02,
+      0.07
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#14171c"
+    }
+   ],
+   "source": "https://en.wikipedia.org/wiki/Uniforms_of_the_Singapore_Police_Force",
+   "note": "Dark blue shirt, trousers and peak cap. Colour shades are estimated."
+  },
+  {
+   "id": "police-shield",
+   "name": "Police officer with helmet and round shield",
+   "colors": {
+    "shirt": "#2b3d5e",
+    "pants": "#2b3d5e"
+   },
+   "parts": [
+    {
+     "bone": "head",
+     "prim": "sphere",
+     "pos": [
+      0,
+      1.655,
+      0.01
+     ],
+     "size": [
+      0.25,
+      0.23,
+      0.27
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#26324a"
+    },
+    {
+     "bone": "spine03",
+     "prim": "cylinder",
+     "pos": [
+      0.05,
+      1.1,
+      0.33
+     ],
+     "size": [
+      0.6,
+      0.03,
+      0.6
+     ],
+     "rot": [
+      90,
+      0,
+      0
+     ],
+     "color": "#b7c3cc"
+    }
+   ],
+   "source": "https://en.wikipedia.org/wiki/2013_Little_India_riot",
+   "note": "The riot account names officers with helmets and shields at the bus. Shield shape and colours are estimated."
+  },
+  {
+   "id": "soc-riot",
+   "name": "Special Operations Command riot officer: helmet with visor, long shield, baton",
+   "colors": {
+    "shirt": "#1b222c",
+    "pants": "#1b222c"
+   },
+   "parts": [
+    {
+     "bone": "head",
+     "prim": "sphere",
+     "pos": [
+      0,
+      1.655,
+      0.01
+     ],
+     "size": [
+      0.25,
+      0.23,
+      0.27
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#15191f"
+    },
+    {
+     "bone": "head",
+     "prim": "box",
+     "pos": [
+      0,
+      1.6,
+      0.19
+     ],
+     "size": [
+      0.22,
+      0.15,
+      0.02
+     ],
+     "rot": [
+      -12,
+      0,
+      0
+     ],
+     "color": "#8fb0c4"
+    },
+    {
+     "bone": "spine03",
+     "prim": "box",
+     "pos": [
+      0.06,
+      0.92,
+      0.36
+     ],
+     "size": [
+      0.56,
+      1.1,
+      0.03
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#a9c0d0"
+    },
+    {
+     "bone": "spine03",
+     "prim": "box",
+     "pos": [
+      0.06,
+      1.47,
+      0.36
+     ],
+     "size": [
+      0.58,
+      0.04,
+      0.05
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#15191f"
+    },
+    {
+     "bone": "spine03",
+     "prim": "box",
+     "pos": [
+      0.06,
+      0.37,
+      0.36
+     ],
+     "size": [
+      0.58,
+      0.04,
+      0.05
+     ],
+     "rot": [
+      0,
+      0,
+      0
+     ],
+     "color": "#15191f"
+    },
+    {
+     "bone": "wrist.R",
+     "prim": "cylinder",
+     "pos": [
+      -0.47,
+      1.03,
+      0.4
+     ],
+     "size": [
+      0.035,
+      0.6,
+      0.035
+     ],
+     "rot": [
+      90,
+      0,
+      0
+     ],
+     "color": "#101215"
+    }
+   ],
+   "source": "https://en.wikipedia.org/wiki/Uniforms_of_the_Singapore_Police_Force ; https://www.hometeamns.sg/frontline/ensuring-safety-security-of-singapore/ ; https://www.nas.gov.sg/archivesonline/photographs/record-details/d3115385-1161-11e3-83d5-0050568939ad",
+   "note": "Darker blue combat dress, helmet, tactical shield and baton. The visor, shield size and colours are estimated."
+  }
  ]
 }

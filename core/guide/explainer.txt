@@ -28,7 +28,8 @@ Real events. Use generic faces. Put no names on figures. Do not name victims. Us
 
 Quality bars checked by validate and by the eval.
 - 10 or more people variants and 8 poses. A walk cycle.
-- A shot in every chapter. No hidden focus object.
+- A shot in every chapter. No hidden focus object. No blocked view: nothing stands between the camera and the subject.
+- Uniformed forces wear the right outfit or sourced uniform colours (guide "people").
 - Every object has a source or the estimated flag.
 - Captions are short enough and stay long enough on screen.
 - Captions are also written to an .srt file by export_scene.
