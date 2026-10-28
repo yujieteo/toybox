@@ -1,0 +1,27 @@
+TOYBOX OVERVIEW
+
+Toybox turns facts into a short animated 3D explainer. You build it with tools. The scene is one file. The viewer and the MP4 export both read that file.
+
+Work in this order.
+1. Read the guide "explainer" for the story plan.
+2. Call new_scene. Set the ground and the lighting.
+3. Call list_models to find models. Use "person" for people.
+4. Place the set first: roads, buildings, rooms. Then place vehicles, props and people.
+5. Add motion with move_along, set_pose and animate.
+6. Add one chapter for each step of the story. Give each chapter a caption, a source and a focus.
+7. Set the camera for each chapter.
+8. Call validate. Fix every error. Call render_preview to look at key moments.
+9. Call export_scene.
+
+Units. Metres and seconds. x is east. z is south. y is up. Yaw 0 faces south (+z). Yaw 90 faces east. Yaw 180 faces north.
+
+Rules the tools enforce.
+- A model id must exist in the catalogue.
+- An object must not go below the ground.
+- Two solid objects must not overlap by more than 20 percent. People may overlap each other in a crowd.
+- Times must go forward.
+- A caption has 280 characters or fewer. It stays on screen at least 0.06 s for each character.
+- Every chapter needs a caption. Its focus objects must be in the camera view at its start.
+- A claim from a source needs the source text. A guess needs estimated true.
+
+Read the other guides when you need them: people, camera, indoor, map, explainer.

@@ -1,0 +1,2170 @@
+{
+ "toybox": 1,
+ "title": "HomeTeamNS Khatib: a visit to the Grand Ballroom (approximate)",
+ "author": "Toybox eval",
+ "duration": 82.4,
+ "backdrop": {
+  "ground": "plain",
+  "size": [
+   140,
+   100
+  ],
+  "color": "#d9d4c7"
+ },
+ "lighting": [
+  {
+   "t": 0,
+   "look": "indoor"
+  }
+ ],
+ "objects": [
+  {
+   "id": "gf-n-wall-1",
+   "model": "wall-5",
+   "at": [
+    20,
+    0,
+    -28
+   ],
+   "yaw": 180,
+   "scale": [
+    14.030000000000001,
+    1.6071428571428572,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-s-wall-1",
+   "model": "wall-5",
+   "at": [
+    -8.137,
+    0,
+    4
+   ],
+   "yaw": 0,
+   "scale": [
+    2.775,
+    1.6071428571428572,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-s-wall-2",
+   "model": "wall-3",
+   "at": [
+    0,
+    2.1,
+    4
+   ],
+   "yaw": 0,
+   "scale": [
+    0.7999999999999995,
+    0.8571428571428572,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-s-door-3",
+   "model": "door",
+   "at": [
+    0,
+    0,
+    4
+   ],
+   "yaw": 0,
+   "scale": [
+    2.2857142857142856,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-s-wall-4",
+   "model": "wall-5",
+   "at": [
+    28.138,
+    0,
+    4
+   ],
+   "yaw": 0,
+   "scale": [
+    10.775,
+    1.6071428571428572,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-e-wall-1",
+   "model": "wall-5",
+   "at": [
+    55,
+    0,
+    -12
+   ],
+   "yaw": 90,
+   "scale": [
+    6.37,
+    1.6071428571428572,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-w-wall-1",
+   "model": "wall-5",
+   "at": [
+    -15,
+    0,
+    -12
+   ],
+   "yaw": 270,
+   "scale": [
+    6.37,
+    1.6071428571428572,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gf-floor",
+   "model": "floor-tile",
+   "at": [
+    20,
+    0,
+    -12
+   ],
+   "yaw": 0,
+   "scale": [
+    35,
+    1,
+    16
+   ],
+   "flip": false,
+   "tags": [
+    "floor",
+    "gf"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "desk",
+   "model": "reception-desk",
+   "at": [
+    -5,
+    0,
+    -6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ts-1",
+   "model": "turnstile",
+   "at": [
+    -1.1,
+    0,
+    -9
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ts-2",
+   "model": "turnstile",
+   "at": [
+    1.1,
+    0,
+    -9
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "sofa",
+   "model": "sofa",
+   "at": [
+    -8,
+    0,
+    0.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "plant",
+   "model": "plant",
+   "at": [
+    4,
+    0,
+    2.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "plant-1",
+   "model": "plant",
+   "at": [
+    -10,
+    0,
+    -12
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "board",
+   "model": "notice-board",
+   "at": [
+    5,
+    0,
+    -2.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "Notices",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "lift-1",
+   "model": "lift-door",
+   "at": [
+    22,
+    0,
+    -11.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "lift-2",
+   "model": "lift-door",
+   "at": [
+    25,
+    0,
+    -11.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "stair-a",
+   "model": "stairs-14",
+   "at": [
+    12,
+    0,
+    -9.14
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    0.9453781512605043,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "stairs"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "stair-b",
+   "model": "stairs-14",
+   "at": [
+    13.3,
+    2.25,
+    -9.14
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    0.9453781512605043,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "stairs"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "landing",
+   "model": "floor-tile",
+   "at": [
+    12.65,
+    2.23,
+    -6.5
+   ],
+   "yaw": 0,
+   "scale": [
+    1.4,
+    1,
+    0.65
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-n-wall-1",
+   "model": "wall-3",
+   "at": [
+    13.3,
+    4.5,
+    -25
+   ],
+   "yaw": 180,
+   "scale": [
+    1.05,
+    1.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-s-wall-1",
+   "model": "wall-3",
+   "at": [
+    12.163,
+    4.5,
+    -11
+   ],
+   "yaw": 0,
+   "scale": [
+    0.2916666666666667,
+    1.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-s-wall-2",
+   "model": "wall-3",
+   "at": [
+    13.3,
+    6.6,
+    -11
+   ],
+   "yaw": 0,
+   "scale": [
+    0.46666666666666673,
+    0.3928571428571429,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-s-door-3",
+   "model": "door",
+   "at": [
+    13.3,
+    4.5,
+    -11
+   ],
+   "yaw": 0,
+   "scale": [
+    1.3333333333333333,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-s-wall-4",
+   "model": "wall-3",
+   "at": [
+    14.438,
+    4.5,
+    -11
+   ],
+   "yaw": 0,
+   "scale": [
+    0.2916666666666667,
+    1.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-e-wall-1",
+   "model": "wall-5",
+   "at": [
+    14.8,
+    4.5,
+    -20.362
+   ],
+   "yaw": 90,
+   "scale": [
+    1.825,
+    1.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-e-wall-2",
+   "model": "wall-3",
+   "at": [
+    14.8,
+    6.6,
+    -15
+   ],
+   "yaw": 90,
+   "scale": [
+    0.5333333333333338,
+    0.3928571428571429,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-e-door-3",
+   "model": "door",
+   "at": [
+    14.8,
+    4.5,
+    -15
+   ],
+   "yaw": 90,
+   "scale": [
+    1.5238095238095237,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-e-wall-4",
+   "model": "wall-3",
+   "at": [
+    14.8,
+    4.5,
+    -12.637
+   ],
+   "yaw": 90,
+   "scale": [
+    1.0416666666666667,
+    1.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-w-wall-1",
+   "model": "wall-5",
+   "at": [
+    11.8,
+    4.5,
+    -18
+   ],
+   "yaw": 270,
+   "scale": [
+    2.7700000000000005,
+    1.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-floor",
+   "model": "floor-tile",
+   "at": [
+    13.3,
+    4.5,
+    -18
+   ],
+   "yaw": 0,
+   "scale": [
+    1.5,
+    1,
+    7
+   ],
+   "flip": false,
+   "tags": [
+    "floor",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "corr-ceiling",
+   "model": "ceiling-tile",
+   "at": [
+    13.3,
+    7.65,
+    -18
+   ],
+   "yaw": 0,
+   "scale": [
+    1.5,
+    1,
+    7
+   ],
+   "flip": false,
+   "tags": [
+    "ceiling",
+    "corr"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-n-wall-1",
+   "model": "wall-5",
+   "at": [
+    34.3,
+    4.5,
+    -28
+   ],
+   "yaw": 180,
+   "scale": [
+    7.830000000000001,
+    2.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-s-wall-1",
+   "model": "wall-5",
+   "at": [
+    34.3,
+    4.5,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    7.830000000000001,
+    2.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-e-wall-1",
+   "model": "wall-5",
+   "at": [
+    53.8,
+    4.5,
+    -15
+   ],
+   "yaw": 90,
+   "scale": [
+    5.17,
+    2.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-w-wall-1",
+   "model": "wall-5",
+   "at": [
+    14.8,
+    4.5,
+    -21.862
+   ],
+   "yaw": 270,
+   "scale": [
+    2.425,
+    2.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-w-wall-2",
+   "model": "wall-3",
+   "at": [
+    14.8,
+    6.6,
+    -15
+   ],
+   "yaw": 270,
+   "scale": [
+    0.5333333333333338,
+    1.392857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-w-door-3",
+   "model": "door",
+   "at": [
+    14.8,
+    4.5,
+    -15
+   ],
+   "yaw": 270,
+   "scale": [
+    1.5238095238095237,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-w-wall-4",
+   "model": "wall-5",
+   "at": [
+    14.8,
+    4.5,
+    -8.137
+   ],
+   "yaw": 270,
+   "scale": [
+    2.425,
+    2.142857142857143,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "wall",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-floor",
+   "model": "floor-tile",
+   "at": [
+    34.3,
+    4.5,
+    -15
+   ],
+   "yaw": 0,
+   "scale": [
+    19.5,
+    1,
+    13
+   ],
+   "flip": false,
+   "tags": [
+    "floor",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "ball-ceiling",
+   "model": "ceiling-tile",
+   "at": [
+    34.3,
+    10.45,
+    -15
+   ],
+   "yaw": 0,
+   "scale": [
+    19.5,
+    1,
+    13
+   ],
+   "flip": false,
+   "tags": [
+    "ceiling",
+    "ball"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "stage",
+   "model": "stage",
+   "at": [
+    51.5,
+    4.5,
+    -15
+   ],
+   "yaw": 270,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-1",
+   "model": "banquet-table-8",
+   "at": [
+    26,
+    4.5,
+    -24
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-2",
+   "model": "banquet-table-8",
+   "at": [
+    26,
+    4.5,
+    -15
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-3",
+   "model": "banquet-table-8",
+   "at": [
+    26,
+    4.5,
+    -6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-4",
+   "model": "banquet-table-8",
+   "at": [
+    32,
+    4.5,
+    -24
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-5",
+   "model": "banquet-table-8",
+   "at": [
+    32,
+    4.5,
+    -15
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-6",
+   "model": "banquet-table-8",
+   "at": [
+    32,
+    4.5,
+    -6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-7",
+   "model": "banquet-table-8",
+   "at": [
+    38,
+    4.5,
+    -24
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-8",
+   "model": "banquet-table-8",
+   "at": [
+    38,
+    4.5,
+    -15
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-9",
+   "model": "banquet-table-8",
+   "at": [
+    38,
+    4.5,
+    -6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-10",
+   "model": "banquet-table-8",
+   "at": [
+    44,
+    4.5,
+    -24
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-11",
+   "model": "banquet-table-8",
+   "at": [
+    44,
+    4.5,
+    -15
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bt-12",
+   "model": "banquet-table-8",
+   "at": [
+    44,
+    4.5,
+    -6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "plant-2",
+   "model": "plant",
+   "at": [
+    17,
+    4.5,
+    -13
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "plant-3",
+   "model": "plant",
+   "at": [
+    17,
+    4.5,
+    -17
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "visitor",
+   "model": "person",
+   "variant": 9,
+   "at": [
+    0,
+    0,
+    12
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#3f6e9a",
+    "pants": "#3a3f47"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated",
+   "estimated": true,
+   "hidden": false
+  }
+ ],
+ "tracks": [
+  {
+   "object": "visitor",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      0,
+      0,
+      12
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 7.39,
+     "v": [
+      0,
+      0,
+      3.5
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 13.91,
+     "v": [
+      0,
+      0,
+      -4
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 17.39,
+     "v": [
+      0,
+      0,
+      -8
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 19.3,
+     "v": [
+      0,
+      0,
+      -10.2
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 26.49,
+     "v": [
+      8,
+      0,
+      -12.3
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 29.97,
+     "v": [
+      12,
+      0,
+      -12.3
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 31.01,
+     "v": [
+      12,
+      0,
+      -11.1
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 34.94,
+     "v": [
+      12,
+      2.25,
+      -7.18
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 35.76,
+     "v": [
+      12.65,
+      2.25,
+      -6.5
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 36.58,
+     "v": [
+      13.3,
+      2.25,
+      -7.18
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 40.51,
+     "v": [
+      13.3,
+      4.5,
+      -11.1
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 43.9,
+     "v": [
+      13.3,
+      4.5,
+      -15
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 45.2,
+     "v": [
+      14.8,
+      4.5,
+      -15
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 47.11,
+     "v": [
+      17,
+      4.5,
+      -15
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 51.12,
+     "v": [
+      20,
+      4.5,
+      -18.5
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 73.73,
+     "v": [
+      46,
+      4.5,
+      -18.5
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "visitor",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 0,
+     "v": 180,
+     "ease": "linear"
+    },
+    {
+     "t": 19.18,
+     "v": 180,
+     "ease": "linear"
+    },
+    {
+     "t": 19.42,
+     "v": 104.708,
+     "ease": "linear"
+    },
+    {
+     "t": 26.37,
+     "v": 104.708,
+     "ease": "linear"
+    },
+    {
+     "t": 26.61,
+     "v": 90,
+     "ease": "linear"
+    },
+    {
+     "t": 29.85,
+     "v": 90,
+     "ease": "linear"
+    },
+    {
+     "t": 30.09,
+     "v": 0,
+     "ease": "linear"
+    },
+    {
+     "t": 34.82,
+     "v": 0,
+     "ease": "linear"
+    },
+    {
+     "t": 35.06,
+     "v": 43.708,
+     "ease": "linear"
+    },
+    {
+     "t": 35.64,
+     "v": 43.708,
+     "ease": "linear"
+    },
+    {
+     "t": 35.88,
+     "v": 136.292,
+     "ease": "linear"
+    },
+    {
+     "t": 36.46,
+     "v": 136.292,
+     "ease": "linear"
+    },
+    {
+     "t": 36.7,
+     "v": 180,
+     "ease": "linear"
+    },
+    {
+     "t": 43.78,
+     "v": 180,
+     "ease": "linear"
+    },
+    {
+     "t": 44.02,
+     "v": 90,
+     "ease": "linear"
+    },
+    {
+     "t": 46.99,
+     "v": 90,
+     "ease": "linear"
+    },
+    {
+     "t": 47.23,
+     "v": 139.399,
+     "ease": "linear"
+    },
+    {
+     "t": 51,
+     "v": 139.399,
+     "ease": "linear"
+    },
+    {
+     "t": 51.24,
+     "v": 90,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "visitor",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 73.73,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  }
+ ],
+ "camera": [
+  {
+   "t": 0,
+   "shot": "wide",
+   "eye": [
+    3.923,
+    5.985,
+    16.465
+   ],
+   "target": [
+    0,
+    1.05,
+    8.053
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 8.4,
+   "shot": "wide",
+   "eye": [
+    4.548,
+    5.745,
+    10.685
+   ],
+   "target": [
+    0,
+    1.05,
+    3.117
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 9.4,
+   "shot": "medium",
+   "eye": [
+    1.719,
+    3.303,
+    5.914
+   ],
+   "target": [
+    -3.15,
+    0.875,
+    -2.519
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 17.4,
+   "shot": "medium",
+   "eye": [
+    0.396,
+    2.379,
+    -2.012
+   ],
+   "target": [
+    -3.15,
+    0.875,
+    -6.893
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 18.4,
+   "shot": "close",
+   "eye": [
+    1.376,
+    1.648,
+    -5.219
+   ],
+   "target": [
+    0,
+    1.225,
+    -9
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 26.4,
+   "shot": "close",
+   "eye": [
+    6.683,
+    2.029,
+    -3.672
+   ],
+   "target": [
+    3.329,
+    1.225,
+    -10.548
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 27.4,
+   "shot": "top",
+   "eye": [
+    10.664,
+    20.281,
+    -8.287
+   ],
+   "target": [
+    10.664,
+    2.25,
+    -9.865
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 35.4,
+   "shot": "top",
+   "eye": [
+    10.664,
+    20.215,
+    -7.528
+   ],
+   "target": [
+    10.664,
+    2.25,
+    -9.1
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 36.4,
+   "shot": "medium",
+   "eye": [
+    18.398,
+    3.905,
+    -5.597
+   ],
+   "target": [
+    12.65,
+    2.25,
+    -8.916
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 40.9,
+   "shot": "medium",
+   "eye": [
+    20.249,
+    5.199,
+    -6.068
+   ],
+   "target": [
+    12.65,
+    3.125,
+    -9.452
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 41.9,
+   "shot": "follow",
+   "eye": [
+    13.3,
+    6.207,
+    -8.787
+   ],
+   "target": [
+    13.3,
+    5.375,
+    -12.699
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 44.4,
+   "shot": "follow",
+   "eye": [
+    9.964,
+    6.207,
+    -15
+   ],
+   "target": [
+    13.877,
+    5.375,
+    -15
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 45.4,
+   "shot": "top",
+   "eye": [
+    13.503,
+    23.955,
+    -16.374
+   ],
+   "target": [
+    13.503,
+    5.375,
+    -18
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 53.4,
+   "shot": "top",
+   "eye": [
+    17.298,
+    23.955,
+    -16.374
+   ],
+   "target": [
+    17.298,
+    5.375,
+    -18
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 54.4,
+   "shot": "medium",
+   "eye": [
+    24.689,
+    7.626,
+    -10.098
+   ],
+   "target": [
+    19.338,
+    5.55,
+    -16.475
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 62.4,
+   "shot": "medium",
+   "eye": [
+    35.588,
+    9.588,
+    -5.225
+   ],
+   "target": [
+    23.938,
+    5.55,
+    -16.475
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 63.4,
+   "shot": "wide",
+   "eye": [
+    45.647,
+    19.832,
+    9.855
+   ],
+   "target": [
+    38.988,
+    6.15,
+    -15
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 71.4,
+   "shot": "wide",
+   "eye": [
+    48.422,
+    20.148,
+    9.578
+   ],
+   "target": [
+    38.988,
+    6.15,
+    -15
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 72.4,
+   "shot": "orbit",
+   "eye": [
+    37.585,
+    12.839,
+    5.508
+   ],
+   "target": [
+    37.585,
+    5.375,
+    -15
+   ],
+   "fov": 50,
+   "ease": "inout"
+  },
+  {
+   "t": 81.4,
+   "shot": "orbit",
+   "eye": [
+    40.605,
+    13.227,
+    6.456
+   ],
+   "target": [
+    38.35,
+    5.375,
+    -15
+   ],
+   "fov": 50,
+   "ease": "inout"
+  }
+ ],
+ "chapters": [
+  {
+   "id": "c1",
+   "start": 0,
+   "end": 9.4,
+   "title": "The entrance",
+   "clock": "",
+   "caption": "The visitor arrives at the HomeTeamNS Khatib clubhouse, 2 Yishun Walk, Singapore 767944. The layout in this scene is approximate.",
+   "focus": [
+    "visitor",
+    "gf-s-door-3"
+   ],
+   "shot": "wide",
+   "source": "https://www.hometeamns.sg/khatib",
+   "measured": true
+  },
+  {
+   "id": "c2",
+   "start": 9.4,
+   "end": 18.4,
+   "title": "Reception",
+   "clock": "",
+   "caption": "The visitor passes the reception desk. The size and place of the desk are estimates. The floor plan is not public.",
+   "focus": [
+    "desk",
+    "visitor"
+   ],
+   "shot": "medium",
+   "source": "estimated",
+   "estimated": true
+  },
+  {
+   "id": "c3",
+   "start": 18.4,
+   "end": 27.4,
+   "title": "The turnstile",
+   "clock": "",
+   "caption": "The visitor walks through the gate. The gates are drawn as an estimate.",
+   "focus": [
+    "ts-1",
+    "visitor"
+   ],
+   "shot": "close",
+   "source": "estimated",
+   "estimated": true
+  },
+  {
+   "id": "c4",
+   "start": 27.4,
+   "end": 36.4,
+   "title": "To the stairs",
+   "clock": "",
+   "caption": "The route to the stairs is an estimate. Lifts are the other way up.",
+   "focus": [
+    "lift-1",
+    "visitor"
+   ],
+   "shot": "top",
+   "source": "estimated",
+   "estimated": true
+  },
+  {
+   "id": "c5",
+   "start": 36.4,
+   "end": 45.4,
+   "title": "Up the stairs",
+   "clock": "",
+   "caption": "The visitor climbs two flights to the second level. The height of one floor is an estimate.",
+   "focus": [
+    "stair-a",
+    "visitor"
+   ],
+   "shot": "follow",
+   "source": "estimated",
+   "estimated": true
+  },
+  {
+   "id": "c6",
+   "start": 45.4,
+   "end": 54.4,
+   "title": "The corridor",
+   "clock": "",
+   "caption": "On the second level the visitor walks along a corridor. The corridor is an estimate.",
+   "focus": [
+    "corr-floor",
+    "visitor"
+   ],
+   "shot": "top",
+   "source": "estimated",
+   "estimated": true
+  },
+  {
+   "id": "c7",
+   "start": 54.4,
+   "end": 63.4,
+   "title": "The ballroom door",
+   "clock": "",
+   "caption": "The visitor enters the ballroom. The public page names it the Grand Ballroom.",
+   "focus": [
+    "visitor",
+    "ball-w-door-3"
+   ],
+   "shot": "medium",
+   "source": "https://www.hometeamns.sg/khatib",
+   "measured": true
+  },
+  {
+   "id": "c8",
+   "start": 63.4,
+   "end": 72.4,
+   "title": "The Grand Ballroom",
+   "clock": "",
+   "caption": "The Grand Ballroom is a pillar-free space of 1,014 square metres. The tables and the stage are approximate.",
+   "focus": [
+    "stage",
+    "bt-1",
+    "bt-2",
+    "bt-5",
+    "bt-6"
+   ],
+   "shot": "wide",
+   "source": "https://www.hometeamns.sg/khatib",
+   "measured": true
+  },
+  {
+   "id": "c9",
+   "start": 72.4,
+   "end": 82.4,
+   "title": "Tables and stage",
+   "clock": "",
+   "caption": "The visitor stops near the banquet tables. This is a model of a possible layout. Do not use it to find your way.",
+   "focus": [
+    "bt-6",
+    "visitor"
+   ],
+   "shot": "orbit",
+   "source": "estimated",
+   "estimated": true
+  }
+ ],
+ "captions": [
+  {
+   "start": 0,
+   "end": 9.4,
+   "text": "The visitor arrives at the HomeTeamNS Khatib clubhouse, 2 Yishun Walk, Singapore 767944. The layout in this scene is approximate."
+  },
+  {
+   "start": 9.4,
+   "end": 18.4,
+   "text": "The visitor passes the reception desk. The size and place of the desk are estimates. The floor plan is not public."
+  },
+  {
+   "start": 18.4,
+   "end": 27.4,
+   "text": "The visitor walks through the gate. The gates are drawn as an estimate."
+  },
+  {
+   "start": 27.4,
+   "end": 36.4,
+   "text": "The route to the stairs is an estimate. Lifts are the other way up."
+  },
+  {
+   "start": 36.4,
+   "end": 45.4,
+   "text": "The visitor climbs two flights to the second level. The height of one floor is an estimate."
+  },
+  {
+   "start": 45.4,
+   "end": 54.4,
+   "text": "On the second level the visitor walks along a corridor. The corridor is an estimate."
+  },
+  {
+   "start": 54.4,
+   "end": 63.4,
+   "text": "The visitor enters the ballroom. The public page names it the Grand Ballroom."
+  },
+  {
+   "start": 63.4,
+   "end": 72.4,
+   "text": "The Grand Ballroom is a pillar-free space of 1,014 square metres. The tables and the stage are approximate."
+  },
+  {
+   "start": 72.4,
+   "end": 82.4,
+   "text": "The visitor stops near the banquet tables. This is a model of a possible layout. Do not use it to find your way."
+  }
+ ],
+ "callouts": [],
+ "credits": [
+  "Public facts: address and ballroom name from https://www.hometeamns.sg/khatib. The floor plan is not public. All sizes, positions and the route are approximate."
+ ],
+ "cutaway": {
+  "ceilings": true,
+  "nearWalls": true
+ }
+}

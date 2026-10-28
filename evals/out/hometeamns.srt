@@ -1,0 +1,35 @@
+1
+00:00:00,000 --> 00:00:09,400
+The visitor arrives at the HomeTeamNS Khatib clubhouse, 2 Yishun Walk, Singapore 767944. The layout in this scene is approximate.
+
+2
+00:00:09,400 --> 00:00:18,400
+The visitor passes the reception desk. The size and place of the desk are estimates. The floor plan is not public.
+
+3
+00:00:18,400 --> 00:00:27,400
+The visitor walks through the gate. The gates are drawn as an estimate.
+
+4
+00:00:27,400 --> 00:00:36,400
+The route to the stairs is an estimate. Lifts are the other way up.
+
+5
+00:00:36,400 --> 00:00:45,400
+The visitor climbs two flights to the second level. The height of one floor is an estimate.
+
+6
+00:00:45,400 --> 00:00:54,400
+On the second level the visitor walks along a corridor. The corridor is an estimate.
+
+7
+00:00:54,400 --> 00:01:03,400
+The visitor enters the ballroom. The public page names it the Grand Ballroom.
+
+8
+00:01:03,400 --> 00:01:12,400
+The Grand Ballroom is a pillar-free space of 1,014 square metres. The tables and the stage are approximate.
+
+9
+00:01:12,400 --> 00:01:22,400
+The visitor stops near the banquet tables. This is a model of a possible layout. Do not use it to find your way.

@@ -1,0 +1,14 @@
+MAPS
+
+Set the map with set_backdrop. Give origin {lat, lon}. Use ground "street" for a built street. Use ground "map" to show OneMap tiles under the scene.
+
+Local coordinates. The origin is (0, 0). x is east. z is south. One degree of latitude is about 111 km.
+
+Data rules.
+- OneMap tiles load live in the viewer. Never store OneMap data in the scene.
+- OpenStreetMap footprints need ODbL credit. If you add them, call add_credit with "© OpenStreetMap contributors". The data file keeps the ODbL header.
+- A layout that is not in a source is an estimate. Set estimated true. Use source "estimated, from <what>".
+
+Street layout. Use road-straight (8 m by 10 m, along z), road-junction (8 m by 8 m) and road-zebra. Rotate a road tile with yaw 90 to run along x. Put kerb pieces on the edges. Put shophouses beside the road with the front facing it.
+
+Facing. A building front faces +z at yaw 0. A building on the north side of an east-west road faces south, so yaw 0. A building on the south side faces north, so yaw 180.
