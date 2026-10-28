@@ -275,7 +275,12 @@
       0,
       0
      ],
-     "ease": "linear"
+     "ease": "linear",
+     "cue": [
+      2,
+      "steps",
+      0
+     ]
     },
     {
      "t": 6.411,
@@ -284,7 +289,12 @@
       0,
       0
      ],
-     "ease": "step"
+     "ease": "step",
+     "cue": [
+      2,
+      "steps",
+      1.4
+     ]
     },
     {
      "t": 11.84,
@@ -293,7 +303,12 @@
       0,
       0
      ],
-     "ease": "linear"
+     "ease": "linear",
+     "cue": [
+      4,
+      "walks",
+      0
+     ]
     },
     {
      "t": 15.89,
@@ -302,7 +317,12 @@
       0,
       0
      ],
-     "ease": "linear"
+     "ease": "linear",
+     "cue": [
+      4,
+      "walks",
+      4.05
+     ]
     }
    ]
   },
@@ -313,12 +333,22 @@
     {
      "t": 5.011,
      "v": 270,
-     "ease": "step"
+     "ease": "step",
+     "cue": [
+      2,
+      "steps",
+      0
+     ]
     },
     {
      "t": 11.84,
      "v": 270,
-     "ease": "linear"
+     "ease": "linear",
+     "cue": [
+      4,
+      "walks",
+      0
+     ]
     }
    ]
   },
@@ -334,22 +364,42 @@
     {
      "t": 5.011,
      "v": "walk",
-     "ease": "step"
+     "ease": "step",
+     "cue": [
+      2,
+      "steps",
+      0
+     ]
     },
     {
      "t": 6.411,
      "v": "stand",
-     "ease": "step"
+     "ease": "step",
+     "cue": [
+      2,
+      "steps",
+      1.4
+     ]
     },
     {
      "t": 11.84,
      "v": "walk",
-     "ease": "step"
+     "ease": "step",
+     "cue": [
+      4,
+      "walks",
+      0
+     ]
     },
     {
      "t": 15.89,
      "v": "stand",
-     "ease": "step"
+     "ease": "step",
+     "cue": [
+      4,
+      "walks",
+      4.05
+     ]
     }
    ]
   },
@@ -427,7 +477,16 @@
     -1.002
    ],
    "fov": 50,
-   "ease": "inout"
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "zebra",
+     "narrator",
+     "p1"
+    ],
+    "view": 25,
+    "elevation": 22
+   }
   },
   {
    "t": 6.715,
@@ -446,7 +505,16 @@
    "ease": "step",
    "cue": [
     3
-   ]
+   ],
+   "frame": {
+    "ids": [
+     "zebra",
+     "narrator",
+     "p1"
+    ],
+    "view": 35,
+    "elevation": 18
+   }
   },
   {
    "t": 18.093,
@@ -465,7 +533,14 @@
    "ease": "inout",
    "cue": [
     6
-   ]
+   ],
+   "frame": {
+    "ids": [
+     "narrator"
+    ],
+    "view": 10,
+    "margin": 2.4
+   }
   },
   {
    "t": 23.917,
@@ -481,7 +556,14 @@
     -3
    ],
    "fov": 50,
-   "ease": "inout"
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "narrator"
+    ],
+    "view": 0,
+    "margin": 2.4
+   }
   }
  ],
  "chapters": [

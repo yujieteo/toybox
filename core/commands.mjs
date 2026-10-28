@@ -85,7 +85,7 @@ function mutate(scene, ctx, fn) {
   let result;
   try {
     result = fn(copy, cat);
-    if (copy.narration?.length || cued(copy).length) retime(copy);
+    if (copy.narration?.length || cued(copy).length) { retime(copy); reframe(copy, cat); }
   } catch (e) {
     if (e instanceof Fail) return fail([{ code: e.code, message: e.message }]);
     if (e.message.startsWith('Cue ') || e.message.includes('is not in sentence')) return fail([{ code: 'bad_cue', message: e.message }]);
@@ -104,6 +104,14 @@ function mutate(scene, ctx, fn) {
   }
   replaceScene(scene, copy);
   return okr(result);
+}
+
+// A framed camera key computes its eye and target again at its time, after a cue moved the key or its subject.
+function reframe(s, cat) {
+  for (const k of s.camera || []) if (k.frame) {
+    const { ids, ...opts } = k.frame, f = frameCamera(s, cat, ids, k.shot, k.t, { ...opts, fov: k.fov });
+    k.eye = f.eye.map(r2); k.target = f.target.map(r2);
+  }
 }
 
 // The time that a: gives with cue (a cue of the narration) or with key (a number).
@@ -360,6 +368,7 @@ def('remove', 'Remove an object, its animation tracks and its children. Remove o
     let grew = true; while (grew) { grew = false; for (const o of s.objects) if (o.parent && gone.has(o.parent) && !gone.has(o.id)) { gone.add(o.id); grew = true; } }
     s.objects = s.objects.filter((o) => !gone.has(o.id));
     s.tracks = s.tracks.filter((t) => !gone.has(t.object));
+    for (const k of s.camera) if (k.frame) { k.frame.ids = k.frame.ids.filter((f) => !gone.has(f)); if (!k.frame.ids.length) delete k.frame; }
     for (const c of s.chapters) if (c.focus) c.focus = c.focus.filter((f) => !gone.has(f));
     s.callouts = s.callouts.filter((c) => !gone.has(c.object));
     if (s.motions) s.motions = s.motions.filter((m) => !gone.has(m.object));
@@ -445,26 +454,26 @@ def('set_pose', 'Set the pose of an object at time t (or at a cue of the narrati
     return { id: o.id, t: a.t, pose: a.pose };
   }));
 
-const keySchema = { type: 'object', required: ['t', 'v'], properties: { t: num, v: { description: 'Value: [x,y,z] for at, a number for yaw, number or [x,y,z] for scale, a pose name for pose.' }, ease: { type: 'string', enum: EASES } } };
-def('animate', 'Write a whole animation track (replaces the track). Keys need strictly rising t. Never scale a building, a structure or a vehicle to nothing to clear a camera view (validate: object_vanishes). A vehicle may be swapped for another vehicle at the same place and time.', { id: str, channel: { type: 'string', enum: CHANNELS }, keys: { type: 'array', items: keySchema, minItems: 1 } }, ['id', 'channel', 'keys'],
+const keySchema = { type: 'object', required: ['v'], properties: { t: num, cue: cueArg, v: { description: 'Value: [x,y,z] for at, a number for yaw, number or [x,y,z] for scale, a pose name for pose.' }, ease: { type: 'string', enum: EASES } } };
+def('animate', 'Write a whole animation track (replaces the track). Each key has t or a cue of the narration. Keys need strictly rising t. Never scale a building, a structure or a vehicle to nothing to clear a camera view (validate: object_vanishes). A vehicle may be swapped for another vehicle at the same place and time.', { id: str, channel: { type: 'string', enum: CHANNELS }, keys: { type: 'array', items: keySchema, minItems: 1 } }, ['id', 'channel', 'keys'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     find(s, a.id);
     s.tracks = s.tracks.filter((t) => !(t.object === a.id && t.channel === a.channel));
-    s.tracks.push({ object: a.id, channel: a.channel, keys: a.keys.map((k) => ({ t: k.t, v: a.channel === 'at' && k.v.length === 2 ? at3(k.v) : k.v, ease: k.ease || (a.channel === 'pose' ? 'step' : 'linear') })) });
+    s.tracks.push({ object: a.id, channel: a.channel, keys: a.keys.map((k) => ({ t: timeArg(s, k), v: a.channel === 'at' && k.v.length === 2 ? at3(k.v) : k.v, ease: k.ease || (a.channel === 'pose' ? 'step' : 'linear'), ...(k.cue ? { cue: k.cue } : {}) })) });
     return { id: a.id, channel: a.channel, keys: a.keys.length };
   }));
 
-def('move_along', 'Move an object along a path of points. Writes at, yaw and pose tracks. Use speed (m/s) or times (one absolute time per point). It uses the walk pose (run above 3 m/s) while it moves and stand at the end. When the moving object passes into another object, leaves the ground or drives in the wrong lane, the answer has "collisions". See guide "motion".',
-  { id: str, path: { type: 'array', items: { type: 'array', items: num, minItems: 2, maxItems: 3 }, minItems: 2 }, speed: num, times: { type: 'array', items: num }, start: num, pose: { type: 'string', enum: POSES }, end_pose: { type: 'string', enum: POSES } },
+def('move_along', 'Move an object along a path of points. Writes at, yaw and pose tracks. Use speed (m/s) or times (one absolute time per point). With cue (a cue of the narration) the move starts at the cue, and times count from it. It uses the walk pose (run above 3 m/s) while it moves and stand at the end. When the moving object passes into another object, leaves the ground or drives in the wrong lane, the answer has "collisions". See guide "motion".',
+  { id: str, path: { type: 'array', items: { type: 'array', items: num, minItems: 2, maxItems: 3 }, minItems: 2 }, speed: num, times: { type: 'array', items: num }, start: num, cue: cueArg, pose: { type: 'string', enum: POSES }, end_pose: { type: 'string', enum: POSES } },
   ['id', 'path'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const o = find(s, a.id), start = a.start ?? 0;
+    const o = find(s, a.id), start = a.cue ? timeArg(s, a, 'start') : a.start ?? 0;
     const y0 = o.at[1];
     const P = a.path.map((p) => at3(p, y0));
     let times;
     if (a.times) {
       if (a.times.length !== P.length) throw new Fail('bad_args', 'times needs one value per path point.');
-      times = a.times;
+      times = a.cue ? a.times.map((t) => r2(start + t - a.times[0])) : a.times;
     } else {
       const sp = a.speed ?? 1.4; times = [start];
       for (let i = 1; i < P.length; i++) times.push(r2(times[i - 1] + Math.max(Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]) / sp, 0.05)));
@@ -473,7 +482,9 @@ def('move_along', 'Move an object along a path of points. Writes at, yaw and pos
     const t0 = times[0], tEnd = times[times.length - 1];
     const speed = (a.speed ?? Math.hypot(P[1][0] - P[0][0], P[1][2] - P[0][2]) / (times[1] - times[0]));
     const moving = a.pose || (speed > 3 ? 'run' : 'walk');
-    mergeKeys(s, o.id, 'at', P.map((p, i) => ({ t: times[i], v: p.map(r2), ease: 'linear' })), true);
+    const [ci, word = '', off = 0] = a.cue || [];
+    const follow = (ks) => (a.cue ? ks.map((k) => ({ ...k, cue: [ci, word, r2(off + k.t - t0)] })) : ks);
+    mergeKeys(s, o.id, 'at', follow(P.map((p, i) => ({ t: times[i], v: p.map(r2), ease: 'linear' }))), true);
     // yaw: face the direction of travel, turning over 0.24 s at corners
     const yk = []; let yaw = o.yaw ?? 0;
     const segYaw = (i) => Math.atan2(P[i + 1][0] - P[i][0], P[i + 1][2] - P[i][2]) / D;
@@ -488,10 +499,10 @@ def('move_along', 'Move an object along a path of points. Writes at, yaw and pos
         yaw = ny;
       }
     }
-    mergeKeys(s, o.id, 'yaw', yk, true);
+    mergeKeys(s, o.id, 'yaw', follow(yk), true);
     if (o.model === 'person') {
       if (!trackOf(s, o.id, 'pose') && t0 > 0) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }]);
-      mergeKeys(s, o.id, 'pose', [{ t: t0, v: moving, ease: 'step' }, { t: tEnd, v: a.end_pose || 'stand', ease: 'step' }], false);
+      mergeKeys(s, o.id, 'pose', follow([{ t: t0, v: moving, ease: 'step' }, { t: tEnd, v: a.end_pose || 'stand', ease: 'step' }]), false);
     }
     if (!trackOf(s, o.id, 'at').keys.some((k) => k.t < t0)) o.at = P[0].map(r2);
     const out = { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
@@ -509,7 +520,8 @@ def('set_camera', 'Add or replace a camera key at time t (or at a cue of the nar
     let eye = a.eye, target = a.target, fov = a.fov ?? 50;
     if (a.frame?.length) { const f = frameCamera(s, cat, a.frame, a.shot, a.t, a); eye = f.eye; target = f.target; fov = f.fov; }
     if (!eye || !target) throw new Fail('bad_args', 'Give frame (object ids) or both eye and target.');
-    const key = { t: a.t, shot: a.shot, eye: eye.map(r2), target: target.map(r2), fov, ease: a.ease || 'inout', ...(a.cue ? { cue: a.cue } : {}) };
+    const framing = a.frame?.length ? { frame: { ids: a.frame, ...Object.fromEntries(['view', 'elevation', 'margin', 'distance'].filter((k) => a[k] !== undefined).map((k) => [k, a[k]])) } } : {};
+    const key = { t: a.t, shot: a.shot, eye: eye.map(r2), target: target.map(r2), fov, ease: a.ease || 'inout', ...(a.cue ? { cue: a.cue } : {}), ...framing };
     s.camera = s.camera.filter((k) => Math.abs(k.t - a.t) > 1e-9);
     const prev = [...s.camera].reverse().find((k) => k.t < a.t);
     if (a.cut && prev) prev.ease = 'step';
@@ -520,9 +532,10 @@ def('set_camera', 'Add or replace a camera key at time t (or at a cue of the nar
     return out;
   }));
 
-def('set_lighting', 'Set the lighting look from time t (day, dusk, night, indoor).', { t: num, look: { type: 'string', enum: LOOKS } }, ['t', 'look'],
+def('set_lighting', 'Set the lighting look from time t (or from a cue of the narration): day, dusk, night, indoor.', { t: num, cue: cueArg, look: { type: 'string', enum: LOOKS } }, ['look'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    s.lighting = (s.lighting || []).filter((k) => k.t !== a.t); s.lighting.push({ t: a.t, look: a.look }); s.lighting.sort((p, q) => p.t - q.t); return { t: a.t, look: a.look };
+    const t = timeArg(s, a);
+    s.lighting = (s.lighting || []).filter((k) => k.t !== t); s.lighting.push({ t, look: a.look, ...(a.cue ? { cue: a.cue } : {}) }); s.lighting.sort((p, q) => p.t - q.t); return { t, look: a.look };
   }));
 
 def('add_caption', 'Add a caption (up to 280 characters, at least 0.06 s per character on screen, no overlap with other captions). A scene with narration makes its captions from the narration: do not add captions to it.', { start: num, end: num, text: str }, ['start', 'end', 'text'],

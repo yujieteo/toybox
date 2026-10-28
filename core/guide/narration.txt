@@ -10,7 +10,9 @@ Work in this order.
 5. Call validate. Fix every error. Call export_scene.
 
 Cues. A cue is [sentence, "word", offset]. The sentence index starts at 0. The time is the start of the sentence plus the part of its length that comes before the word. offset is seconds, and it is optional. [3] is the start of sentence 3.
-- set_pose, set_camera and add_motion take cue in place of t.
+- set_pose, set_camera, set_lighting and add_motion take cue in place of t. A key of animate can have cue in place of t.
+- move_along takes cue in place of start. With times, the first time is at the cue, and the other times keep their distance from it.
+- A set_camera key with frame computes its eye and target again when its time or its objects move.
 - add_chapter and add_callout take cue and end_cue in place of start and end.
 - When the narration or the voice changes, every cued time moves with its word. A fixed t does not move. Use cues.
 - A cue to a word that the sentence does not say fails (code bad_cue).
@@ -25,6 +27,6 @@ d is the length in seconds. Most words have a good default.
 
 The narrator. Place the model "narrator" (a pink ball with 2 eyes) near the action, but not behind a vehicle or a building. It breathes, looks about and blinks by itself. Give it motion words on the key words of the narration. It is not a fact, so its source says that it is the narrator.
 
-Raised and lowered text. In a label, a callout, a chapter title or a sentence, ^{st} raises text and _{2} lowers it, for example "31^{st} October", "m^{2}", "CO_{2}". The .srt file shows "31st", "m²" and "CO₂".
+Raised and lowered text. In a label, a callout, a chapter title or a sentence, ^{st} raises text and _{2} lowers it, for example "31^{st} October", "m^{2}", "CO_{2}". Use the braces always. A ^ or _ without braces is plain text, for example "Block_A". The .srt file shows "31st", "m²" and "CO₂".
 
 Checks (validate). fact_no_source, unknown_fact and bad_cue are errors that a tool refuses. narration_timing means a time does not agree with the voice: call narrate or make_voice. voice_missing means some sentences have stand-in times: call make_voice.

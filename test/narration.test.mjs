@@ -56,6 +56,43 @@ test('a cue follows the narration when the narration changes', () => {
   assert.equal(JSON.stringify(s), before);
 });
 
+test('move_along, animate, set_lighting and a framed camera follow their cue words when the narration changes', () => {
+  const s = narrated(['One two three.', 'Four five six seven.']);
+  assert.ok(run(s, 'place', { model: 'person', at: [4, 0], id: 'p' }).ok);
+  assert.ok(run(s, 'move_along', { id: 'p', path: [[4, 0], [4, 3]], cue: [1, 'five'], times: [0, 1.5] }).ok);
+  assert.ok(run(s, 'animate', { id: 'n', channel: 'yaw', keys: [{ t: 0, v: 0 }, { cue: [0, 'three'], v: 90 }] }).ok);
+  assert.ok(run(s, 'set_lighting', { cue: [1, 'six'], look: 'dusk' }).ok);
+  assert.ok(run(s, 'set_camera', { t: 3, shot: 'medium', frame: ['p'] }).ok);
+  assert.ok(run(s, 'set_camera', { cue: [1, 'seven'], shot: 'medium', frame: ['p'] }).ok);
+  const eye3 = s.camera[0].eye;
+  const r = run(s, 'narrate', { sentences: ['A much longer first sentence: one two three.', 'Four five six seven.'] });
+  assert.ok(r.ok, JSON.stringify(r));
+  const at = (cue) => cueTime(s.narration, cue), track = (id, ch) => s.tracks.find((t) => t.object === id && t.channel === ch).keys;
+  const walk = at([1, 'five']);
+  assert.deepEqual(track('p', 'at').map((k) => k.t), [walk, walk + 1.5].map((v) => Math.round(v * 1000) / 1000));
+  assert.deepEqual(track('p', 'pose').filter((k) => k.cue).map((k) => k.t), track('p', 'at').map((k) => k.t));
+  assert.equal(track('n', 'yaw')[1].t, at([0, 'three']));
+  assert.equal(s.lighting.find((k) => k.look === 'dusk').t, at([1, 'six']));
+  assert.equal(s.camera[1].t, at([1, 'seven']));
+  assert.notDeepEqual(s.camera[0].eye, eye3, 'the person is at another place at 3 s now');
+  for (const cam of s.camera) {
+    const fresh = Object.assign(newScene({}), structuredClone(s), { camera: [] });
+    assert.ok(run(fresh, 'set_camera', { t: cam.t, shot: 'medium', frame: ['p'] }).ok);
+    assert.deepEqual([cam.eye, cam.target], [fresh.camera[0].eye, fresh.camera[0].target]);
+  }
+  assert.ok(!codes(s).includes('narration_timing'), JSON.stringify(validate(s)));
+});
+
+test('a cue needs a text word and a number offset', () => {
+  const s = narrated();
+  const n = s.narration;
+  assert.throws(() => cueTime(n, [1, 'Four', '1']), /^Error: Cue /);
+  assert.throws(() => cueTime(n, [1, 5]), /^Error: Cue /);
+  assert.equal(run(s, 'add_motion', { id: 'n', move: 'hop', cue: [1, 'Four', '1'] }).errors[0].code, 'bad_cue');
+  s.motions = [{ object: 'n', move: 'hop', t: 1, cue: [1, 'Four', '1'] }];
+  assert.ok(codes(s).includes('bad_cue'));
+});
+
 test('validate: stale beats and bad cues', () => {
   const s = narrated();
   s.narration[1].start += 1;
@@ -108,8 +145,12 @@ test('motion words: each gives finite numbers at every time; pop starts from not
 
 test('raised and lowered text in labels', () => {
   assert.deepEqual(marks('31^{st} May'), [{ text: '31', shift: 0 }, { text: 'st', shift: 1 }, { text: ' May', shift: 0 }]);
-  assert.deepEqual(marks('CO_2'), [{ text: 'CO', shift: 0 }, { text: '2', shift: -1 }]);
-  assert.equal(plain('m^{2} and CO_2'), 'm² and CO₂');
+  assert.deepEqual(marks('CO_{2}'), [{ text: 'CO', shift: 0 }, { text: '2', shift: -1 }]);
+  assert.equal(plain('m^{2} and CO_{2}'), 'm² and CO₂');
+  for (const t of ['Block_A', 'snake_case', 'x^2']) {
+    assert.deepEqual(marks(t), [{ text: t, shift: 0 }]);
+    assert.equal(plain(t), t);
+  }
   assert.equal(plain('31^{st}'), '31st');
   assert.equal(plain('e^{i x}'), 'e^(i x)');
   const s = newScene({ duration: 10 });

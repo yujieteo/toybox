@@ -40,9 +40,8 @@ export function build() {
   cmd('place', { model: 'car-sedan', at: [-2, 40], yaw: 180, id: 'car', ...E });
 
   // the person steps onto the crossing, waits, then walks across
-  const step = at([2, 'steps']), walk = at([4, 'walks']);
-  cmd('move_along', { id: 'p1', path: [[5.5, 0], [3.5, 0]], times: [step, step + 1.4] });
-  const across = cmd('move_along', { id: 'p1', path: [[3.5, 0], [-4.6, 0]], speed: 2, start: walk });
+  cmd('move_along', { id: 'p1', path: [[5.5, 0], [3.5, 0]], cue: [2, 'steps'], times: [0, 1.4] });
+  const across = cmd('move_along', { id: 'p1', path: [[3.5, 0], [-4.6, 0]], speed: 2, cue: [4, 'walks'] });
   // the car comes, stops before the crossing, and goes on when the person is on the far side
   const stop = at([4, 'stops']), go = Math.max(at([5, 'goes']), across.end + 0.5);
   cmd('move_along', { id: 'car', path: [[-2, 40], [-2, 5]], times: [0, stop] });

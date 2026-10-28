@@ -21,6 +21,7 @@ const r3 = (v) => Math.round(v * 1000) / 1000;
 // before the word. Without a word it is the start of the sentence. Throws on a bad cue.
 export function cueTime(narration, cue) {
   const [i, word = '', offset = 0] = cue;
+  if (typeof word !== 'string' || !Number.isFinite(offset)) throw new Error(`Cue ${JSON.stringify(cue)} is not [sentence, "word", offset]: word must be a text and offset a number of seconds.`);
   const n = narration?.[i];
   if (!Number.isInteger(i) || !n) throw new Error(`Cue sentence ${i} does not exist. The narration has ${narration?.length || 0} sentences.`);
   const k = n.text.indexOf(word);
