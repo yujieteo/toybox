@@ -397,7 +397,7 @@ export async function createViewer(opts) {
     return [e[0] + d[0] * k, 0, e[2] + d[2] * k];
   };
   const snapshot = () => { v.undo.push(JSON.stringify(v.scene)); if (v.undo.length > 20) v.undo.shift(); };
-  v.undoEdit = () => { const s = v.undo.pop(); if (s) v.load(JSON.parse(s)); };
+  v.undoEdit = () => { const s = v.undo.pop(); if (s) { v.load(JSON.parse(s)); if (v.onedit) v.onedit(); } };
   const objOf = id => v.scene.objects.find(o => o.id === id);
   v.edit = (op, arg) => {
     const o = objOf(v.selected); if (!o) return;
@@ -422,6 +422,7 @@ export async function createViewer(opts) {
       v.selected = null;
     }
     v.load(v.scene);
+    if (v.onedit) v.onedit();
   };
   v.moveSelectedTo = (gx, gz) => {
     const o = objOf(v.selected); if (!o) return;
