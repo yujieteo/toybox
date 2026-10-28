@@ -15,7 +15,14 @@ const W = instance.exports;
 W._initialize();
 W.vid_init();
 
-function put(text) { W.clear(); for (let i = 0; i < text.length; i++) W.put(text.charCodeAt(i)); }
+// Each Goose data stack in vid.wasm has 1 MB (GS_STACK_RESERVE in engine/build.sh) and no guard,
+// so a longer text writes over other memory. 65536 code units keep the result (up to 1.5 numbers
+// for each code unit, for marks) in 1 MB.
+export const MAX_TEXT = 65536;
+function put(text) {
+  if (text.length > MAX_TEXT) throw new RangeError(`vid: a text has ${text.length} code units, the limit is ${MAX_TEXT}`);
+  W.clear(); for (let i = 0; i < text.length; i++) W.put(text.charCodeAt(i));
+}
 const result = () => Array.from({ length: W.out_len() }, (_, i) => W.out(i));
 const textOf = (units) => String.fromCharCode(...units);
 

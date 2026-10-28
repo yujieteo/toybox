@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MOVES, poseAt, seedOf, marks, plain, standIn } from '../web/vid.js';
+import { MOVES, poseAt, seedOf, marks, plain, standIn, MAX_TEXT } from '../web/vid.js';
 import { timeline, cueTime } from '../core/narration.mjs';
 
 const G = JSON.parse(readFileSync(new URL('./fixtures/vid-golden.json', import.meta.url)));
@@ -26,6 +26,15 @@ test('vid port: marks and plain are the same as vid.js', () => {
     assert.deepEqual(marks(m.t), m.marks, m.t);
     assert.equal(plain(m.t), m.plain, m.t);
   }
+});
+
+test('vid port: a long text gives correct marks up to the limit and an error after it', () => {
+  const s = 'x^{2}'.repeat(MAX_TEXT / 5) + 'a'.repeat(MAX_TEXT % 5);
+  assert.equal(marks(s).length, 2 * Math.floor(MAX_TEXT / 5) + 1);
+  assert.equal(plain('a'.repeat(MAX_TEXT)).length, MAX_TEXT);
+  assert.throws(() => plain('x^{2}'.repeat(60000)), RangeError);
+  assert.throws(() => marks('a'.repeat(MAX_TEXT + 1)), RangeError);
+  assert.equal(plain('m^{2}'), 'm²');
 });
 
 test('vid port: the beats, the cue times and the stand-in times are the same as vid.js', () => {
