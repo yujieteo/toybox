@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { rotYaw, rectCorners, overlapRatio } from './geom.mjs';
-import { narrationErrors } from './narration.mjs';
+import { narrationErrors, narrationLength } from './narration.mjs';
 import { MOVES, plain } from '../web/vid.js';
 import { FORMAT, upgradeScene } from '../web/format.js';
 
@@ -91,6 +91,24 @@ export function cameraAt(scene, t) {
   }
   const l = ks[ks.length - 1];
   return { ...pack(l), shot: l.shot };
+}
+
+// ---------- motion-word end time
+// The last time at which a motion word still changes the picture, in seconds. The engine uses the
+// same defaults and shapes (engine/vid.goose: move_pose, hop, pop, squash, blink). A scene must
+// render up to this time, or a trailing motion is cut off (or never drawn at all).
+export const MOTION_D = { out: 0.3, hop: 0.5, squint: 1.0, look: 1.0, glance: 1.2, wave: 1.6, spin: 0.9 };
+const MOTION_NO_D_END = { pop: 0.5, squash: 0.62, blink: 0.4 };
+export function motionEnd(m) {
+  const t = typeof m?.t === 'number' && Number.isFinite(m.t) ? m.t : 0;
+  const d = typeof m?.d === 'number' && Number.isFinite(m.d) ? m.d : undefined;
+  const noD = MOTION_NO_D_END[m?.move];
+  if (noD !== undefined) return t + noD;
+  const len = d ?? MOTION_D[m?.move];
+  if (len === undefined) return t + (d ?? 0);
+  // hop bounces once more after d: the landing squash at 1.2d and the settle at 1.6d + 0.16.
+  if (m.move === 'hop') return Math.max(t + len, t + 1.6 * len + 0.16);
+  return t + len;
 }
 
 // ---------- bounds
@@ -406,7 +424,7 @@ export function contrast_ok(a, b) { return contrastRatio(a, b) >= 4.5; }
 
 // ---------- SRT
 function ts(sec) {
-  const ms = Math.round(sec * 1000);
+  const ms = Math.round(Math.max(0, sec) * 1000);   // a bad negative time must never make an invalid .srt
   const p = (n, w) => String(n).padStart(w, '0');
   return `${p(Math.floor(ms / 3600000), 2)}:${p(Math.floor(ms / 60000) % 60, 2)}:${p(Math.floor(ms / 1000) % 60, 2)},${p(ms % 1000, 3)}`;
 }
@@ -508,6 +526,7 @@ export function validate(scene, catalogue) {
     const p = `chapters[${i}]`;
     if (!isNum(c.start) || !isNum(c.end)) { E('schema', p, 'Chapter needs numeric start and end.'); return; }
     seeT(c.end);
+    if (c.start < 0 || c.end < 0) E('schema', p, 'Chapter start and end must be 0 or more seconds.');
     if (c.end <= c.start) E('time_backwards', p, `Chapter ends (${c.end}) before it starts (${c.start}).`);
     if (c.start < prevEnd - 1e-9) E('time_backwards', p, `Chapter starts at ${c.start}, before the previous chapter ends at ${prevEnd}.`);
     prevEnd = c.end;
@@ -522,6 +541,7 @@ export function validate(scene, catalogue) {
     const p = `captions[${i}]`;
     if (!isNum(c.start) || !isNum(c.end) || typeof c.text !== 'string') { E('schema', p, 'Caption needs start, end and text.'); return; }
     seeT(c.end);
+    if (c.start < 0 || c.end < 0) E('schema', p, 'Caption start and end must be 0 or more seconds.');
     if (c.end <= c.start) E('time_backwards', p, `Caption ends (${c.end}) before it starts (${c.start}).`);
     const chars = plain(c.text).length;
     if (chars > MAX_CAPTION) E('caption_too_long', p, `Caption has ${chars} characters. The limit is ${MAX_CAPTION}.`);
@@ -535,6 +555,7 @@ export function validate(scene, catalogue) {
     const p = `callouts[${i}]`;
     if (!isNum(c.start) || !isNum(c.end)) { E('schema', p, 'Callout needs start and end.'); return; }
     seeT(c.end);
+    if (c.start < 0 || c.end < 0) E('schema', p, 'Callout start and end must be 0 or more seconds.');
     if (c.end <= c.start) E('time_backwards', p, 'Callout ends before it starts.');
     if (c.object && !ids.has(c.object)) E('unknown_object', `${p}.object`, `Callout object ${c.object} does not exist.`);
     if (c.measured === true && !c.source) E('measured_no_source', p, 'Callout is measured but has no source.');
@@ -551,12 +572,16 @@ export function validate(scene, catalogue) {
     const p = `motions[${i}]`;
     if (!ids.has(m.object)) E('unknown_object', `${p}.object`, `Motion object ${m.object} does not exist.`);
     if (!MOVES.includes(m.move)) E('schema', `${p}.move`, `move must be one of ${MOVES.join(', ')}.`);
-    if (!isNum(m.t) || m.t < 0) E('schema', `${p}.t`, 't must be a number of seconds >= 0.'); else seeT(m.t + (m.d ?? 0));
+    if (!isNum(m.t) || m.t < 0) E('schema', `${p}.t`, 't must be a number of seconds >= 0.'); else seeT(motionEnd(m));
     if (m.d !== undefined && !(isNum(m.d) && m.d > 0)) E('schema', `${p}.d`, 'd must be more than 0 seconds.');
     for (const k of ['h', 'x', 'y', 'deg']) if (m[k] !== undefined && !isNum(m[k])) E('schema', `${p}.${k}`, `${k} must be a number.`);
   });
   errs.push(...narrationErrors(scene));
-  if (isNum(scene.duration) && scene.duration + 1e-9 < maxT) E('duration_too_short', 'duration', `duration is ${scene.duration} s but the last time in the scene is ${maxT} s.`);
+  // The voice is content too: the last sentence end and the tail after it must fit in duration,
+  // even when a bad scene file has no captions to carry the narration length.
+  for (const n of Array.isArray(scene.narration) ? scene.narration : []) seeT(n?.end);
+  seeT(narrationLength(scene.narration));
+  if (isNum(scene.duration) && scene.duration < maxT - 5e-4) E('duration_too_short', 'duration', `duration is ${scene.duration} s but the last time in the scene is ${maxT} s.`);
 
   if (scene.chapters.length >= 12) {
     const shots = new Set([...scene.chapters.map((c) => c.shot), ...scene.camera.map((k) => k.shot)].filter(Boolean));

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createInterface } from 'node:readline';
-import { mkdtempSync, existsSync } from 'node:fs';
+import { mkdtempSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadScene } from '../core/scene.mjs';
@@ -62,6 +62,26 @@ test('render_preview posts t to the render url and returns the image path', asyn
   await c.call('initialize', {});
   const r = await c.tool('render_preview', { t: 3 });
   assert.ok(!r.isError); assert.equal(r.data.path, '/tmp/frame-3.png'); assert.deepEqual(got, { t: 3 });
+  assert.equal(r.content.length, 1, 'a picture that cannot be read gives the text block only');
+  await c.stop(); srv.close();
+});
+
+test('render_preview gives the picture to the agent as an MCP image block', async () => {
+  // A 1x1 PNG: the daemon writes the real frame; this only proves the bytes reach the client.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const dir = mkdtempSync(join(tmpdir(), 'tbmcp-')), pngPath = join(dir, 'preview-1.png');
+  writeFileSync(pngPath, png);
+  const srv = createServer((req, res) => { req.resume(); req.on('end', () => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ path: pngPath })); }); });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const c = start(['--scene', join(dir, 's.toybox.json'), '--render-url', `http://127.0.0.1:${srv.address().port}/render`]);
+  await c.call('initialize', {});
+  const r = await c.tool('render_preview', { t: 3 });
+  assert.ok(!r.isError);
+  assert.equal(r.data.path, pngPath);
+  assert.equal(r.content.length, 2, 'the text block and the picture');
+  assert.equal(r.content[1].type, 'image');
+  assert.equal(r.content[1].mimeType, 'image/png');
+  assert.deepEqual(Buffer.from(r.content[1].data, 'base64'), png);
   await c.stop(); srv.close();
 });
 

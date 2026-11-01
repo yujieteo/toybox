@@ -3,9 +3,9 @@
 import { writeFileSync, readFileSync, readdirSync, mkdirSync, copyFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, relative, isAbsolute, basename } from 'node:path';
-import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, checkScene, motionErrors, viewBlocks, focusAt,
+import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, valueAt, trackOf, stateAt, boundsVisible, checkScene, motionErrors, viewBlocks, focusAt, motionEnd,
   HARD_CODES, POSES, SHOTS, LOOKS, GROUNDS, CHANNELS, EASES, MOVES, ASPECT, sub, dot, cross, norm } from './scene.mjs';
-import { retime, cueTime, cued } from './narration.mjs';
+import { retime, cueTime, cued, narrationLength } from './narration.mjs';
 import { voiceFile, voiceSeconds } from './voice.mjs';
 import { rotYaw } from './geom.mjs';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.mjs';
@@ -15,6 +15,7 @@ const fail = (errors) => ({ ok: false, errors });
 const okr = (result) => ({ ok: true, result });
 const D = Math.PI / 180;
 const r2 = (v) => Math.round(v * 1000) / 1000;
+const ceilMs = (v) => Math.ceil(v * 1000 - 1e-6) / 1000;
 
 // ---------- JSON Schema pieces and a small argument checker
 const num = { type: 'number' };
@@ -68,11 +69,14 @@ function cloneScene(s) { return structuredClone(s); }
 function replaceScene(target, src) { for (const k of Object.keys(target)) delete target[k]; Object.assign(target, src); }
 function maxTime(s) {
   let m = 0;
-  for (const t of s.tracks || []) for (const k of t.keys) m = Math.max(m, k.t);
-  for (const k of s.camera || []) m = Math.max(m, k.t);
-  for (const k of s.lighting || []) m = Math.max(m, k.t);
-  for (const k of [...(s.chapters || []), ...(s.captions || []), ...(s.callouts || [])]) m = Math.max(m, k.end);
-  for (const k of s.motions || []) m = Math.max(m, k.t + (k.d ?? 0));
+  const see = (t) => { if (typeof t === 'number' && Number.isFinite(t) && t > m) m = t; };
+  for (const t of s.tracks || []) for (const k of t.keys || []) see(k.t);
+  for (const k of s.camera || []) see(k.t);
+  for (const k of s.lighting || []) see(k.t);
+  for (const k of [...(s.chapters || []), ...(s.captions || []), ...(s.callouts || [])]) see(k.end);
+  for (const k of s.motions || []) see(motionEnd(k));   // the whole motion, not only t + d
+  for (const n of s.narration || []) see(n?.end);        // the voice is content too
+  see(narrationLength(s.narration));
   return m;
 }
 const errKey = (e) => `${e.code}|${e.message}`;
@@ -81,6 +85,10 @@ const hardErrors = (errs) => errs.filter((e) => HARD_CODES.has(e.code));
 // Apply fn to a copy. Keep the copy only if it adds no new hard validation error.
 function mutate(scene, ctx, fn) {
   const cat = ctx?.catalogue || loadCatalogue();
+  // A duration that the tools computed from the content can be recomputed after an edit that makes
+  // the content shorter (make_voice after stand-in times, remove, a shorter track). A duration that
+  // a scene file set longer than the content is a floor and stays.
+  const autoDuration = Math.abs((scene.duration || 0) - r2(maxTime(scene))) <= 0.001;
   const copy = cloneScene(scene);
   let result;
   try {
@@ -91,7 +99,9 @@ function mutate(scene, ctx, fn) {
     if (e.message.startsWith('Cue ') || e.message.includes('is not in sentence')) return fail([{ code: 'bad_cue', message: e.message }]);
     throw e;
   }
-  copy.duration = Math.max(copy.duration || 0, r2(maxTime(copy)));
+  // Ceil to the millisecond: duration must never be shorter than the unrounded content end, or
+  // validate would report duration_too_short after a command that succeeded (and no tool can set it).
+  copy.duration = Math.max(autoDuration ? 0 : copy.duration || 0, ceilMs(maxTime(copy)));
   const after = hardErrors(validate(copy, cat));
   if (after.length) {
     const before = new Set(hardErrors(validate(scene, cat)).map(errKey));
@@ -554,6 +564,7 @@ def('add_chapter', 'Add a chapter (a named time range: start and end, or cue and
   { start: num, end: num, cue: cueArg, end_cue: cueArg, title: str, clock: str, caption: str, focus: strArr, shot: { type: 'string', enum: SHOTS }, source: common.source, estimated: common.estimated, measured: common.measured, id: str },
   ['title'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
+    if (a.caption && s.narration?.length) throw new Fail('narrated', 'A narrated scene makes its captions from the narration. Do not give a chapter a caption.');
     const id = a.id || `c${s.chapters.length + 1}`;
     const c = { id, start: timeArg(s, a, 'start'), end: timeArg(s, a, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
     for (const k of ['estimated', 'measured']) if (a[k] !== undefined) c[k] = a[k];

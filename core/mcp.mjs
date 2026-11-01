@@ -1,5 +1,6 @@
 // Stdio MCP server (JSON-RPC 2.0, one JSON message per line).
 // Run: node core/mcp.mjs --scene PATH [--render-url URL]
+import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -28,7 +29,15 @@ async function toolCall(opts, name, args) {
       const r = await fetch(opts.renderUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: args.t }) });
       const body = await r.json();
       if (!r.ok) return text({ errors: [{ code: 'render_failed', message: body.error || `Daemon answered ${r.status}.` }] }, true);
-      return text(body.path ? { path: body.path, t: args.t } : body);
+      const out = body.path ? { path: body.path, t: args.t } : body;
+      // The agent has only the toybox tools, so it cannot open a path. Give it the pixels as an
+      // MCP image block too; the text block keeps the t and the path for clients without images.
+      const content = [{ type: 'text', text: JSON.stringify(out) }];
+      try {
+        const png = body.path ? readFileSync(body.path) : null;
+        if (png && png.length) content.push({ type: 'image', data: png.toString('base64'), mimeType: 'image/png' });
+      } catch { /* a missing picture is not an MCP error: the client still gets the path */ }
+      return { content };
     } catch (e) {
       return text({ errors: [{ code: 'render_failed', message: `Cannot reach the render daemon at ${opts.renderUrl}: ${e.message}` }] }, true);
     }
