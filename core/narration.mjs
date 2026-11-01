@@ -3,7 +3,7 @@
 // cue [i, "word", offset] gives the time of "word" in sentence i (plus offset seconds).
 // The times come from engine/vid.goose through web/vid.js.
 import { voiceId } from './voice.mjs';
-import { LEAD, GAP, TAIL, STAND_IN, beats, find, cueAt, standIn } from '../web/vid.js';
+import { LEAD, GAP, TAIL, STAND_IN, beats, find, cueAt, standIn, plain } from '../web/vid.js';
 
 // Seconds of silence before, between and after sentences, and for each character of a sentence that has no voice yet.
 export { LEAD, GAP, TAIL, STAND_IN };
@@ -15,16 +15,26 @@ export function timeline(narration) {
   return length;
 }
 
+// The length of the narration in seconds from its seconds/pause values, without writing times.
+// NaN when the seconds are missing or bad; callers ignore that (validate reports it).
+export function narrationLength(narration) {
+  if (!Array.isArray(narration) || !narration.length) return 0;
+  return beats(narration).length;
+}
+
 // The time of word in sentence i: the start of the sentence plus the part of its length that comes
 // before the word. Without a word it is the start of the sentence. Throws on a bad cue.
+// The voice says the plain text: the ^{...} and _{...} markup in the text is not spoken, so the
+// cue position is measured in the spoken (plain) words, not in the raw text with the markup.
 export function cueTime(narration, cue) {
   const [i, word = '', offset = 0] = cue;
   if (typeof word !== 'string' || !Number.isFinite(offset)) throw new Error(`Cue ${JSON.stringify(cue)} is not [sentence, "word", offset]: word must be a text and offset a number of seconds.`);
   const n = narration?.[i];
   if (!Number.isInteger(i) || !n) throw new Error(`Cue sentence ${i} does not exist. The narration has ${narration?.length || 0} sentences.`);
-  const k = find(n.text, word);
+  const said = plain(n.text), saidWord = plain(word);
+  const k = find(said, saidWord);
   if (k < 0) throw new Error(`"${word}" is not in sentence ${i}: "${n.text}".`);
-  return cueAt(n, k, offset);
+  return cueAt({ start: n.start, end: n.end, text: said }, k, offset);
 }
 
 // Every item that can have a cue (start) and an endCue (end).
@@ -36,7 +46,7 @@ export function cued(scene) {
 // After a change of the narration or its voice: new beats, the cued times, and 1 caption for each sentence.
 export function retime(scene) {
   const narration = scene.narration || [];
-  for (const n of narration) if (!n.voice) n.seconds = standIn(n.text);
+  for (const n of narration) if (!n.voice) n.seconds = standIn(plain(n.text));
   const length = timeline(narration);
   for (const x of cued(scene)) {
     if (x.cue) x['t' in x ? 't' : 'start'] = cueTime(narration, x.cue);
@@ -74,6 +84,8 @@ export function narrationErrors(scene) {
     if (!n.voice) silent++;
     else if (n.voice !== `voice/${voiceId(n.text)}.wav`) E('narration_timing', `${p}.voice`, `The voice file of sentence ${i} is for another text. Call make_voice.`);
   });
+  if (narration.length && (!Array.isArray(scene.captions) || scene.captions.length !== narration.length))
+    E('narration_no_captions', 'captions', `A narrated scene needs 1 caption for each sentence, from its start to the start of the next: ${narration.length} sentences but ${Array.isArray(scene.captions) ? scene.captions.length : 0} captions. Call narrate or make_voice, or call validate after a tool change.`);
   if (errs.length) return errs;
   const want = structuredClone(narration);
   timeline(want);

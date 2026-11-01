@@ -8,13 +8,16 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { plain } from '../web/vid.js';
 
 export const VOICE = 'af_heart', RATE = 24000;
 const KEEP = 1200;   // samples of silence to keep at each end of a sentence (50 ms)
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const VOICE_HOME = path.join(os.homedir(), '.cache', 'toybox', 'voice');
 
-export const voiceId = (text) => createHash('sha1').update(`${VOICE} ${text}`).digest('hex').slice(0, 12);
+// The voice speaks the plain text: the ^{...} and _{...} markup is not spoken, so it is not part of
+// the id either. For a sentence without markup plain(text) is the same text: its file id does not change.
+export const voiceId = (text) => createHash('sha1').update(`${VOICE} ${plain(String(text))}`).digest('hex').slice(0, 12);
 export const voiceFile = (text) => `voice/${voiceId(text)}.wav`;
 
 // The seconds of a voice file that exists in dir, or null.
@@ -45,8 +48,13 @@ async function speak(text) {   // 16-bit mono WAV bytes, without the long silenc
     const { KokoroTTS } = await import(pathToFileURL(path.join(VOICE_HOME, 'node_modules', 'kokoro-js', 'dist', 'kokoro.js')).href);
     tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
   }
-  const a = (await tts.generate(text, { voice: VOICE })).audio, loud = (v) => Math.abs(v) > 0.01;
-  const pcm = a.subarray(Math.max(0, a.findIndex(loud) - KEEP), a.findLastIndex(loud) + KEEP);
+  const a = (await tts.generate(plain(String(text)), { voice: VOICE })).audio, loud = (v) => Math.abs(v) > 0.01;
+  // Keep the spoken part with 50 ms of silence at each end. A silent result (no sample over the
+  // threshold: punctuation only, or an empty render) keeps a short quiet clip, so the file is not
+  // 0 seconds long and make_voice can never get stuck reporting "no voice file".
+  const first = a.findIndex(loud), last = a.findLastIndex(loud);
+  let pcm = first < 0 ? a.subarray(0, Math.min(a.length, 2 * KEEP)) : a.subarray(Math.max(0, first - KEEP), last + KEEP);
+  if (!pcm.length) pcm = new Float32Array(2 * KEEP);
   const wav = Buffer.alloc(44 + 2 * pcm.length);
   wav.write('RIFF', 0); wav.writeUInt32LE(36 + 2 * pcm.length, 4); wav.write('WAVEfmt ', 8);
   wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(RATE, 24);
@@ -60,7 +68,7 @@ export async function makeVoices(dir, texts) {
   let made = 0;
   fs.mkdirSync(path.join(dir, 'voice'), { recursive: true });
   for (const text of new Set(texts)) {
-    if (voiceSeconds(dir, text) !== null) continue;
+    if ((voiceSeconds(dir, text) ?? 0) > 0) continue;   // a 0-second file (bad old write) is made again
     fs.writeFileSync(path.join(dir, voiceFile(text)), await speak(text));
     made++;
   }

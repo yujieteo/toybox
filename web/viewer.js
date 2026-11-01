@@ -239,11 +239,14 @@ export async function createViewer(opts) {
     }
     for (const [a, c, d] of ear(q)) for (const k of [a, d, c]) out.push(q[k][0], h, q[k][1], 0, 1, 0);
   }
+  let mapGeneration = 0;   // raised at each scene load, so a slow tile load cannot repaint a newer scene
   function buildMap(scene) {
+    const generation = ++mapGeneration;
     const map = scene.map;
     M._ground_map(0, 0, 0, 0, 0);
     v.mapImage = false;
-    if (!map) return;
+    v.tilesReady = Promise.resolve();
+    if (!map) return v.tilesReady;
     if (map.osm && map.osm.buildings && map.osm.buildings.length) {
       const palette = [[0.86, 0.80, 0.70], [0.78, 0.80, 0.82], [0.84, 0.68, 0.58]];
       const groups = [[], [], []];
@@ -257,14 +260,17 @@ export async function createViewer(opts) {
         v.rootIds.set('__osm' + gi, id);
       });
     }
-    if (v.oneMap(scene)) loadTiles(map);
+    // The tiles load from the network. The promise lets the export wait for the map before the
+    // first frame. The authoring page does not wait: the map appears when it arrives.
+    if (v.oneMap(scene)) v.tilesReady = loadTiles(map, generation).catch(() => {});
+    return v.tilesReady;
   }
   v.oneMap = scene => !!(scene.map && scene.map.origin && (scene.backdrop || {}).ground === 'map');
   const mercator = (lat, lon, z) => {
     const n = 2 ** z, x = (lon + 180) / 360 * n, s = Math.sin(lat * Math.PI / 180);
     return [x, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n];
   };
-  async function loadTiles(map) {
+  async function loadTiles(map, generation) {
     const om = map.onemap || {}, z = om.zoom || 18, style = om.style || 'Default', o = map.origin;
     const [fx, fy] = mercator(o.lat, o.lon, z), cx = Math.floor(fx), cy = Math.floor(fy), R = 1;
     const mPerTile = 156543.03392 * Math.cos(o.lat * Math.PI / 180) / 2 ** z * 256;
@@ -277,12 +283,14 @@ export async function createViewer(opts) {
       im.onerror = () => done();
       im.src = `https://www.onemap.gov.sg/maps/tiles/${style}/${z}/${cx - R + i}/${cy - R + j}.png`;
     }))));
-    if (!any) return;
+    if (!any || generation !== mapGeneration) return;
+    let d;
     try {
-      const d = g.getImageData(0, 0, cv.width, cv.height);
-      M.HEAPU8.set(d.data, up());
-      M._toybox_ground_upload(cv.width, cv.height);
+      d = g.getImageData(0, 0, cv.width, cv.height);
     } catch (e) { return; }   // a tainted canvas: the tiles stay off
+    if (generation !== mapGeneration) return;
+    M.HEAPU8.set(d.data, up());
+    M._toybox_ground_upload(cv.width, cv.height);
     // metres from the origin: x east, z south
     const x0 = ((cx - R) - fx) * mPerTile, x1 = ((cx + R + 1) - fx) * mPerTile;
     const z0 = ((cy - R) - fy) * mPerTile, z1 = ((cy + R + 1) - fy) * mPerTile;
