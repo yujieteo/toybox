@@ -91,10 +91,11 @@ export function report(scene, name, opts = {}) {
 }
 
 export function finish(builder, name, opts = {}) {
-  mkdirSync(OUT_DIR, { recursive: true });
-  const file = join(OUT_DIR, `${name}.toybox.json`);
+  const dir = opts.dir || OUT_DIR;
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${name}.toybox.json`);
   saveScene(file, builder.scene);
-  writeFileSync(join(OUT_DIR, `${name}.srt`), srt(builder.scene));
+  writeFileSync(join(dir, `${name}.srt`), srt(builder.scene));
   const rep = report(builder.scene, name, opts);
   rep.file = file; rep.calls = builder.calls;
   return rep;
