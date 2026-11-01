@@ -4,6 +4,11 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Added
+
+- A narrated "How to board an MRT train" demo scene (`evals/mrt.mjs`, with the generated scene, captions and voice files in `web/scenes/mrt/`), its facts from Wikipedia and LTA, an MRT station kit (train car, platform screen doors, track, platform edge, station wall and fare gate) and an eval case (#11).
+- A static showcase page (`web/demo.html`) that plays the demo scene, lists the steps of boarding from the scene chapters, names the sources and credits, and opens at `?t=<seconds>` or plays at `?play=1`, with a test and a README section (#11).
+
 ## [0.1.0] - 2026-10-28
 
 ### Added
