@@ -21,7 +21,7 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 | `web/` | The chat page (`app.html`), the static viewer (`viewer.html`), the export code and the style. |
 | `assets/` | The model catalogue, the person mesh, the imported CC0 models (`assets/models/`) and their credits (`assets/ATTRIBUTION.md`). |
 | `tools/people/` | The script that turns the MakeHuman CC0 body into the person mesh. |
-| `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `node tools/assets/import.mjs` |
+| `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `node tools/assets/import.mjs`. |
 | `docs/` | The design (`design.md`), the file format (`scene-format.md`) and the spike results (`spikes-1-2.md`). |
 | `evals/` | Scenes that the tools build, with their quality bars. Run `node evals/run.mjs`. `evals/narrated.mjs` is a short narrated example with its voice files in `evals/out/voice/`. |
 | `test/` | Tests. Run `node --test test/` |
