@@ -8,6 +8,27 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 - A narrated "How to board an MRT train" demo scene (`evals/mrt.mjs`, with the generated scene, captions and voice files in `web/scenes/mrt/`), its facts from Wikipedia and LTA, an MRT station kit (train car, platform screen doors, track, platform edge, station wall and fare gate) and an eval case (#11).
 - A static showcase page (`web/demo.html`) that plays the demo scene, lists the steps of boarding from the scene chapters, names the sources and credits, and opens at `?t=<seconds>` or plays at `?play=1`, with a test and a README section (#11).
+- Engine: the outline keeps a constant pixel width at each resolution, the shadow of an elevated object sits at the object base, and the cutaway hides only walls between the camera and the target (`engine/scene.goose`, `engine/gl_shim.h`).
+- A unit test file for the render timing fixes, and a unit test file for the export helpers.
+
+### Changed
+
+- The MP4 encoder level and bitrate follow the export size and the frame rate. The daemon refuses a size that the browser cannot encode before it starts a browser job.
+- The MP4 button saves a pending scene edit before it starts the export.
+- The export waits for the OneMap tiles before it captures the first frame.
+
+### Fixed
+
+- The scene duration can become shorter after a change that removes content, such as `make_voice` after stand-in times or `remove`. A longer duration from a scene file stays.
+- A motion word at the end of a scene is no longer cut off: the duration covers the full motion, including the hop bounce.
+- A narration sentence with raised or lowered text is spoken as its plain text, and a cue time uses the spoken words.
+- Validate refuses a negative chapter, caption or callout time, and the `.srt` output cannot show a negative time.
+- The MP4 export sends a scene snapshot to the daemon. An edit during the export cannot mix two scene versions in the MP4, the `.srt` and the copied scene file.
+- A full-frame readback for a debug hash no longer runs in each normal export. An export is about 20% faster.
+- The export cannot run past the last rendered frame.
+- The daemon answers with an error and stays alive when Chrome is absent, a job callback is stray, or ffmpeg fails. A failed mux keeps the frames for a retry.
+- `render_preview` gives the picture to the agent as an MCP image, not only a file path.
+- A duration that rounds below the unrounded content end no longer leaves an unfixable `duration_too_short` error.
 
 ## [0.1.0] - 2026-10-28
 
