@@ -12,7 +12,7 @@ const C = {
   yellow: '#d9b44a', green: '#6f9a6a', darkgreen: '#4f7a52', concrete: '#bdb7ab', asphalt: '#5d6168', line: '#e7e2d3',
   wood: '#a67c52', cream: '#e8dcc0', teal: '#5f9ea0', pink: '#d9a5a0', sand: '#d8c6a0', steel: '#9aa1a8', dark: '#4a4f57',
   char: '#2e2b2a', ash: '#4b4644', orange: '#d98a3d', grey: '#a9a9a4', brick: '#b8765f', sage: '#9db89a', lilac: '#a99bb8',
-  floor: '#cfc7b6', ceil: '#f0ece2', wall: '#e6e0d2', carpet: '#7c8aa5',
+  floor: '#cfc7b6', ceil: '#f0ece2', wall: '#e6e0d2', carpet: '#7c8aa5', train: '#d8dcdf', edge: '#d8d2c2',
 };
 const r = (v) => Math.round(v * 1000) / 1000;
 const part = (prim, pos, size, color, slot, rot) => {
@@ -257,6 +257,93 @@ add('notice-board', 'Notice board', 'furniture', [
 add('turnstile', 'Turnstile gate', 'furniture', [
   box([0, 0.5, 0], [0.25, 1.0, 0.9], C.steel, 'body'), box([0.35, 0.95, 0], [0.5, 0.04, 0.04], C.glass, 'arm'), box([0, 1.05, 0], [0.27, 0.08, 0.92], C.dark),
 ], ['turnstile']);
+
+// ---- MRT station (Singapore). The train runs along its local z (the same way as the buses) and has a
+// door gap on both sides, so a person can walk in only through a door. The platform screen doors are
+// full height, as at the underground stations. The train car carries the scene tag "floor" when it is
+// placed: the body is not a wall, and people walk in it.
+function mrtTrain() {
+  const w = 3.2, len = 24, wx = 1.52, gapW = 1.6, doorZ = [-7.2, 0, 7.2], T = 0.16;
+  const parts = [
+    box([0, 0.03, 0], [w - 0.2, 0.06, len - 0.4], C.floor, 'floor'),                 // floor inside the car
+    box([0, 2.72, 0], [w + 0.04, 0.24, len], C.train, 'roof'),                       // roof
+    box([0, 2.96, -6], [1.6, 0.24, 5], C.steel, 'roof'), box([0, 2.96, 6], [1.6, 0.24, 5], C.steel, 'roof'),
+    box([0, 0.75, 0], [w - 0.1, 0.3, len - 0.5], C.train, 'body'),                   // skirt below the floor line
+    box([0, 0.9, len / 2 + 0.02], [w - 0.6, 1.5, 0.06], C.glass, 'glass'),          // cab windows at both ends
+    box([0, 0.9, -len / 2 - 0.02], [w - 0.6, 1.5, 0.06], C.glass, 'glass'),
+  ];
+  // side walls: a segment between each door gap, with a window band and a red stripe on the outside
+  for (const sx of [-1, 1]) {
+    const x = sx * wx;
+    for (const [a, b] of [[-11.84, -8.0], [-6.4, -0.8], [0.8, 6.4], [8.0, 11.84]]) {
+      const mid = (a + b) / 2, segLen = b - a;
+      parts.push(box([x, 1.33, mid], [T, 2.54, segLen], C.train, 'body'));
+      parts.push(box([sx * 1.6, 1.66, mid], [0.04, 0.95, segLen - 0.4], C.glass, 'glass'));
+      parts.push(box([sx * 1.605, 0.98, mid], [0.03, 0.18, segLen - 0.3], C.red, 'stripe'));
+    }
+    // a door frame and a lintel above each door gap
+    for (const z of doorZ) {
+      parts.push(box([x, 2.35, z], [T, 0.5, gapW], C.train, 'body'));
+      parts.push(box([x, 1.33, z - gapW / 2 - 0.06], [T + 0.04, 2.54, 0.12], C.dark, 'frame'));
+      parts.push(box([x, 1.33, z + gapW / 2 + 0.06], [T + 0.04, 2.54, 0.12], C.dark, 'frame'));
+    }
+  }
+  return parts;
+}
+add('mrt-train-car', 'MRT train car (doors on both sides, along z)', 'vehicle', mrtTrain(), ['mrt', 'train', 'carriage']);
+add('mrt-track', 'MRT track, two rails along x', 'road', [
+  box([0, 0.03, 0], [24, 0.06, 4], C.asphalt, 'asphalt'),
+  box([0, 0.09, -0.72], [24, 0.04, 0.08], C.steel, 'rail'), box([0, 0.09, 0.72], [24, 0.04, 0.08], C.steel, 'rail'),
+  ...Array.from({ length: 30 }, (_, i) => box([-11.6 + i * 0.8, 0.075, 0], [0.3, 0.03, 2.2], C.wood, 'sleeper')),
+], ['mrt', 'track', 'rail']);
+add('mrt-train-door-leaf', 'MRT train door leaf', 'structure', [
+  box([0, 1.05, 0], [0.86, 2.1, 0.05], C.train, 'frame'),
+  box([0, 1.22, 0.028], [0.7, 1.66, 0.014], C.glass, 'glass'),
+  box([0, 0.14, 0.028], [0.8, 0.24, 0.014], C.red, 'stripe'),
+], ['train-door']);
+add('psd-bay', 'Platform screen door bay, full height (1.4 m door gap)', 'structure', [
+  box([0, 2.75, 0], [2.7, 0.42, 0.18], C.train, 'frame'),                          // header
+  box([-1.31, 1.48, 0], [0.12, 2.96, 0.2], C.dark, 'frame'), box([1.31, 1.48, 0], [0.12, 2.96, 0.2], C.dark, 'frame'),
+  box([0, 0.11, 0], [2.7, 0.22, 0.12], C.dark),                                    // bottom rail
+  box([0, 2.52, 0.03], [1.5, 0.1, 0.06], C.dark),                                  // door track
+  box([-1.0, 1.35, 0], [0.6, 2.2, 0.06], C.glass, 'glass'), box([1.0, 1.35, 0], [0.6, 2.2, 0.06], C.glass, 'glass'),
+  box([0, 2.62, 0.1], [1.7, 0.22, 0.02], C.white, 'board'),                        // station name board
+  box([0, 0.26, 0.05], [1.5, 0.02, 0.08], C.yellow),                               // threshold warning line
+], ['platform-screen-door']);
+add('psd-leaf', 'Platform screen door leaf', 'structure', [
+  box([0, 1.1, 0], [0.76, 2.24, 0.05], C.train, 'frame'),
+  box([0, 1.22, 0.028], [0.64, 1.72, 0.014], C.glass, 'glass'),
+  box([0, 0.18, 0.028], [0.72, 0.3, 0.014], C.dark, 'kick'),
+  box([0.28, 1.12, 0.04], [0.04, 0.16, 0.02], C.yellow),
+], ['platform-screen-door']);
+add('psd-panel', 'Fixed platform screen wall between two door bays, 4.4 m', 'structure', [
+  box([0, 2.75, 0], [4.4, 0.42, 0.18], C.train, 'frame'),
+  box([0, 0.11, 0], [4.4, 0.22, 0.12], C.dark),
+  box([-2.14, 1.48, 0], [0.12, 2.96, 0.2], C.dark, 'frame'), box([2.14, 1.48, 0], [0.12, 2.96, 0.2], C.dark, 'frame'),
+  box([0, 1.35, 0], [4.0, 2.2, 0.05], C.glass, 'glass'),
+  box([0, 2.52, 0.03], [4.0, 0.1, 0.06], C.dark),
+], ['platform-screen-door']);
+add('platform-edge-strip', 'Platform edge, yellow line and tactile strip, 4 m', 'structure', [
+  box([0, 0.03, -0.3], [4, 0.06, 0.3], C.edge, 'edge'),                            // platform edge band
+  box([0, 0.065, 0], [4, 0.012, 0.1], C.yellow, 'line'),                           // yellow line
+  box([0, 0.03, 0.3], [4, 0.06, 0.3], C.concrete, 'tactile'),                      // tactile strip
+  ...[-0.12, -0.04, 0.04, 0.12].map((dz) => box([0, 0.065, 0.3 + dz], [4, 0.012, 0.03], C.grey)),
+], ['platform-edge']);
+add('fare-gate', 'Fare gate pedestal (a pair makes a gate)', 'furniture', [
+  box([0, 0.55, 0], [0.32, 1.1, 1.5], C.white, 'body'),
+  box([0, 1.13, 0], [0.36, 0.06, 1.56], C.steel, 'top'),
+  box([0, 1.2, 0.5], [0.26, 0.14, 0.32], C.dark, 'reader'),
+  box([0, 1.2, 0.665], [0.2, 0.08, 0.012], C.teal, 'screen'),
+  box([-0.18, 0.9, 0.35], [0.06, 0.3, 0.08], C.blue, 'flap'), box([0.18, 0.9, 0.35], [0.06, 0.3, 0.08], C.blue, 'flap'),
+  box([0, 0.12, -0.72], [0.3, 0.24, 0.06], C.steel),
+], ['fare-gate']);
+add('station-wall', 'Station wall panel with posters, 5 m', 'structure', [
+  box([0, 2.1, 0], [5, 4.2, 0.28], C.wall, 'wall'),
+  box([0, 4.02, 0.16], [5, 0.26, 0.05], C.steel),
+  box([0, 0.25, 0.16], [5, 0.5, 0.05], C.concrete),
+  box([-1.25, 2.2, 0.155], [1.5, 2.0, 0.03], C.blue, 'poster'),
+  box([1.25, 2.2, 0.155], [1.5, 2.0, 0.03], C.teal, 'poster'),
+], ['station-wall']);
 
 // ---- outfits: colours and parts that a person wears. A part follows one bone of the body (names in
 // assets/people/skel.json). pos and rot are in the rest pose: origin between the feet, facing +z.

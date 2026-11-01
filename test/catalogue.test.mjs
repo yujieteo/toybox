@@ -9,7 +9,8 @@ const KINDS = ['vehicle', 'building', 'furniture', 'structure', 'prop', 'sign', 
 const REQUIRED = ['car-sedan', 'car-taxi', 'car-police', 'ambulance-scdf', 'bus-public', 'bus-private', 'lorry', 'motorbike', 'shophouse-2', 'shophouse-3',
   'hdb-slab', 'bus-stop', 'kerb', 'road-straight', 'road-junction', 'road-zebra', 'lamp-post', 'traffic-light', 'bin', 'barrier', 'cone', 'tree', 'bench', 'sign',
   'wall-3', 'wall-5', 'wall-door-3', 'door', 'window', 'floor-tile', 'ceiling-tile', 'stairs-14', 'escalator', 'lift-door', 'reception-desk', 'table', 'chair',
-  'banquet-table-8', 'stage', 'sofa', 'plant', 'notice-board', 'turnstile'];
+  'banquet-table-8', 'stage', 'sofa', 'plant', 'notice-board', 'turnstile',
+  'mrt-train-car', 'mrt-train-door-leaf', 'psd-bay', 'psd-leaf', 'platform-edge-strip', 'fare-gate', 'station-wall', 'mrt-track', 'psd-panel'];
 
 test('at least 45 models, unique ids, required ids present', () => {
   assert.ok(cat.models.length >= 45);
@@ -48,6 +49,19 @@ test('real sizes are plausible', () => {
   assert.ok(get('stairs-14')[1] > 2.2 && get('stairs-14')[1] < 2.6);
   assert.equal(get('wall-3')[0], 3); assert.equal(get('wall-5')[0], 5);
   assert.ok(get('stairs-14').length === 3);
+  // MRT station kit: a full train car, a full-height screen door bay and a fare gate pedestal
+  const train = get('mrt-train-car');
+  assert.ok(train[2] >= 18 && train[2] <= 26, `train length ${train[2]}`);
+  assert.ok(train[0] >= 2.8 && train[0] <= 3.4, `train width ${train[0]}`);
+  assert.ok(train[1] >= 2.8 && train[1] <= 3.6, `train height ${train[1]}`);
+  const bay = get('psd-bay'); assert.ok(bay[1] >= 2.6 && bay[1] <= 3.4, `screen door height ${bay[1]}`); assert.ok(bay[0] >= 2.2 && bay[0] <= 3.0);
+  assert.ok(get('psd-leaf')[1] >= 1.9 && get('psd-leaf')[1] <= 2.5);
+  assert.ok(get('psd-panel')[0] >= 3.5 && get('psd-panel')[0] <= 5 && get('psd-panel')[1] >= 2.6 && get('psd-panel')[1] <= 3.4);
+  assert.ok(get('mrt-train-door-leaf')[1] >= 1.8 && get('mrt-train-door-leaf')[1] <= 2.2);
+  const edge = get('platform-edge-strip'); assert.equal(edge[0], 4); assert.ok(edge[1] <= 0.12, `edge strip height ${edge[1]}`); assert.ok(edge[2] >= 0.7 && edge[2] <= 1.2, `edge strip depth ${edge[2]}`);
+  const gate = get('fare-gate'); assert.ok(gate[1] >= 1.0 && gate[1] <= 1.4); assert.ok(gate[2] >= 1.2 && gate[2] <= 2.0);
+  assert.ok(get('station-wall')[0] >= 4 && get('station-wall')[1] >= 3.5 && get('station-wall')[1] <= 5);
+  const track = cat.models.find((m) => m.id === 'mrt-track'); assert.equal(track.kind, 'road'); assert.equal(track.size[0], 24); assert.ok(track.size[1] <= 0.15 && track.size[2] >= 3 && track.size[2] <= 5);
 });
 
 // The rows of the table in assets/ATTRIBUTION.md, as objects keyed by the header cells.
