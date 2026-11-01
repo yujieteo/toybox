@@ -23,7 +23,7 @@ function fit() {
 new ResizeObserver(fit).observe($('stage')); fit();
 bindControls(v, { canvas, ui: { play: $('play'), seek: $('seek'), time: $('time'), story: $('story'), save: $('save'), panel: $('panel'), pname: $('pname'), psrc: $('psrc') } });
 
-let lastVersion = 0, saving = null;
+let lastVersion = 0, saveTimer = null, savingNow = false, savePromise = Promise.resolve();
 async function pull() {
   const s = await (await api('/api/scene')).json();
   $('seek').max = s.duration || 60;
@@ -36,18 +36,33 @@ async function pull() {
 async function poll() {
   try {
     const { v: ver } = await (await api('/api/version')).json();
-    if (ver !== lastVersion && !saving) { lastVersion = ver; await pull(); }
+    if (ver !== lastVersion && !savingNow && saveTimer === null) { lastVersion = ver; await pull(); }
   } catch (e) { status('The Toybox daemon does not answer.'); }
   setTimeout(poll, 1000);
 }
-v.onedit = () => {
-  clearTimeout(saving);
-  saving = setTimeout(async () => {
+async function saveScene() {
+  savingNow = true;
+  try {
     const r = await api(`/api/scene?v=${lastVersion}`, { method: 'POST', body: JSON.stringify(v.scene) });
-    const a = await r.json(); saving = null;
+    const a = await r.json();
     if (r.status === 409) { status(a.error); lastVersion = 0; } else if (a.v) lastVersion = a.v; else status(a.error);
-  }, 400);
-};
+  } finally { saveTimer = null; savingNow = false; }
+}
+function queueSave(delay = 400) {
+  clearTimeout(saveTimer);
+  savePromise = new Promise(resolve => {
+    saveTimer = setTimeout(async () => {
+      try { await saveScene(); } catch (e) { status('The scene could not be saved: ' + e.message); } finally { resolve(); }
+    }, delay);
+  });
+}
+// The export reads the scene file from the disk. Send a pending edit first, so the export cannot
+// use the previous version of the scene.
+async function flushSave() {
+  if (saveTimer !== null) { clearTimeout(saveTimer); try { await saveScene(); } catch (e) { status('The scene could not be saved: ' + e.message); } }
+  else await savePromise;
+}
+v.onedit = () => queueSave(400);
 await poll();
 
 // chat
@@ -78,8 +93,9 @@ $('stop').onclick = () => { if (ctl) ctl.abort(); };
 $('msg').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('form').requestSubmit(); });
 
 $('mp4').onclick = async () => {
-  $('mp4').disabled = true; status('The MP4 export runs in a separate browser. It can take a minute.');
+  $('mp4').disabled = true; status('Saving the scene, then the MP4 export runs in a separate browser. It can take a minute.');
   try {
+    await flushSave();
     const r = await (await api('/api/export', { method: 'POST', body: JSON.stringify({ name: (v.scene.title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() }) })).json();
     status(r.error ? r.error : `Done. Files: ${[r.mp4, r.srt, r.scene, r.odbl].filter(Boolean).join(', ')}`);
   } catch (e) { status('The export failed: ' + e.message); }
