@@ -4,9 +4,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { build as riot } from '../evals/riot.mjs';
 import { build as home } from '../evals/hometeamns.mjs';
 import { build as narrated } from '../evals/narrated.mjs';
+import { build as mrt, SENTENCES, DEMO_DIR } from '../evals/mrt.mjs';
 import { loadScene, validate } from '../core/scene.mjs';
 
-for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', home, [8, 10]], ['narrated', narrated, [2, 2]]]) {
+for (const [name, build, chapters] of [['riot', riot, [12, 20]], ['hometeamns', home, [8, 10]], ['narrated', narrated, [2, 2]], ['mrt', mrt, [8, 10]]]) {
   test(`eval ${name}: every quality bar passes`, () => {
     const rep = build();
     const failed = rep.rows.filter((r) => !r.ok);
@@ -57,4 +58,28 @@ test('narrated scene: the voice sets the beats, and the motion words follow the 
   assert.deepEqual(s.captions.map((c) => c.text), s.narration.map((n) => n.text));
   assert.ok(s.motions.length >= 8 && s.motions.every((m) => m.cue));
   assert.ok(s.callouts.some((c) => c.text.includes('^{st}')));
+});
+
+test('mrt scene: a narrated Singapore platform boarding story', () => {
+  const s = loadScene(new URL('../web/scenes/mrt/mrt.toybox.json', import.meta.url).pathname);
+  assert.ok(s.duration >= 45 && s.duration <= 75, String(s.duration));
+  assert.ok(s.chapters.length >= 8 && s.chapters.length <= 10);
+  assert.ok(s.narration.length >= 8 && s.narration.length <= 12);
+  assert.ok(s.narration.every((n) => n.voice && existsSync(new URL(`../web/scenes/mrt/${n.voice}`, import.meta.url))));
+  assert.ok(s.facts.every((f) => /^https:\/\//.test(f.source)));
+  assert.ok(s.narration.flatMap((n) => n.facts || []).every((f) => s.facts.some((x) => x.id === f)));
+  assert.deepEqual(s.captions.map((c) => c.text), s.narration.map((n) => n.text));
+  const people = s.objects.filter((o) => o.model === 'person');
+  assert.ok(people.length >= 12, `${people.length} people`);
+  assert.ok(people.filter((o) => o.id === 'main').length === 1);
+  assert.ok(s.objects.some((o) => o.model === 'mrt-train-car'));
+  assert.ok(s.objects.filter((o) => o.model === 'psd-bay').length >= 3);
+  assert.deepEqual(validate(s), []);
+  // the commuter walks in through the open doors and stands clear inside the car
+  const mainAt = s.tracks.find((t) => t.object === 'main' && t.channel === 'at');
+  const last = mainAt.keys.at(-1).v;
+  assert.ok(last[2] < -2.2, `main ends inside the car at z ${last[2]}`);
+  // the platform door leaves move on a word of the narration
+  const leaf = s.tracks.find((t) => t.object === 'psd-3-leaf-l' && t.channel === 'at');
+  assert.ok(leaf.keys.some((k) => k.cue), 'the door leaf follows a cue');
 });

@@ -1,0 +1,4781 @@
+{
+ "toybox": 1,
+ "title": "How to board an MRT train",
+ "author": "Toybox eval",
+ "duration": 58.499,
+ "backdrop": {
+  "ground": "floor",
+  "size": [
+   110,
+   80
+  ],
+  "color": "#a9a49a"
+ },
+ "lighting": [
+  {
+   "t": 0,
+   "look": "indoor"
+  }
+ ],
+ "objects": [
+  {
+   "id": "platform-w",
+   "model": "floor-tile",
+   "at": [
+    -13,
+    0,
+    2.25
+   ],
+   "yaw": 0,
+   "scale": [
+    13,
+    1,
+    4.25
+   ],
+   "flip": false,
+   "colors": {
+    "floor": "#cdc6b6"
+   },
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "platform-e",
+   "model": "floor-tile",
+   "at": [
+    13,
+    0,
+    2.25
+   ],
+   "yaw": 0,
+   "scale": [
+    13,
+    1,
+    4.25
+   ],
+   "flip": false,
+   "colors": {
+    "floor": "#cdc6b6"
+   },
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "concourse",
+   "model": "floor-tile",
+   "at": [
+    0,
+    0,
+    9.5
+   ],
+   "yaw": 0,
+   "scale": [
+    10,
+    1,
+    3
+   ],
+   "flip": false,
+   "colors": {
+    "floor": "#c6c0b2"
+   },
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "track--36",
+   "model": "mrt-track",
+   "at": [
+    -36,
+    0,
+    -4.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "asphalt": "#4d5157"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "track--12",
+   "model": "mrt-track",
+   "at": [
+    -12,
+    0,
+    -4.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "asphalt": "#4d5157"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "track-12",
+   "model": "mrt-track",
+   "at": [
+    12,
+    0,
+    -4.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "asphalt": "#4d5157"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "track-36",
+   "model": "mrt-track",
+   "at": [
+    36,
+    0,
+    -4.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "asphalt": "#4d5157"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-1",
+   "model": "station-wall",
+   "at": [
+    -20,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-2",
+   "model": "station-wall",
+   "at": [
+    -15,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-3",
+   "model": "station-wall",
+   "at": [
+    -10,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-4",
+   "model": "station-wall",
+   "at": [
+    -5,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-5",
+   "model": "station-wall",
+   "at": [
+    0,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-6",
+   "model": "station-wall",
+   "at": [
+    5,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-7",
+   "model": "station-wall",
+   "at": [
+    10,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-8",
+   "model": "station-wall",
+   "at": [
+    15,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "wall-9",
+   "model": "station-wall",
+   "at": [
+    20,
+    0,
+    -8.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "wall": "#e2dccc"
+   },
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge--6",
+   "model": "platform-edge-strip",
+   "at": [
+    -24,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge--5",
+   "model": "platform-edge-strip",
+   "at": [
+    -20,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge--4",
+   "model": "platform-edge-strip",
+   "at": [
+    -16,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge--3",
+   "model": "platform-edge-strip",
+   "at": [
+    -12,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge--2",
+   "model": "platform-edge-strip",
+   "at": [
+    -8,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge--1",
+   "model": "platform-edge-strip",
+   "at": [
+    -4,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-0",
+   "model": "platform-edge-strip",
+   "at": [
+    0,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-1",
+   "model": "platform-edge-strip",
+   "at": [
+    4,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-2",
+   "model": "platform-edge-strip",
+   "at": [
+    8,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-3",
+   "model": "platform-edge-strip",
+   "at": [
+    12,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-4",
+   "model": "platform-edge-strip",
+   "at": [
+    16,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-5",
+   "model": "platform-edge-strip",
+   "at": [
+    20,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "edge-6",
+   "model": "platform-edge-strip",
+   "at": [
+    24,
+    0,
+    -1.55
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-1",
+   "model": "psd-bay",
+   "at": [
+    -14.4,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-1-leaf-l",
+   "model": "psd-leaf",
+   "at": [
+    -14.780000000000001,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-1-leaf-r",
+   "model": "psd-leaf",
+   "at": [
+    -14.02,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-2",
+   "model": "psd-bay",
+   "at": [
+    -7.2,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-2-leaf-l",
+   "model": "psd-leaf",
+   "at": [
+    -7.58,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-2-leaf-r",
+   "model": "psd-leaf",
+   "at": [
+    -6.82,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-3",
+   "model": "psd-bay",
+   "at": [
+    0,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-3-leaf-l",
+   "model": "psd-leaf",
+   "at": [
+    -0.38,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-3-leaf-r",
+   "model": "psd-leaf",
+   "at": [
+    0.38,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-4",
+   "model": "psd-bay",
+   "at": [
+    7.2,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-4-leaf-l",
+   "model": "psd-leaf",
+   "at": [
+    6.82,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-4-leaf-r",
+   "model": "psd-leaf",
+   "at": [
+    7.58,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-5",
+   "model": "psd-bay",
+   "at": [
+    14.4,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-5-leaf-l",
+   "model": "psd-leaf",
+   "at": [
+    14.02,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-5-leaf-r",
+   "model": "psd-leaf",
+   "at": [
+    14.780000000000001,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-panel--10.8",
+   "model": "psd-panel",
+   "at": [
+    -10.8,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-panel--3.6",
+   "model": "psd-panel",
+   "at": [
+    -3.6,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-panel-3.6",
+   "model": "psd-panel",
+   "at": [
+    3.6,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "psd-panel-10.8",
+   "model": "psd-panel",
+   "at": [
+    10.8,
+    0,
+    -2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train",
+   "model": "mrt-train-car",
+   "at": [
+    -34,
+    0,
+    -3.8
+   ],
+   "yaw": 90,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "train": "#d8dcdf",
+    "stripe": "#b5483c"
+   },
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train-leaf-0-l",
+   "model": "mrt-train-door-leaf",
+   "at": [
+    -0.43,
+    0,
+    -2.16
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train-leaf-0-r",
+   "model": "mrt-train-door-leaf",
+   "at": [
+    0.43,
+    0,
+    -2.16
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train-leaf-7.2-l",
+   "model": "mrt-train-door-leaf",
+   "at": [
+    6.7700000000000005,
+    0,
+    -2.16
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train-leaf-7.2-r",
+   "model": "mrt-train-door-leaf",
+   "at": [
+    7.63,
+    0,
+    -2.16
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train-leaf--7.2-l",
+   "model": "mrt-train-door-leaf",
+   "at": [
+    -7.63,
+    0,
+    -2.16
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "train-leaf--7.2-r",
+   "model": "mrt-train-door-leaf",
+   "at": [
+    -6.7700000000000005,
+    0,
+    -2.16
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "floor"
+   ],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gate-1",
+   "model": "fare-gate",
+   "at": [
+    -2.5,
+    0,
+    8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gate-2",
+   "model": "fare-gate",
+   "at": [
+    -1.5,
+    0,
+    8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gate-3",
+   "model": "fare-gate",
+   "at": [
+    -0.5,
+    0,
+    8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gate-4",
+   "model": "fare-gate",
+   "at": [
+    0.5,
+    0,
+    8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gate-5",
+   "model": "fare-gate",
+   "at": [
+    1.5,
+    0,
+    8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gate-6",
+   "model": "fare-gate",
+   "at": [
+    2.5,
+    0,
+    8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "gap-sign",
+   "model": "sign",
+   "at": [
+    2.6,
+    0,
+    -1.85
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [
+    "sign"
+   ],
+   "label": "Please mind the platform gap",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bench-w",
+   "model": "bench",
+   "at": [
+    -4,
+    0,
+    4.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bench-e",
+   "model": "bench",
+   "at": [
+    5.2,
+    0,
+    4.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bin-w",
+   "model": "bin",
+   "at": [
+    -1.6,
+    0,
+    6.4
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bin-e",
+   "model": "bin",
+   "at": [
+    3.2,
+    0,
+    6.8
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "board",
+   "model": "notice-board",
+   "at": [
+    -8.5,
+    0,
+    6.2
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "tags": [],
+   "label": "Station map",
+   "parent": null,
+   "source": "estimated: station layout and positions are approximate",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "main",
+   "model": "person",
+   "variant": 8,
+   "at": [
+    0,
+    0.02,
+    11.8
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#3f6e9a",
+    "pants": "#3a3f47"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "waiter-a",
+   "model": "person",
+   "variant": 2,
+   "at": [
+    -2.4,
+    0.02,
+    -0.2
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#c8553d",
+    "pants": "#3a3f47"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "waiter-b",
+   "model": "person",
+   "variant": 5,
+   "at": [
+    3.4,
+    0.02,
+    -0.6
+   ],
+   "yaw": 170,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#6f9a6a",
+    "pants": "#4a5568"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "waiter-c",
+   "model": "person",
+   "variant": 11,
+   "at": [
+    -4.6,
+    0.02,
+    1.2
+   ],
+   "yaw": 160,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#a99bb8",
+    "pants": "#2f4a6b"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "pointing",
+   "model": "person",
+   "variant": 9,
+   "at": [
+    3.4,
+    0.02,
+    0.6
+   ],
+   "yaw": 210,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#e8dcc0",
+    "pants": "#55595f"
+   },
+   "pose": "point",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "waving",
+   "model": "person",
+   "variant": 14,
+   "at": [
+    -3.2,
+    0.02,
+    2.2
+   ],
+   "yaw": 150,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#5f9ea0",
+    "pants": "#3a3f47"
+   },
+   "pose": "wave",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "cheering",
+   "model": "person",
+   "variant": 3,
+   "at": [
+    4.9,
+    0.02,
+    2.4
+   ],
+   "yaw": 190,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#d9b44a",
+    "pants": "#6b5b4b"
+   },
+   "pose": "cheer",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "bending",
+   "model": "person",
+   "variant": 21,
+   "at": [
+    5.6,
+    0.02,
+    3.4
+   ],
+   "yaw": 300,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#b8765f",
+    "pants": "#3a3f47"
+   },
+   "pose": "bend",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "sitter-w",
+   "model": "person",
+   "variant": 6,
+   "at": [
+    -4,
+    0.02,
+    4.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#4a79a5",
+    "pants": "#2f4a6b"
+   },
+   "pose": "sit",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "sitter-e",
+   "model": "person",
+   "variant": 18,
+   "at": [
+    5.2,
+    0.02,
+    4.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#8c8c86",
+    "pants": "#55595f"
+   },
+   "pose": "sit",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "walker-w",
+   "model": "person",
+   "variant": 7,
+   "at": [
+    -6,
+    0.02,
+    5.8
+   ],
+   "yaw": 270,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#6f9a6a",
+    "pants": "#3a3f47"
+   },
+   "pose": "walk",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "walker-e",
+   "model": "person",
+   "variant": 12,
+   "at": [
+    10,
+    0.02,
+    5.2
+   ],
+   "yaw": 90,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#a99bb8",
+    "pants": "#4a5568"
+   },
+   "pose": "walk",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "runner",
+   "model": "person",
+   "variant": 4,
+   "at": [
+    14,
+    0.02,
+    5.6
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#d98a3d",
+    "pants": "#3a3f47"
+   },
+   "pose": "run",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "alight-1",
+   "model": "person",
+   "variant": 13,
+   "at": [
+    -0.4,
+    0.02,
+    -3.3
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#c8553d",
+    "pants": "#55595f"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "alight-2",
+   "model": "person",
+   "variant": 16,
+   "at": [
+    0.4,
+    0.02,
+    -3.6
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#3f6e9a",
+    "pants": "#6b5b4b"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "alight-3",
+   "model": "person",
+   "variant": 20,
+   "at": [
+    -0.1,
+    0.02,
+    -4.3
+   ],
+   "yaw": 0,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#6f9a6a",
+    "pants": "#4a5568"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "carrier",
+   "model": "person",
+   "variant": 17,
+   "at": [
+    -7.2,
+    0.02,
+    0.4
+   ],
+   "yaw": 120,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#e8dcc0",
+    "pants": "#3a3f47"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  },
+  {
+   "id": "child",
+   "model": "person",
+   "variant": 10,
+   "at": [
+    2.4,
+    0.02,
+    3.2
+   ],
+   "yaw": 180,
+   "scale": [
+    1,
+    1,
+    1
+   ],
+   "flip": false,
+   "colors": {
+    "shirt": "#d9b44a",
+    "pants": "#4a5568"
+   },
+   "pose": "stand",
+   "tags": [],
+   "label": "",
+   "parent": null,
+   "source": "estimated: a typical commuter; faces are generic",
+   "estimated": true,
+   "hidden": false
+  }
+ ],
+ "tracks": [
+  {
+   "object": "main",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0.5,
+     "v": [
+      0,
+      0.02,
+      11.8
+     ],
+     "ease": "linear",
+     "cue": [
+      0,
+      "",
+      0
+     ]
+    },
+    {
+     "t": 2.6,
+     "v": [
+      0,
+      0.02,
+      9.1
+     ],
+     "ease": "step",
+     "cue": [
+      0,
+      "",
+      2.1
+     ]
+    },
+    {
+     "t": 6.509,
+     "v": [
+      0,
+      0.02,
+      9.1
+     ],
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      0.5
+     ]
+    },
+    {
+     "t": 7.409,
+     "v": [
+      0,
+      0.02,
+      8
+     ],
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      1.4
+     ]
+    },
+    {
+     "t": 8.709,
+     "v": [
+      0,
+      0.02,
+      6.4
+     ],
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      2.7
+     ]
+    },
+    {
+     "t": 12.309,
+     "v": [
+      1.1,
+      0.02,
+      2.4
+     ],
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      6.3
+     ]
+    },
+    {
+     "t": 15.109,
+     "v": [
+      1.1,
+      0.02,
+      -1.05
+     ],
+     "ease": "step",
+     "cue": [
+      1,
+      "Tap",
+      9.1
+     ]
+    },
+    {
+     "t": 46.931,
+     "v": [
+      1.1,
+      0.02,
+      -1.05
+     ],
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      0
+     ]
+    },
+    {
+     "t": 47.531,
+     "v": [
+      0.7,
+      0.02,
+      -1.25
+     ],
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      0.6
+     ]
+    },
+    {
+     "t": 48.331,
+     "v": [
+      0.35,
+      0.02,
+      -2
+     ],
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      1.4
+     ]
+    },
+    {
+     "t": 48.831,
+     "v": [
+      0.15,
+      0.02,
+      -2.4
+     ],
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      1.9
+     ]
+    },
+    {
+     "t": 49.931,
+     "v": [
+      0,
+      0.02,
+      -3.2
+     ],
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      3
+     ]
+    }
+   ]
+  },
+  {
+   "object": "main",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 0.5,
+     "v": 180,
+     "ease": "step",
+     "cue": [
+      0,
+      "",
+      0
+     ]
+    },
+    {
+     "t": 6.509,
+     "v": 180,
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      0.5
+     ]
+    },
+    {
+     "t": 8.589,
+     "v": 180,
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      2.58
+     ]
+    },
+    {
+     "t": 8.829,
+     "v": 164.624,
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      2.82
+     ]
+    },
+    {
+     "t": 12.189,
+     "v": 164.624,
+     "ease": "linear",
+     "cue": [
+      1,
+      "Tap",
+      6.18
+     ]
+    },
+    {
+     "t": 12.429,
+     "v": 180,
+     "ease": "step",
+     "cue": [
+      1,
+      "Tap",
+      6.42
+     ]
+    },
+    {
+     "t": 46.931,
+     "v": 243.435,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      0
+     ]
+    },
+    {
+     "t": 47.411,
+     "v": 243.435,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      0.48
+     ]
+    },
+    {
+     "t": 47.651,
+     "v": 205.017,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      0.72
+     ]
+    },
+    {
+     "t": 48.211,
+     "v": 205.017,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      1.28
+     ]
+    },
+    {
+     "t": 48.451,
+     "v": 206.565,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      1.52
+     ]
+    },
+    {
+     "t": 48.711,
+     "v": 206.565,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      1.78
+     ]
+    },
+    {
+     "t": 48.951,
+     "v": 190.62,
+     "ease": "linear",
+     "cue": [
+      8,
+      "move",
+      2.02
+     ]
+    }
+   ]
+  },
+  {
+   "object": "main",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 0.5,
+     "v": "walk",
+     "ease": "step",
+     "cue": [
+      0,
+      "",
+      0
+     ]
+    },
+    {
+     "t": 2.6,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      0,
+      "",
+      2.1
+     ]
+    },
+    {
+     "t": 6.509,
+     "v": "walk",
+     "ease": "step",
+     "cue": [
+      1,
+      "Tap",
+      0.5
+     ]
+    },
+    {
+     "t": 15.109,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      1,
+      "Tap",
+      9.1
+     ]
+    },
+    {
+     "t": 46.931,
+     "v": "walk",
+     "ease": "step",
+     "cue": [
+      8,
+      "move",
+      0
+     ]
+    },
+    {
+     "t": 49.931,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      8,
+      "move",
+      3
+     ]
+    }
+   ]
+  },
+  {
+   "object": "runner",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 26.994,
+     "v": [
+      14,
+      0.02,
+      5.6
+     ],
+     "ease": "linear",
+     "cue": [
+      4,
+      "Queue",
+      0.3
+     ]
+    },
+    {
+     "t": 28.8,
+     "v": [
+      14,
+      0.02,
+      -0.9
+     ],
+     "ease": "linear",
+     "cue": [
+      4,
+      "Queue",
+      2.106
+     ]
+    }
+   ]
+  },
+  {
+   "object": "runner",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 26.994,
+     "v": 180,
+     "ease": "linear",
+     "cue": [
+      4,
+      "Queue",
+      0.3
+     ]
+    }
+   ]
+  },
+  {
+   "object": "runner",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "run",
+     "ease": "step"
+    },
+    {
+     "t": 26.994,
+     "v": "run",
+     "ease": "step",
+     "cue": [
+      4,
+      "Queue",
+      0.3
+     ]
+    },
+    {
+     "t": 28.8,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      4,
+      "Queue",
+      2.106
+     ]
+    }
+   ]
+  },
+  {
+   "object": "walker-w",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0.5,
+     "v": [
+      -6,
+      0.02,
+      5.8
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 20.5,
+     "v": [
+      -24,
+      0.02,
+      5.8
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "walker-w",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 0.5,
+     "v": 270,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "walker-w",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 0.5,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 20.5,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "walker-e",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0.5,
+     "v": [
+      10,
+      0.02,
+      5.2
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 16.056,
+     "v": [
+      24,
+      0.02,
+      5.2
+     ],
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "walker-e",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 0.5,
+     "v": 90,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "object": "walker-e",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 0.5,
+     "v": "walk",
+     "ease": "step"
+    },
+    {
+     "t": 16.056,
+     "v": "stand",
+     "ease": "step"
+    }
+   ]
+  },
+  {
+   "object": "train",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      -34,
+      0,
+      -3.8
+     ],
+     "ease": "linear"
+    },
+    {
+     "t": 26.694,
+     "v": [
+      -34,
+      0,
+      -3.8
+     ],
+     "ease": "inout",
+     "cue": [
+      4
+     ]
+    },
+    {
+     "t": 31.527,
+     "v": [
+      0,
+      0,
+      -3.8
+     ],
+     "ease": "inout",
+     "cue": [
+      5,
+      "arrives"
+     ]
+    }
+   ]
+  },
+  {
+   "object": "psd-3-leaf-l",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      -0.38,
+      0,
+      -1.85
+     ],
+     "ease": "step"
+    },
+    {
+     "t": 32.216,
+     "v": [
+      -0.38,
+      0,
+      -1.85
+     ],
+     "ease": "linear",
+     "cue": [
+      5,
+      "open",
+      -1
+     ]
+    },
+    {
+     "t": 33.716,
+     "v": [
+      -1,
+      0,
+      -1.85
+     ],
+     "ease": "step",
+     "cue": [
+      5,
+      "open",
+      0.5
+     ]
+    },
+    {
+     "t": 49.793,
+     "v": [
+      -1,
+      0,
+      -1.85
+     ],
+     "ease": "linear",
+     "cue": [
+      9,
+      "doors",
+      -0.3
+     ]
+    },
+    {
+     "t": 51.312,
+     "v": [
+      -0.38,
+      0,
+      -1.85
+     ],
+     "ease": "step",
+     "cue": [
+      9,
+      "close",
+      0.8
+     ]
+    }
+   ]
+  },
+  {
+   "object": "psd-3-leaf-r",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      0.38,
+      0,
+      -1.85
+     ],
+     "ease": "step"
+    },
+    {
+     "t": 32.216,
+     "v": [
+      0.38,
+      0,
+      -1.85
+     ],
+     "ease": "linear",
+     "cue": [
+      5,
+      "open",
+      -1
+     ]
+    },
+    {
+     "t": 33.716,
+     "v": [
+      1,
+      0,
+      -1.85
+     ],
+     "ease": "step",
+     "cue": [
+      5,
+      "open",
+      0.5
+     ]
+    },
+    {
+     "t": 49.793,
+     "v": [
+      1,
+      0,
+      -1.85
+     ],
+     "ease": "linear",
+     "cue": [
+      9,
+      "doors",
+      -0.3
+     ]
+    },
+    {
+     "t": 51.312,
+     "v": [
+      0.38,
+      0,
+      -1.85
+     ],
+     "ease": "step",
+     "cue": [
+      9,
+      "close",
+      0.8
+     ]
+    }
+   ]
+  },
+  {
+   "object": "train-leaf-0-l",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      -0.38,
+      0,
+      -2.16
+     ],
+     "ease": "step"
+    },
+    {
+     "t": 32.216,
+     "v": [
+      -0.38,
+      0,
+      -2.16
+     ],
+     "ease": "linear",
+     "cue": [
+      5,
+      "open",
+      -1
+     ]
+    },
+    {
+     "t": 33.716,
+     "v": [
+      -1,
+      0,
+      -2.16
+     ],
+     "ease": "step",
+     "cue": [
+      5,
+      "open",
+      0.5
+     ]
+    },
+    {
+     "t": 49.793,
+     "v": [
+      -1,
+      0,
+      -2.16
+     ],
+     "ease": "linear",
+     "cue": [
+      9,
+      "doors",
+      -0.3
+     ]
+    },
+    {
+     "t": 51.312,
+     "v": [
+      -0.38,
+      0,
+      -2.16
+     ],
+     "ease": "step",
+     "cue": [
+      9,
+      "close",
+      0.8
+     ]
+    }
+   ]
+  },
+  {
+   "object": "train-leaf-0-r",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 0,
+     "v": [
+      0.38,
+      0,
+      -2.16
+     ],
+     "ease": "step"
+    },
+    {
+     "t": 32.216,
+     "v": [
+      0.38,
+      0,
+      -2.16
+     ],
+     "ease": "linear",
+     "cue": [
+      5,
+      "open",
+      -1
+     ]
+    },
+    {
+     "t": 33.716,
+     "v": [
+      1,
+      0,
+      -2.16
+     ],
+     "ease": "step",
+     "cue": [
+      5,
+      "open",
+      0.5
+     ]
+    },
+    {
+     "t": 49.793,
+     "v": [
+      1,
+      0,
+      -2.16
+     ],
+     "ease": "linear",
+     "cue": [
+      9,
+      "doors",
+      -0.3
+     ]
+    },
+    {
+     "t": 51.312,
+     "v": [
+      0.38,
+      0,
+      -2.16
+     ],
+     "ease": "step",
+     "cue": [
+      9,
+      "close",
+      0.8
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-1",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 37.55,
+     "v": [
+      -0.4,
+      0.02,
+      -3.3
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      -1
+     ]
+    },
+    {
+     "t": 38.694,
+     "v": [
+      -0.6,
+      0.02,
+      -2
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      0.144
+     ]
+    },
+    {
+     "t": 39.808,
+     "v": [
+      -1.6,
+      0.02,
+      -1.2
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      1.258
+     ]
+    },
+    {
+     "t": 41.895,
+     "v": [
+      -4,
+      0.02,
+      -1.15
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      3.345
+     ]
+    },
+    {
+     "t": 44.938,
+     "v": [
+      -7.5,
+      0.02,
+      -1.15
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      6.388
+     ]
+    },
+    {
+     "t": 46.437,
+     "v": [
+      -8,
+      0.02,
+      0.5
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      7.887
+     ]
+    },
+    {
+     "t": 48.693,
+     "v": [
+      -9.2,
+      0.02,
+      2.8
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      10.143
+     ]
+    },
+    {
+     "t": 50.676,
+     "v": [
+      -11,
+      0.02,
+      4.2
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      12.126
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-1",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 37.55,
+     "v": -8.746,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      -1
+     ]
+    },
+    {
+     "t": 38.574,
+     "v": -8.746,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      0.024
+     ]
+    },
+    {
+     "t": 38.814,
+     "v": -51.34,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      0.264
+     ]
+    },
+    {
+     "t": 39.688,
+     "v": -51.34,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      1.138
+     ]
+    },
+    {
+     "t": 39.928,
+     "v": -88.807,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      1.378
+     ]
+    },
+    {
+     "t": 41.775,
+     "v": -88.807,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      3.225
+     ]
+    },
+    {
+     "t": 42.015,
+     "v": -90,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      3.465
+     ]
+    },
+    {
+     "t": 44.818,
+     "v": -90,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      6.268
+     ]
+    },
+    {
+     "t": 45.058,
+     "v": -16.858,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      6.508
+     ]
+    },
+    {
+     "t": 46.317,
+     "v": -16.858,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      7.767
+     ]
+    },
+    {
+     "t": 46.557,
+     "v": -27.553,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      8.007
+     ]
+    },
+    {
+     "t": 48.573,
+     "v": -27.553,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      10.023
+     ]
+    },
+    {
+     "t": 48.813,
+     "v": -52.125,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      10.263
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-1",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 37.55,
+     "v": "walk",
+     "ease": "step",
+     "cue": [
+      6,
+      "gap",
+      -1
+     ]
+    },
+    {
+     "t": 50.676,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      6,
+      "gap",
+      12.126
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-2",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 38.95,
+     "v": [
+      0.4,
+      0.02,
+      -3.6
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      0.4
+     ]
+    },
+    {
+     "t": 40.344,
+     "v": [
+      0.3,
+      0.02,
+      -2
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      1.794
+     ]
+    },
+    {
+     "t": 41.335,
+     "v": [
+      -0.6,
+      0.02,
+      -1.3
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      2.785
+     ]
+    },
+    {
+     "t": 43.426,
+     "v": [
+      -3,
+      0.02,
+      -1.15
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      4.876
+     ]
+    },
+    {
+     "t": 48.209,
+     "v": [
+      -8.5,
+      0.02,
+      -1.15
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      9.659
+     ]
+    },
+    {
+     "t": 49.568,
+     "v": [
+      -8.7,
+      0.02,
+      0.4
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      11.018
+     ]
+    },
+    {
+     "t": 51.707,
+     "v": [
+      -9.8,
+      0.02,
+      2.6
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      13.157
+     ]
+    },
+    {
+     "t": 54.9,
+     "v": [
+      -13,
+      0.02,
+      4.4
+     ],
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      16.35
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-2",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 38.95,
+     "v": -3.576,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      0.4
+     ]
+    },
+    {
+     "t": 40.224,
+     "v": -3.576,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      1.674
+     ]
+    },
+    {
+     "t": 40.464,
+     "v": -52.125,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      1.914
+     ]
+    },
+    {
+     "t": 41.215,
+     "v": -52.125,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      2.665
+     ]
+    },
+    {
+     "t": 41.455,
+     "v": -86.424,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      2.905
+     ]
+    },
+    {
+     "t": 43.306,
+     "v": -86.424,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      4.756
+     ]
+    },
+    {
+     "t": 43.546,
+     "v": -90,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      4.996
+     ]
+    },
+    {
+     "t": 48.089,
+     "v": -90,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      9.539
+     ]
+    },
+    {
+     "t": 48.329,
+     "v": -7.352,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      9.779
+     ]
+    },
+    {
+     "t": 49.448,
+     "v": -7.352,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      10.898
+     ]
+    },
+    {
+     "t": 49.688,
+     "v": -26.565,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      11.138
+     ]
+    },
+    {
+     "t": 51.587,
+     "v": -26.565,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      13.037
+     ]
+    },
+    {
+     "t": 51.827,
+     "v": -60.642,
+     "ease": "linear",
+     "cue": [
+      6,
+      "gap",
+      13.277
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-2",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 38.95,
+     "v": "walk",
+     "ease": "step",
+     "cue": [
+      6,
+      "gap",
+      0.4
+     ]
+    },
+    {
+     "t": 54.9,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      6,
+      "gap",
+      16.35
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-3",
+   "channel": "at",
+   "keys": [
+    {
+     "t": 44.059,
+     "v": [
+      -0.1,
+      0.02,
+      -4.3
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      0
+     ]
+    },
+    {
+     "t": 45.977,
+     "v": [
+      -0.2,
+      0.02,
+      -2
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      1.918
+     ]
+    },
+    {
+     "t": 47.044,
+     "v": [
+      -1.2,
+      0.02,
+      -1.2
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      2.985
+     ]
+    },
+    {
+     "t": 49.044,
+     "v": [
+      -3.6,
+      0.02,
+      -1.15
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      4.985
+     ]
+    },
+    {
+     "t": 52.711,
+     "v": [
+      -8,
+      0.02,
+      -1.15
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      8.652
+     ]
+    },
+    {
+     "t": 54.612,
+     "v": [
+      -9,
+      0.02,
+      0.9
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      10.553
+     ]
+    },
+    {
+     "t": 57.333,
+     "v": [
+      -11.5,
+      0.02,
+      3
+     ],
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      13.274
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-3",
+   "channel": "yaw",
+   "keys": [
+    {
+     "t": 44.059,
+     "v": -2.49,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      0
+     ]
+    },
+    {
+     "t": 45.857,
+     "v": -2.49,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      1.798
+     ]
+    },
+    {
+     "t": 46.097,
+     "v": -51.34,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      2.038
+     ]
+    },
+    {
+     "t": 46.924,
+     "v": -51.34,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      2.865
+     ]
+    },
+    {
+     "t": 47.164,
+     "v": -88.807,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      3.105
+     ]
+    },
+    {
+     "t": 48.924,
+     "v": -88.807,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      4.865
+     ]
+    },
+    {
+     "t": 49.164,
+     "v": -90,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      5.105
+     ]
+    },
+    {
+     "t": 52.591,
+     "v": -90,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      8.532
+     ]
+    },
+    {
+     "t": 52.831,
+     "v": -26.003,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      8.772
+     ]
+    },
+    {
+     "t": 54.492,
+     "v": -26.003,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      10.433
+     ]
+    },
+    {
+     "t": 54.732,
+     "v": -49.97,
+     "ease": "linear",
+     "cue": [
+      7,
+      "passengers",
+      10.673
+     ]
+    }
+   ]
+  },
+  {
+   "object": "alight-3",
+   "channel": "pose",
+   "keys": [
+    {
+     "t": 0,
+     "v": "stand",
+     "ease": "step"
+    },
+    {
+     "t": 44.059,
+     "v": "walk",
+     "ease": "step",
+     "cue": [
+      7,
+      "passengers",
+      0
+     ]
+    },
+    {
+     "t": 57.333,
+     "v": "stand",
+     "ease": "step",
+     "cue": [
+      7,
+      "passengers",
+      13.274
+     ]
+    }
+   ]
+  }
+ ],
+ "camera": [
+  {
+   "t": 0.5,
+   "shot": "medium",
+   "eye": [
+    2.497,
+    2.579,
+    14.951
+   ],
+   "target": [
+    0,
+    0.885,
+    9.598
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main",
+     "gate-3",
+     "gate-4"
+    ],
+    "view": 25,
+    "elevation": 16,
+    "margin": 1.35
+   }
+  },
+  {
+   "t": 5.559,
+   "shot": "medium",
+   "eye": [
+    2.031,
+    2.263,
+    12.603
+   ],
+   "target": [
+    0,
+    0.885,
+    8.248
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main",
+     "gate-3",
+     "gate-4"
+    ],
+    "view": 25,
+    "elevation": 16,
+    "margin": 1.35
+   }
+  },
+  {
+   "t": 6.009,
+   "shot": "close",
+   "eye": [
+    3.359,
+    2.006,
+    12.716
+   ],
+   "target": [
+    0.23,
+    1.239,
+    8.248
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main",
+     "gate-4"
+    ],
+    "view": 35,
+    "elevation": 8,
+    "margin": 1.7
+   }
+  },
+  {
+   "t": 10.275,
+   "shot": "close",
+   "eye": [
+    4.551,
+    2.237,
+    12.419
+   ],
+   "target": [
+    0.479,
+    1.239,
+    6.602
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main",
+     "gate-4"
+    ],
+    "view": 35,
+    "elevation": 8,
+    "margin": 1.7
+   }
+  },
+  {
+   "t": 10.725,
+   "shot": "wide",
+   "eye": [
+    0,
+    5.666,
+    11.506
+   ],
+   "target": [
+    0,
+    1.48,
+    1.145
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main",
+     "psd-3",
+     "psd-2",
+     "psd-4"
+    ],
+    "view": 0,
+    "elevation": 22
+   }
+  },
+  {
+   "t": 18.294,
+   "shot": "medium",
+   "eye": [
+    -2.322,
+    3.769,
+    7.603
+   ],
+   "target": [
+    -3.6,
+    1.48,
+    -1.49
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main",
+     "psd-2",
+     "psd-3"
+    ],
+    "view": 8,
+    "elevation": 14,
+    "margin": 1.4
+   }
+  },
+  {
+   "t": 26.244,
+   "shot": "medium",
+   "eye": [
+    -2.322,
+    3.769,
+    7.603
+   ],
+   "target": [
+    -3.6,
+    1.48,
+    -1.49
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main",
+     "psd-2",
+     "psd-3"
+    ],
+    "view": 8,
+    "elevation": 14,
+    "margin": 1.4
+   }
+  },
+  {
+   "t": 26.694,
+   "shot": "medium",
+   "eye": [
+    0.311,
+    2.69,
+    3.533
+   ],
+   "target": [
+    1.153,
+    1.48,
+    -1.245
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main",
+     "waiter-b",
+     "psd-3"
+    ],
+    "view": 350,
+    "elevation": 14,
+    "margin": 1.3
+   }
+  },
+  {
+   "t": 30.549,
+   "shot": "medium",
+   "eye": [
+    0.311,
+    2.69,
+    3.533
+   ],
+   "target": [
+    1.153,
+    1.48,
+    -1.245
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main",
+     "waiter-b",
+     "psd-3"
+    ],
+    "view": 350,
+    "elevation": 14,
+    "margin": 1.3
+   }
+  },
+  {
+   "t": 30.999,
+   "shot": "wide",
+   "eye": [
+    7.97,
+    8.536,
+    16.365
+   ],
+   "target": [
+    -1.129,
+    1.54,
+    -3.148
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "train",
+     "main",
+     "psd-3"
+    ],
+    "view": 25,
+    "elevation": 18
+   }
+  },
+  {
+   "t": 35.302,
+   "shot": "wide",
+   "eye": [
+    9.099,
+    8.536,
+    16.365
+   ],
+   "target": [
+    0,
+    1.54,
+    -3.148
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "train",
+     "main",
+     "psd-3"
+    ],
+    "view": 25,
+    "elevation": 18
+   }
+  },
+  {
+   "t": 35.752,
+   "shot": "close",
+   "eye": [
+    1.643,
+    3.183,
+    6.241
+   ],
+   "target": [
+    0,
+    2.072,
+    -1.49
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main",
+     "psd-3"
+    ],
+    "view": 12,
+    "elevation": 8,
+    "margin": 1.6
+   }
+  },
+  {
+   "t": 43.16,
+   "shot": "close",
+   "eye": [
+    1.643,
+    3.183,
+    6.241
+   ],
+   "target": [
+    0,
+    2.072,
+    -1.49
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main",
+     "psd-3"
+    ],
+    "view": 12,
+    "elevation": 8,
+    "margin": 1.6
+   }
+  },
+  {
+   "t": 43.61,
+   "shot": "medium",
+   "eye": [
+    0.965,
+    2.702,
+    4.184
+   ],
+   "target": [
+    0,
+    1.48,
+    -2.68
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "alight-3",
+     "main",
+     "psd-3"
+    ],
+    "view": 8,
+    "elevation": 10,
+    "margin": 1.4
+   }
+  },
+  {
+   "t": 46.204,
+   "shot": "medium",
+   "eye": [
+    0.724,
+    2.398,
+    3.65
+   ],
+   "target": [
+    0,
+    1.48,
+    -1.505
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "alight-3",
+     "main",
+     "psd-3"
+    ],
+    "view": 8,
+    "elevation": 10,
+    "margin": 1.4
+   }
+  },
+  {
+   "t": 46.654,
+   "shot": "follow",
+   "eye": [
+    1.1,
+    1.727,
+    2.863
+   ],
+   "target": [
+    1.1,
+    0.895,
+    -1.05
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main"
+    ]
+   }
+  },
+  {
+   "t": 49.364,
+   "shot": "follow",
+   "eye": [
+    0.798,
+    1.727,
+    1.058
+   ],
+   "target": [
+    0.077,
+    0.895,
+    -2.788
+   ],
+   "fov": 50,
+   "ease": "step",
+   "frame": {
+    "ids": [
+     "main"
+    ]
+   }
+  },
+  {
+   "t": 49.814,
+   "shot": "close",
+   "eye": [
+    1.561,
+    3.335,
+    6.238
+   ],
+   "target": [
+    0,
+    2.072,
+    -2.614
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "main",
+     "psd-3"
+    ],
+    "view": 10,
+    "elevation": 8,
+    "margin": 1.8
+   }
+  },
+  {
+   "t": 52.214,
+   "shot": "close",
+   "eye": [
+    1.538,
+    5.2,
+    11.977
+   ],
+   "target": [
+    0,
+    2.072,
+    -2.657
+   ],
+   "fov": 50,
+   "ease": "inout",
+   "frame": {
+    "ids": [
+     "psd-2",
+     "psd-3",
+     "psd-4",
+     "main"
+    ],
+    "view": 6,
+    "elevation": 12,
+    "margin": 1.3
+   }
+  }
+ ],
+ "chapters": [
+  {
+   "id": "c1",
+   "start": 0.5,
+   "end": 6.009,
+   "title": "The fare gate",
+   "cue": [
+    0
+   ],
+   "endCue": [
+    1
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "gate-3",
+    "gate-4"
+   ],
+   "shot": "medium",
+   "source": "https://en.wikipedia.org/wiki/Mass_Rapid_Transit_(Singapore)",
+   "measured": true
+  },
+  {
+   "id": "c2",
+   "start": 6.009,
+   "end": 10.725,
+   "title": "Tap in",
+   "cue": [
+    1
+   ],
+   "endCue": [
+    2
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "gate-4"
+   ],
+   "shot": "close",
+   "source": "https://en.wikipedia.org/wiki/Fares_and_ticketing_on_the_Mass_Rapid_Transit_(Singapore)",
+   "measured": true
+  },
+  {
+   "id": "c3",
+   "start": 10.725,
+   "end": 26.694,
+   "title": "The screen doors",
+   "cue": [
+    2
+   ],
+   "endCue": [
+    4
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "psd-3",
+    "psd-2",
+    "psd-4"
+   ],
+   "shot": "wide",
+   "source": "https://en.wikipedia.org/wiki/Safety_on_the_Mass_Rapid_Transit_(Singapore) ; https://en.wikipedia.org/wiki/Mass_Rapid_Transit_(Singapore)",
+   "measured": true
+  },
+  {
+   "id": "c4",
+   "start": 26.694,
+   "end": 30.999,
+   "title": "Behind the line",
+   "cue": [
+    4
+   ],
+   "endCue": [
+    5
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "waiter-b",
+    "psd-3"
+   ],
+   "shot": "medium",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/a_better_public_transport_experience/gracious_commuting.html",
+   "measured": true
+  },
+  {
+   "id": "c5",
+   "start": 30.999,
+   "end": 35.752,
+   "title": "The train arrives",
+   "cue": [
+    5
+   ],
+   "endCue": [
+    6
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "train",
+    "main",
+    "psd-3"
+   ],
+   "shot": "wide",
+   "source": "estimated: staging of a typical weekday morning boarding",
+   "estimated": true
+  },
+  {
+   "id": "c6",
+   "start": 35.752,
+   "end": 43.61,
+   "title": "Mind the gap",
+   "cue": [
+    6
+   ],
+   "endCue": [
+    7
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "psd-3"
+   ],
+   "shot": "close",
+   "source": "https://en.wikipedia.org/wiki/Mind_the_gap",
+   "measured": true
+  },
+  {
+   "id": "c7",
+   "start": 43.61,
+   "end": 46.654,
+   "title": "Let them alight",
+   "cue": [
+    7
+   ],
+   "endCue": [
+    8
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "alight-3",
+    "main",
+    "psd-3"
+   ],
+   "shot": "medium",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/a_better_public_transport_experience/gracious_commuting.html",
+   "measured": true
+  },
+  {
+   "id": "c8",
+   "start": 46.654,
+   "end": 49.814,
+   "title": "Board and move in",
+   "cue": [
+    8
+   ],
+   "endCue": [
+    9
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "psd-3"
+   ],
+   "shot": "follow",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/a_better_public_transport_experience/gracious_commuting.html",
+   "measured": true
+  },
+  {
+   "id": "c9",
+   "start": 49.814,
+   "end": 58.499,
+   "title": "The doors close",
+   "cue": [
+    9
+   ],
+   "clock": "08:12",
+   "caption": "",
+   "focus": [
+    "main",
+    "psd-3",
+    "psd-2"
+   ],
+   "shot": "close",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network.html",
+   "measured": true
+  }
+ ],
+ "captions": [
+  {
+   "start": 0.5,
+   "end": 6.009,
+   "text": "The station is split into paid and unpaid areas, and the fare gates are the only way in."
+  },
+  {
+   "start": 6.009,
+   "end": 10.725,
+   "text": "Tap in with a card or a phone, and the fare runs to the tap out at the end."
+  },
+  {
+   "start": 10.725,
+   "end": 18.294,
+   "text": "Glass screen doors line the track: Singapore's MRT was the first in Asia to use them, back in 1987."
+  },
+  {
+   "start": 18.294,
+   "end": 26.694,
+   "text": "They are full height underground and half height at elevated stations, and by 14 March 2012 every elevated station had them."
+  },
+  {
+   "start": 26.694,
+   "end": 30.999,
+   "text": "Queue to one side of the door, behind the yellow line."
+  },
+  {
+   "start": 30.999,
+   "end": 35.752,
+   "text": "The train arrives, and the platform doors open with it."
+  },
+  {
+   "start": 35.752,
+   "end": 43.61,
+   "text": "The announcement asks you to mind the platform gap, and important MRT announcements are made in four languages."
+  },
+  {
+   "start": 43.61,
+   "end": 46.654,
+   "text": "Let the passengers alight first."
+  },
+  {
+   "start": 46.654,
+   "end": 49.814,
+   "text": "Then move in, so the people behind you can board."
+  },
+  {
+   "start": 49.814,
+   "end": 58.499,
+   "text": "The doors close, and the MRT carries on: more than 140 stations on six lines, and over three million rides a day."
+  }
+ ],
+ "callouts": [
+  {
+   "start": 6.009,
+   "end": 7.374,
+   "text": "Tap in here",
+   "object": "gate-4",
+   "source": "https://en.wikipedia.org/wiki/Fares_and_ticketing_on_the_Mass_Rapid_Transit_(Singapore)",
+   "measured": true,
+   "cue": [
+    1,
+    "Tap"
+   ],
+   "endCue": [
+    1,
+    "phone"
+   ]
+  },
+  {
+   "start": 38.55,
+   "end": 43.61,
+   "text": "Please mind the platform gap",
+   "object": "main",
+   "source": "https://en.wikipedia.org/wiki/Mind_the_gap",
+   "measured": true,
+   "cue": [
+    6,
+    "gap"
+   ],
+   "endCue": [
+    7
+   ]
+  }
+ ],
+ "credits": [
+  "Fact sources: Wikipedia.",
+  "Fact sources: Land Transport Authority (LTA).",
+  "Layout, train and crowd are approximate. Faces are generic."
+ ],
+ "facts": [
+  {
+   "id": "paid-area",
+   "text": "Stations are divided into two areas, paid and unpaid, which collect fares by restricting entry only through the fare gates (access control gates).",
+   "source": "https://en.wikipedia.org/wiki/Mass_Rapid_Transit_(Singapore)"
+  },
+  {
+   "id": "tap",
+   "text": "Fares are charged based on commuters \"tapping in\" at the start and \"tapping out\" at the destination; the failure to tap out generally results in full or flat fare(s).",
+   "source": "https://en.wikipedia.org/wiki/Fares_and_ticketing_on_the_Mass_Rapid_Transit_(Singapore)"
+  },
+  {
+   "id": "psd-first",
+   "text": "The Singapore MRT was the first rapid transit system in Asia to incorporate glass platform screen doors, in its underground stations in 1987.",
+   "source": "https://en.wikipedia.org/wiki/Safety_on_the_Mass_Rapid_Transit_(Singapore)"
+  },
+  {
+   "id": "psd-types",
+   "text": "Full-height platform screen doors are installed at all existing underground MRT and sub-surface stations in Singapore; half-height platform screen doors are installed at elevated stations.",
+   "source": "https://en.wikipedia.org/wiki/Safety_on_the_Mass_Rapid_Transit_(Singapore)"
+  },
+  {
+   "id": "psd-2012",
+   "text": "By 14 March 2012, all elevated MRT stations had been retrofitted with half-height platform screen doors and were operational.",
+   "source": "https://en.wikipedia.org/wiki/Mass_Rapid_Transit_(Singapore)"
+  },
+  {
+   "id": "give-way",
+   "text": "LTA's Thoughtful Bunch campaign asks commuters to queue to one side of the door and let others alight first.",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/a_better_public_transport_experience/gracious_commuting.html"
+  },
+  {
+   "id": "move-in",
+   "text": "The same LTA campaign asks commuters to move in to make space so others can board.",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/a_better_public_transport_experience/gracious_commuting.html"
+  },
+  {
+   "id": "mind-gap",
+   "text": "On Singapore's MRT, the phrases \"Please mind the platform gap\" and \"Please mind the gap\" are used in announcements in English.",
+   "source": "https://en.wikipedia.org/wiki/Mind_the_gap"
+  },
+  {
+   "id": "announcements",
+   "text": "In Singapore's MRT, important train announcements are made in the four official languages.",
+   "source": "https://en.wikipedia.org/wiki/Train_station_announcement"
+  },
+  {
+   "id": "network",
+   "text": "Today more than 140 stations across six MRT lines span the island, a 200 km system with over three million daily ridership, run by SMRT and SBS Transit.",
+   "source": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network.html"
+  }
+ ],
+ "narration": [
+  {
+   "text": "The station is split into paid and unpaid areas, and the fare gates are the only way in.",
+   "facts": [
+    "paid-area"
+   ],
+   "voice": "voice/f304610a9e3f.wav",
+   "seconds": 5.059,
+   "start": 0.5,
+   "end": 5.559
+  },
+  {
+   "text": "Tap in with a card or a phone, and the fare runs to the tap out at the end.",
+   "facts": [
+    "tap"
+   ],
+   "voice": "voice/9d3152b81a01.wav",
+   "seconds": 4.266,
+   "start": 6.009,
+   "end": 10.275
+  },
+  {
+   "text": "Glass screen doors line the track: Singapore's MRT was the first in Asia to use them, back in 1987.",
+   "facts": [
+    "psd-first"
+   ],
+   "voice": "voice/e12cc11d98bb.wav",
+   "seconds": 7.119,
+   "start": 10.725,
+   "end": 17.844
+  },
+  {
+   "text": "They are full height underground and half height at elevated stations, and by 14 March 2012 every elevated station had them.",
+   "facts": [
+    "psd-types",
+    "psd-2012"
+   ],
+   "voice": "voice/c320dad1460f.wav",
+   "seconds": 7.95,
+   "start": 18.294,
+   "end": 26.244
+  },
+  {
+   "text": "Queue to one side of the door, behind the yellow line.",
+   "facts": [
+    "give-way"
+   ],
+   "pause": 1,
+   "voice": "voice/360269eb51c3.wav",
+   "seconds": 2.855,
+   "start": 26.694,
+   "end": 29.549
+  },
+  {
+   "text": "The train arrives, and the platform doors open with it.",
+   "pause": 1.4,
+   "voice": "voice/ecb18264ea7b.wav",
+   "seconds": 2.903,
+   "start": 30.999,
+   "end": 33.902
+  },
+  {
+   "text": "The announcement asks you to mind the platform gap, and important MRT announcements are made in four languages.",
+   "facts": [
+    "mind-gap",
+    "announcements"
+   ],
+   "pause": 0.8,
+   "voice": "voice/dc2fc02f6ea3.wav",
+   "seconds": 6.608,
+   "start": 35.752,
+   "end": 42.36
+  },
+  {
+   "text": "Let the passengers alight first.",
+   "facts": [
+    "give-way"
+   ],
+   "pause": 0.8,
+   "voice": "voice/ede3246088ee.wav",
+   "seconds": 1.794,
+   "start": 43.61,
+   "end": 45.404
+  },
+  {
+   "text": "Then move in, so the people behind you can board.",
+   "facts": [
+    "move-in"
+   ],
+   "voice": "voice/a4611b04478f.wav",
+   "seconds": 2.71,
+   "start": 46.654,
+   "end": 49.364
+  },
+  {
+   "text": "The doors close, and the MRT carries on: more than 140 stations on six lines, and over three million rides a day.",
+   "facts": [
+    "network"
+   ],
+   "voice": "voice/13a36e166669.wav",
+   "seconds": 7.885,
+   "start": 49.814,
+   "end": 57.699
+  }
+ ]
+}

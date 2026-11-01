@@ -2,10 +2,11 @@
 import { build as riot } from './riot.mjs';
 import { build as home } from './hometeamns.mjs';
 import { build as narrated } from './narrated.mjs';
+import { build as mrt } from './mrt.mjs';
 import { printReport } from './lib.mjs';
 
 let failed = 0;
-for (const build of [riot, home, narrated]) {
+for (const build of [riot, home, narrated, mrt]) {
   const rep = build();
   printReport(rep);
   if (!rep.ok) failed++;

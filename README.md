@@ -18,7 +18,7 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 | `engine/` | The renderer and the vid utilities (motion words, marks, narration times), written in [Goose](https://aardappel.github.io/goose/). It compiles to C and then to WebAssembly with emcc. |
 | `core/` | The scene schema, the checks, the model kit, the MCP server and the guides for the agent. |
 | `app/serve.mjs` | The local daemon. It serves the page, runs the chat agent and renders pictures and videos in a headless browser. |
-| `web/` | The chat page (`app.html`), the static viewer (`viewer.html`), the export code and the style. |
+| `web/` | The chat page (`app.html`), the static viewer (`viewer.html`), the MRT demo page (`demo.html`), the export code and the style. |
 | `assets/` | The model catalogue, the person mesh, the imported CC0 models (`assets/models/`) and their credits (`assets/ATTRIBUTION.md`). |
 | `tools/people/` | The script that turns the MakeHuman CC0 body into the person mesh. |
 | `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `node tools/assets/import.mjs`. |
@@ -38,6 +38,22 @@ The chat uses the `claude` command with only the Toybox MCP server. You need ffm
 The voice runs on your computer, with no cloud and no account. It is Kokoro-82M (voice `af_heart`) through kokoro-js 1.2.1 on the CPU. The first `make_voice` installs it into `~/.cache/toybox/voice` with npm and downloads the model from Hugging Face. This needs 736 MB of disk: 416 MB of packages (onnxruntime-node is 211 MB) and the 326 MB model. On the maker laptop the install and the first sentence took about 56 s. A scene without narration needs none of it.
 
 For the static viewer, host the `web/`, `assets/` and engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
+
+## Demos
+
+The MRT demo page (`web/demo.html`) is a static showcase: it plays one narrated scene, lists the steps of boarding beside it, and names the sources and credits below. Build the scene first:
+
+```
+node evals/mrt.mjs
+```
+
+The script writes the scene file, its `.srt` captions and the voice files under `web/scenes/mrt/`. Then host `web/`, `assets/` and the engine files together. The daemon does this, for example:
+
+```
+node app/serve.mjs --scene web/scenes/mrt/mrt.toybox.json --engine engine-build --port 8831
+```
+
+Open `http://127.0.0.1:8831/demo.html` (a static page needs no token). Add `?t=12.5` to open the page paused at 12.5 seconds, for screenshots and checks, or `?play=1` to start the scene at once.
 
 ## Numbers that we measured
 
