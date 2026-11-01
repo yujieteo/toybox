@@ -6311,8 +6311,6 @@ static void draw_person_g(Mat_g vp_g, int32_t i_g, Obj_g o_g, float t_g, int64_t
     mvp_g = t11;
     float tt_g = ((float)((float)(t_g)) + (float)(((float)((float)((float)(o_g.variant_g))) * (float)(0.37f))));
     pose_g.base = GS(gs_sp + 0)->top; pose_g.len = 0;
-    int32_t t12 = gs_add_i32((int32_t)(gs_mul_i32((int32_t)(i_g), 10, gs_file0, 512)), 7, gs_file0, 512);
-    pose_angles_g((int32_t)GS_F2I((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t12), (GS_GL->g_cur_g.len), gs_file0, 512)]), 1, (-2147483647 - 1), 2147483647, "i32", gs_file0, 512), tt_g, GS(gs_sp + 0), &pose_g.len, gs_sp + 1);
     int32_t t13 = gs_add_i32((int32_t)(gs_mul_i32((int32_t)(i_g), 10, gs_file0, 513)), 9, gs_file0, 513);
     float bl_g = (((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t13), (GS_GL->g_cur_g.len), gs_file0, 513)]);
     if ((uint8_t)((float)((float)(bl_g)) < (float)(1.0f))) {
@@ -7243,19 +7241,33 @@ static void render_frame_g(double t_g, int64_t gs_sp) {
         int64_t t343;
         if (!((uint8_t)((int32_t)((int32_t)(gs_mod_i32(t343, t342, 2, gs_file0, 627))) == (int32_t)(1)))) goto L340;
         {
-            float nx_g;
-            int32_t t344 = gs_add_i32((int32_t)(b_g_6), 3, gs_file0, 628);
-            float t345 = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t344), (GS_GL->g_cur_g.len), gs_file0, 628)]))) * (float)(0.0174533f));
-            float t346 = gs_sinf(t345);
-            nx_g = t346;
-            float nz_g;
-            int32_t t347 = gs_add_i32((int32_t)(b_g_6), 3, gs_file0, 628);
-            float t348 = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t347), (GS_GL->g_cur_g.len), gs_file0, 628)]))) * (float)(0.0174533f));
-            float t349 = gs_cosf(t348);
-            nz_g = t349;
-            int32_t t350 = b_g_6;
-            int32_t t351 = gs_add_i32((int32_t)(b_g_6), 2, gs_file0, 629);
-            if ((uint8_t)((float)((float)(((float)((float)(((float)((float)(nx_g)) * (float)(((float)((float)(ex_g)) - (float)((((float *)((GS_GL->g_cur_g.base)))[t350]))))))) + (float)(((float)((float)(nz_g)) * (float)(((float)((float)(ez_g)) - (float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t351), (GS_GL->g_cur_g.len), gs_file0, 629)]))))))))) > (float)(0.0f))) {
+            float f_g;
+            if ((uint8_t)(!((int32_t)((int32_t)(o_g_2.flip_g)) == (int32_t)(0)))) {
+                f_g = -1.0f;
+            } else {
+                f_g = 1.0f;
+            }
+            float t384 = f_g;
+            int32_t t385 = gs_add_i32((int32_t)(b_g_6), 3, gs_file0, 630);
+            float t386 = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t385), (GS_GL->g_cur_g.len), gs_file0, 630)]))) * (float)(0.0174533f));
+            float t387 = gs_sinf(t386);
+            float nx_g = ((float)(t384) * (float)(t387));
+            float t388 = f_g;
+            int32_t t389 = gs_add_i32((int32_t)(b_g_6), 3, gs_file0, 630);
+            float t390 = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t389), (GS_GL->g_cur_g.len), gs_file0, 630)]))) * (float)(0.0174533f));
+            float t391 = gs_cosf(t390);
+            float nz_g = ((float)(t388) * (float)(t391));
+            int32_t t392 = b_g_6;
+            float wx_g = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[t392]))) - (float)(ex_g));
+            int32_t t393 = gs_add_i32((int32_t)(b_g_6), 2, gs_file0, 631);
+            float wz_g = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t393), (GS_GL->g_cur_g.len), gs_file0, 631)]))) - (float)(ez_g));
+            float vx_g = ((float)((float)(tx_g)) - (float)(ex_g));
+            float vz_g = ((float)((float)(tz_g)) - (float)(ez_g));
+            float along_g = ((float)((float)(((float)((float)(wx_g)) * (float)(vx_g)))) + (float)(((float)((float)(wz_g)) * (float)(vz_g))));
+            if (!((uint8_t)((float)((float)(((float)((float)(((float)((float)(nx_g)) * (float)(((float)((float)(0.0f)) - (float)(wx_g)))))) + (float)(((float)((float)(nz_g)) * (float)(((float)((float)(0.0f)) - (float)(wz_g)))))))) > (float)(0.0f)))) goto L340;
+            if (!((uint8_t)((float)((float)(along_g)) > (float)(0.0f)))) goto L340;
+            if (!((uint8_t)((float)((float)(along_g)) < (float)(((float)((float)(((float)((float)(vx_g)) * (float)(vx_g)))) + (float)(((float)((float)(vz_g)) * (float)(vz_g)))))))) goto L340;
+            {
                 vis_g = 0;
             }
         }
@@ -7312,8 +7324,12 @@ static void render_frame_g(double t_g, int64_t gs_sp) {
                 int32_t t374 = gs_add_i32((int32_t)(pb_g), 3, gs_file0, 643);
                 float ss_g = ((float)((float)(((float)((float)(o_g_2.shadow_g)) * (float)(2.0f)))) * (float)((((float *)((GS_GL->g_pose_g.base)))[GS_IDX((int64_t)(t374), (GS_GL->g_pose_g.len), gs_file0, 643)])));
                 int32_t t375 = b_g_6;
-                int32_t t376 = gs_add_i32((int32_t)(b_g_6), 2, gs_file0, 644);
-                t377 = translate_g((((float *)((GS_GL->g_cur_g.base)))[t375]), 0.012f, (((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t376), (GS_GL->g_cur_g.len), gs_file0, 644)]));
+                float shx_g = (((float *)((GS_GL->g_cur_g.base)))[t375]);
+                int32_t t375y = gs_add_i32((int32_t)(b_g_6), 1, gs_file0, 649);
+                float shy_g = ((float)((float)((((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t375y), (GS_GL->g_cur_g.len), gs_file0, 649)]))) + (float)(0.012f));
+                int32_t t376 = gs_add_i32((int32_t)(b_g_6), 2, gs_file0, 649);
+                float shz_g = (((float *)((GS_GL->g_cur_g.base)))[GS_IDX((int64_t)(t376), (GS_GL->g_cur_g.len), gs_file0, 649)]);
+                t377 = translate_g(shx_g, shy_g, shz_g);
                 t378 = t377;
                 float x_g_4 = ss_g;
                 float z_g_4 = ss_g;

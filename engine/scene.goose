@@ -509,8 +509,8 @@ fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) {
     let model = mul(world_of(i), body_scale(o));
     let mvp = mul(vp, model);
     let tt = t + (o.variant as f32) * 0.37;
-    var pose = pose_angles(g_cur[i * 10 + 7] as i32, tt);
     let bl = g_cur[i * 10 + 9];
+    var pose: f32[>..] = [];
     if bl < 1.0 { pose = mix_pose(pose_angles(g_cur[i * 10 + 7] as i32, tt), pose_angles(g_cur[i * 10 + 8] as i32, tt), bl); }
     else { pose = pose_angles(g_cur[i * 10 + 8] as i32, tt); }
     let dx = model.m[12] - g_eyex; let dy = model.m[13] - g_eyey; let dz = model.m[14] - g_eyez;
@@ -625,8 +625,13 @@ export "render_frame" fn render_frame(t: f64) {
         if (flags / FLAG_HIDDEN) % 2 == 1 { vis = 0; }
         if g_cut_ceil != 0 && (flags / FLAG_CEIL) % 2 == 1 { vis = 0; }
         if o.parent < 0 && g_cut_wall != 0 && (flags / FLAG_WALL) % 2 == 1 {
-            let nx = sin(g_cur[b + 3] * DEG); let nz = cos(g_cur[b + 3] * DEG);
-            if nx * (ex - g_cur[b]) + nz * (ez - g_cur[b + 2]) > 0.0 { vis = 0; }
+            // Only a wall that faces the camera and sits between the camera and the target is cut away.
+            let f: f32 = if o.flip != 0 { -1.0 } else { 1.0 };
+            let nx = f * sin(g_cur[b + 3] * DEG); let nz = f * cos(g_cur[b + 3] * DEG);
+            let wx = g_cur[b] - ex; let wz = g_cur[b + 2] - ez;
+            let vx = tx - ex; let vz = tz - ez;
+            let along = wx * vx + wz * vz;
+            if nx * (0.0 - wx) + nz * (0.0 - wz) > 0.0 && along > 0.0 && along < vx * vx + vz * vz { vis = 0; }
         }
         if mirror != 0 { local.m[0] = 0.0 - local.m[0]; local.m[1] = 0.0 - local.m[1]; local.m[2] = 0.0 - local.m[2]; }
         for k in 16 { g_world[i * 16 + k] = local.m[k]; }
@@ -641,7 +646,7 @@ export "render_frame" fn render_frame(t: f64) {
             }
             if o.shadow > 0.0 && o.parent < 0 {
                 let ss = o.shadow * 2.0 * g_pose[pb + 3];
-                let sm = mul(translate(g_cur[b], 0.012, g_cur[b + 2]), scale(ss, 0.01, ss));
+                let sm = mul(translate(g_cur[b], g_cur[b + 1] + 0.012, g_cur[b + 2]), scale(ss, 0.01, ss));
                 let smvp = mul(vp, sm);
                 gl_front(0);
                 gl_draw(1, smvp, sm, 0.0, 0.0, 0.0, 0.28, 0);

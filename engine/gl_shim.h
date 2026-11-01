@@ -11,7 +11,13 @@ static GLuint g_prog, g_vao[MAX_MESH], g_vbo[MAX_MESH];
 static int g_n[MAX_MESH];
 static int g_w, g_h;
 static float g_ldir[3] = {0.4f, 0.8f, 0.5f}, g_lcol[3] = {1, 1, 1};
-static GLint u_mvp, u_model, u_color, u_pass, u_alpha, u_ldir, u_lcol;
+static GLint u_mvp, u_model, u_color, u_pass, u_alpha, u_ldir, u_lcol, u_px;
+static GLuint g_prog_now;
+static void gl_use(GLuint p) { if (g_prog_now != p) { glUseProgram(p); g_prog_now = p; } }
+/* Outline width in screen pixels; the vertex shaders turn it into a clip-space offset. */
+static float g_outline_px = 1.5f, g_outline_skin_px = 1.2f;
+static GLuint g_skin;
+static GLint su_px, su_ldir, su_lcol;   /* forward: gl_begin/gl_light set these */
 
 static GLuint compile(GLenum t, const char *src) {
     GLuint s = glCreateShader(t);
@@ -51,11 +57,11 @@ static void gl_init(int32_t w, int32_t h) {
     const char *vs =
       "#version 300 es\n"
       "layout(location=0) in vec3 p; layout(location=1) in vec3 n;\n"
-      "uniform mat4 mvp, model; uniform float pass;\n"
+      "uniform mat4 mvp, model; uniform float pass; uniform vec2 px;\n"
       "out vec3 vn;\n"
       "void main(){ vn = normalize(mat3(model)*n);\n"
       "  vec4 c = mvp*vec4(p,1.0);\n"
-      "  if(pass>0.5){ vec4 d = mvp*vec4(n,0.0); c.xy += normalize(d.xy+1e-6)*0.0035*c.w; }\n"
+      "  if(pass>0.5){ vec4 d = mvp*vec4(n,0.0); c.xy += normalize(d.xy+1e-6)*px*c.w; }\n"
       "  gl_Position = c; }\n";
     const char *fs =
       "#version 300 es\nprecision highp float;\n" LIGHT_FS
@@ -66,7 +72,7 @@ static void gl_init(int32_t w, int32_t h) {
     u_mvp = glGetUniformLocation(g_prog, "mvp"); u_model = glGetUniformLocation(g_prog, "model");
     u_color = glGetUniformLocation(g_prog, "color"); u_pass = glGetUniformLocation(g_prog, "pass");
     u_alpha = glGetUniformLocation(g_prog, "alpha"); u_ldir = glGetUniformLocation(g_prog, "ldir");
-    u_lcol = glGetUniformLocation(g_prog, "lcol");
+    u_lcol = glGetUniformLocation(g_prog, "lcol"); u_px = glGetUniformLocation(g_prog, "px");
     glGenVertexArrays(MAX_MESH, g_vao); glGenBuffers(MAX_MESH, g_vbo);
     /* ground texture quad (OneMap tiles) */
     const char *gvs =
@@ -131,22 +137,29 @@ static void gl_begin(float r, float g, float b) {
     glViewport(0, 0, g_w, g_h);
     glClearColor(r, g, b, 1); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST); glEnable(GL_CULL_FACE);
-    glUseProgram(g_prog);
+    gl_use(g_prog);
+    glUniform2f(u_px, 2.0f * g_outline_px / (float)g_w, 2.0f * g_outline_px / (float)g_h);
+    if (g_skin) {
+        gl_use(g_skin);
+        glUniform2f(su_px, 2.0f * g_outline_skin_px / (float)g_w, 2.0f * g_outline_skin_px / (float)g_h);
+        gl_use(g_prog);
+    }
 }
 
 static void gl_light(float dx, float dy, float dz, float lr, float lg, float lb) {
     g_ldir[0] = dx; g_ldir[1] = dy; g_ldir[2] = dz; g_lcol[0] = lr; g_lcol[1] = lg; g_lcol[2] = lb;
+    gl_use(g_prog); glUniform3fv(u_ldir, 1, g_ldir); glUniform3fv(u_lcol, 1, g_lcol);
+    if (g_skin) { gl_use(g_skin); glUniform3fv(su_ldir, 1, g_ldir); glUniform3fv(su_lcol, 1, g_lcol); }
 }
 
 static void gl_front(int32_t flip) { glFrontFace(flip ? GL_CW : GL_CCW); }
 
 static void gl_draw(int32_t mesh, Mat_g *mvp, Mat_g *model, float r, float g, float b, float a, int32_t outline) {
-    glUseProgram(g_prog);
+    gl_use(g_prog);
     glBindVertexArray(g_vao[mesh]);
     glUniformMatrix4fv(u_mvp, 1, 0, mvp->m_g.e);
     glUniformMatrix4fv(u_model, 1, 0, model->m_g.e);
     glUniform3f(u_color, r, g, b);
-    glUniform3fv(u_ldir, 1, g_ldir); glUniform3fv(u_lcol, 1, g_lcol);
     glUniform1f(u_alpha, a);
     if (a < 0.99f) { glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); glDepthMask(GL_FALSE); }
     if (outline) { glUniform1f(u_pass, 1.0f); glCullFace(GL_FRONT); glDrawArrays(GL_TRIANGLES, 0, g_n[mesh]); }
@@ -156,7 +169,7 @@ static void gl_draw(int32_t mesh, Mat_g *mvp, Mat_g *model, float r, float g, fl
 
 static void gl_draw_ground(Mat_g *mvp) {
     if (!g_ground_tex) return;
-    glUseProgram(g_ground_prog);
+    gl_use(g_ground_prog);
     glUniformMatrix4fv(gu_mvp, 1, 0, mvp->m_g.e);
     glUniform3fv(gu_lcol, 1, g_lcol);
     glBindTexture(GL_TEXTURE_2D, g_ground_tex);
@@ -187,14 +200,14 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) {
           "#version 300 es\n"
           "layout(location=0) in vec3 p; layout(location=1) in vec3 n; layout(location=2) in float reg;\n"
           "layout(location=3) in vec4 bi; layout(location=4) in vec4 bw;\n"
-          "uniform mat4 mvp, model; uniform mat4 bones[20]; uniform float pass;\n"
+          "uniform mat4 mvp, model; uniform mat4 bones[20]; uniform float pass; uniform vec2 px;\n"
           "out vec3 vn; flat out int vreg;\n"
           "void main(){\n"
           "  mat4 s = bw.x*bones[int(bi.x)] + bw.y*bones[int(bi.y)] + bw.z*bones[int(bi.z)] + bw.w*bones[int(bi.w)];\n"
           "  vec4 q = s*vec4(p,1.0); vec3 nn = mat3(s)*n; vreg = int(reg+0.5);\n"
           "  vn = normalize(mat3(model)*nn);\n"
           "  vec4 c = mvp*q;\n"
-          "  if(pass>0.5){ vec4 d = mvp*vec4(nn,0.0); c.xy += normalize(d.xy+1e-6)*0.0028*c.w; }\n"
+          "  if(pass>0.5){ vec4 d = mvp*vec4(nn,0.0); c.xy += normalize(d.xy+1e-6)*px*c.w; }\n"
           "  gl_Position = c; }\n";
         const char *fs =
           "#version 300 es\nprecision highp float;\n" LIGHT_FS
@@ -205,7 +218,7 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) {
         su_mvp = glGetUniformLocation(g_skin, "mvp"); su_model = glGetUniformLocation(g_skin, "model");
         su_bones = glGetUniformLocation(g_skin, "bones"); su_pal = glGetUniformLocation(g_skin, "pal");
         su_pass = glGetUniformLocation(g_skin, "pass"); su_ldir = glGetUniformLocation(g_skin, "ldir");
-        su_lcol = glGetUniformLocation(g_skin, "lcol");
+        su_lcol = glGetUniformLocation(g_skin, "lcol"); su_px = glGetUniformLocation(g_skin, "px");
     }
     GLuint vbo, ebo;
     glGenVertexArrays(1, &g_skin_vao[id]); glBindVertexArray(g_skin_vao[id]);
@@ -223,13 +236,12 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) {
 
 static void gl_draw_skin(int32_t lod, Mat_g *mvp, Mat_g *model, sl_f32 bones, sl_f32 pal, int32_t outline) {
     if (!g_skin_n[lod]) return;
-    glUseProgram(g_skin);
+    gl_use(g_skin);
     glBindVertexArray(g_skin_vao[lod]);
     glUniformMatrix4fv(su_mvp, 1, 0, mvp->m_g.e);
     glUniformMatrix4fv(su_model, 1, 0, model->m_g.e);
     glUniformMatrix4fv(su_bones, 20, 0, bones.data);
     glUniform3fv(su_pal, 8, pal.data);
-    glUniform3fv(su_ldir, 1, g_ldir); glUniform3fv(su_lcol, 1, g_lcol);
     if (outline) { glUniform1f(su_pass, 1.0f); glCullFace(GL_FRONT); glDrawElements(GL_TRIANGLES, g_skin_n[lod], GL_UNSIGNED_SHORT, 0); }
     glUniform1f(su_pass, 0.0f); glCullFace(GL_BACK); glDrawElements(GL_TRIANGLES, g_skin_n[lod], GL_UNSIGNED_SHORT, 0);
 }
