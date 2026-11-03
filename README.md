@@ -13,6 +13,8 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 
 ## Parts
 
+<img src="docs/figures/architecture.svg" width="560" alt="Toybox architecture. The chat page and the daemon talk to each other. The daemon starts Claude Code. Claude Code calls the MCP server, and the MCP server writes the scene file. The daemon reads the scene file. Headless Chrome renders the scene file into frames, and ffmpeg makes the MP4 video from the frames and the voice. The static viewer opens the scene file.">
+
 | Folder | Content |
 | --- | --- |
 | `engine/` | The renderer and the vid utilities (motion words, marks, narration times), written in [Goose](https://aardappel.github.io/goose/). It compiles to C and then to WebAssembly with emcc. |
@@ -22,7 +24,7 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 | `assets/` | The model catalogue, the person mesh, the imported CC0 models (`assets/models/`) and their credits (`assets/ATTRIBUTION.md`). |
 | `tools/people/` | The script that turns the MakeHuman CC0 body into the person mesh. |
 | `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `node tools/assets/import.mjs`. |
-| `docs/` | The design (`design.md`), the file format (`scene-format.md`) and the spike results (`spikes-1-2.md`). |
+| `docs/` | The design (`design.md`), the file format (`scene-format.md`), the spike results (`spikes-1-2.md`) and the README figures (`figures/`). |
 | `evals/` | Scenes that the tools build, with their quality bars. Run `node evals/run.mjs`. `evals/narrated.mjs` is a short narrated example with its voice files in `evals/out/voice/`. |
 | `test/` | Tests. Run `node --test test/` |
 
