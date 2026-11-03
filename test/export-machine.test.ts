@@ -77,4 +77,13 @@ test('the daemon does each row of the export machine', async (tc: TestContext) =
       if (next !== 'done') { await finish(); await exported; }
     }
   }
+  const exported = post('/api/export', '{}');
+  while ((await phase()) === 'done') await new Promise((r) => setTimeout(r, 20));
+  const startBody = JSON.stringify({ scene: JSON.parse(sceneText), srt: '' });
+  const slowBody = new ReadableStream<Uint8Array>({ async start(c) { await new Promise((r) => setTimeout(r, 300)); c.enqueue(new TextEncoder().encode(startBody)); c.close(); } });
+  const slow = fetch(`${base}/export/start?name=sm&fps=30&token=${token}`, { method: 'POST', body: slowBody });
+  await new Promise((r) => setTimeout(r, 100));
+  const both = await Promise.all([slow, start()]);
+  assert.deepEqual(both.map((r) => r.status).sort(), [200, 409], 'two start data at the same time: one stream only');
+  await finish(); await exported;
 });

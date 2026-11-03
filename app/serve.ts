@@ -188,10 +188,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     if (p === '/export/start') {
       if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
       const j = job;
-      if (j.state.phase !== 'waiting') return send(res, 409, { error: 'The export has already started.' });
       let payload: unknown;
       try { payload = JSON.parse((await body(req)).toString('utf8')); }
       catch { return send(res, 400, { error: 'The export start data is not JSON.' }); }
+      if (j.state.phase !== 'waiting') return send(res, 409, { error: 'The export has already started.' });
       if (!isRecord(payload) || !isRecord(payload.scene)) return send(res, 400, { error: 'The export start data has no scene.' });
       let startScene: Scene;
       try { startScene = parseScene(payload.scene); }

@@ -20,7 +20,7 @@ final: done
 | waiting | start | | streaming | R1 | app/serve.ts:204 |
 | waiting | chunk | | - | R2 | app/serve.ts:213 |
 | waiting | end | | - | R2 | app/serve.ts:225 |
-| streaming | start | | - | R3 | app/serve.ts:191 |
+| streaming | start | | - | R3 | app/serve.ts:194 |
 | streaming | chunk | | streaming | R1 | app/serve.ts:217 |
 | streaming | end | | done | R1 R4 | app/serve.ts:265 |
 | * | finish | | done | R4 | app/serve.ts:73 |
