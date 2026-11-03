@@ -19,40 +19,42 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 | --- | --- |
 | `engine/` | The renderer and the vid utilities (motion words, marks, narration times), written in [Goose](https://aardappel.github.io/goose/). It compiles to C and then to WebAssembly with emcc. |
 | `core/` | The scene schema, the checks, the model kit, the MCP server and the guides for the agent. |
-| `app/serve.mjs` | The local daemon. It serves the page, runs the chat agent and renders pictures and videos in a headless browser. |
+| `app/serve.ts` | The local daemon. It serves the page, runs the chat agent and renders pictures and videos in a headless browser. |
 | `web/` | The chat page (`app.html`), the static viewer (`viewer.html`), the MRT demo page (`demo.html`), the export code and the style. |
 | `assets/` | The model catalogue, the person mesh, the imported CC0 models (`assets/models/`) and their credits (`assets/ATTRIBUTION.md`). |
 | `tools/people/` | The script that turns the MakeHuman CC0 body into the person mesh. |
-| `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `node tools/assets/import.mjs`. |
+| `tools/assets/` | The list of imported CC0 models (`sources.json`) and the import script. Run `bun tools/assets/import.ts`. |
 | `docs/` | The design (`design.md`), the file format (`scene-format.md`), the spike results (`spikes-1-2.md`) and the README figures (`figures/`). |
-| `evals/` | Scenes that the tools build, with their quality bars. Run `node evals/run.mjs`. `evals/narrated.mjs` is a short narrated example with its voice files in `evals/out/voice/`. |
-| `test/` | Tests. Run `node --test test/` |
+| `evals/` | Scenes that the tools build, with their quality bars. Run `bun evals/run.ts`. `evals/narrated.ts` is a short narrated example with its voice files in `evals/out/voice/`. |
+| `test/` | Tests. Run `bun test test/` |
+| `scripts/` | The local check (`bun run check`), the process replay (`scripts/replay.ts`), the web page budget and `build-web.ts`. |
 
 ## Build and run
 
+0. Install [Bun](https://bun.sh) and run `bun install`.
 1. Install emsdk (and the Goose compiler if you change `engine/scene.goose` or `engine/vid.goose`). Then run `source emsdk_env.sh`.
 2. Build the engine: `engine/build.sh engine-build`. The Goose-generated `engine/scene.c`, `engine/scene.h`, `engine/vid.c` and `engine/vid.h` are in the repo. Set `GOOSE=/path/to/goose` to regenerate them from the `.goose` files. The script also builds `web/vid.wasm` (the motion words, the raised and lowered text and the narration times). This file is in the repo, so the tests and the tools in `core/` run without emsdk.
-3. Start the daemon: `node app/serve.mjs --scene my.toybox.json --engine engine-build`
+3. Start the daemon: `bun app/serve.ts --scene my.toybox.json --engine engine-build`
 4. Open the address that the daemon prints. It has a secret token and works on 127.0.0.1 only.
 
 The chat uses the `claude` command with only the Toybox MCP server. You need ffmpeg for the MP4 export. You need Google Chrome for pictures and videos.
 
 The voice runs on your computer, with no cloud and no account. It is Kokoro-82M (voice `af_heart`) through kokoro-js 1.2.1 on the CPU. The first `make_voice` installs it into `~/.cache/toybox/voice` with npm and downloads the model from Hugging Face. This needs 736 MB of disk: 416 MB of packages (onnxruntime-node is 211 MB) and the 326 MB model. On the maker laptop the install and the first sentence took about 56 s. A scene without narration needs none of it.
 
-For the static viewer, host the `web/`, `assets/` and engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
+For the static viewer, run `bun scripts/build-web.ts` (it writes `web/*.js` from `web/*.ts`), then host the `web/`, `assets/` and engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
 
 ## Demos
 
 The MRT demo page (`web/demo.html`) is a static showcase: it plays one narrated scene, lists the steps of boarding beside it, and names the sources and credits below. Build the scene first:
 
 ```
-node evals/mrt.mjs
+bun evals/mrt.ts
 ```
 
 The script writes the scene file, its `.srt` captions and the voice files under `web/scenes/mrt/`. Then host `web/`, `assets/` and the engine files together. The daemon does this, for example:
 
 ```
-node app/serve.mjs --scene web/scenes/mrt/mrt.toybox.json --engine engine-build --port 8831
+bun app/serve.ts --scene web/scenes/mrt/mrt.toybox.json --engine engine-build --port 8831
 ```
 
 Open `http://127.0.0.1:8831/demo.html` (a static page needs no token). Add `?t=12.5` to open the page paused at 12.5 seconds, for screenshots and checks, or `?play=1` to start the scene at once.
@@ -100,3 +102,7 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 | Voice files in `evals/out/voice/` | Made with Kokoro-82M (Apache 2.0) |
 
 Excluded models: Polyfork, SimReady and Quaternius. Their licences do not fit this project.
+
+## Checks
+
+`bun run check` is the local check. It runs `tsc --noEmit`, a scan that fails on `any`, `as` casts, `!` and `@ts-` directives without an `allow-unsafe: reason` on the line, the gzip budget of each web page, knip (dead code) and the tests. It then replays the inputs of the tests (`TOYBOX_REPLAY_CAPTURE`) through `runTool` on `main` and on your working tree, and fails on any difference. After a change that must change the output, read the diff and run `bun scripts/replay.ts --accept`.

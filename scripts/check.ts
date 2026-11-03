@@ -1,0 +1,38 @@
+import { spawnSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { findEscapes } from './escapes.ts';
+import { measurePages } from './budget.ts';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const failures: string[] = [];
+
+function step(name: string, cmd: string, args: string[]): void {
+  console.log(`\n== ${name}`);
+  const r = spawnSync(cmd, args, { cwd: root, stdio: 'inherit' });
+  if (r.status !== 0) failures.push(name);
+}
+
+step('tsc --noEmit', resolve(root, 'node_modules/.bin/tsc'), ['--noEmit']);
+
+console.log('\n== escape hatches (any, as, !, ts directives need an allow-unsafe: reason on the line)');
+const tracked = spawnSync('git', ['-C', root, 'ls-files', '*.ts'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+const escapes = tracked.flatMap((f) => findEscapes(resolve(root, f)));
+for (const e of escapes) console.log(`${e.file.slice(root.length + 1)}:${e.line}: ${e.kind}`);
+if (escapes.length > 0) failures.push('escape hatches');
+
+console.log('\n== web page budget');
+for (const p of measurePages(resolve(root, 'web'))) {
+  const over = p.totalKb > p.budgetKb;
+  console.log(`${over ? 'FAIL' : 'ok  '} ${p.page}: ${p.totalKb.toFixed(1)} of ${p.budgetKb} KB gzip`);
+  if (over) failures.push(`budget ${p.page}`);
+}
+
+step('dead code (knip)', resolve(root, 'node_modules/.bin/knip'), []);
+step('tests and process replay against main', process.execPath, [resolve(root, 'scripts/replay.ts'), '--capture', '--base', process.env['TOYBOX_REPLAY_BASE'] ?? 'main']);
+
+if (failures.length > 0) {
+  console.log(`\nFAILED: ${failures.join(', ')}`);
+  process.exit(1);
+}
+console.log('\nAll checks passed.');
