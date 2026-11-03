@@ -1,8 +1,8 @@
 // The MRT demo page: a static showcase of one narrated Toybox scene, "How to board an MRT".
 // The page uses the same viewer and controls as web/viewer.html and adds a "How to board" step
 // list from the scene chapters, a sources list and a loading state. It needs no server, no
-// account and no daemon: host web/, assets/ and the engine files together. Build the scene with
-// `bun evals/mrt.ts`.
+// account and no daemon: run `bun scripts/build-web.ts`, then host dist/web/, assets/ and the
+// engine files together. Build the scene with `bun evals/mrt.ts`.
 import { createViewer, type Viewer } from './viewer.js';
 import type { Scene } from './types.js';
 import { byId, htmlById, messageOf } from './dom.js';
@@ -149,7 +149,7 @@ async function start(): Promise<void> {
 
     const sceneUrl = new URL(SCENE_URL, location.href);
     const response = await fetch(sceneUrl);
-    if (!response.ok) throw new Error(`The scene did not load (HTTP ${response.status} from ${sceneUrl.pathname}). Build it with bun evals/mrt.ts, then host web/, assets/ and the engine files together.`);
+    if (!response.ok) throw new Error(`The scene did not load (HTTP ${response.status} from ${sceneUrl.pathname}). Build it with bun evals/mrt.ts, run bun scripts/build-web.ts, then host dist/web/, assets/ and the engine files together.`);
     const scene = upgradeScene(await response.json());
     if (!Array.isArray(scene.objects)) throw new Error('This is not a Toybox scene file.');
 

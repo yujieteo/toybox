@@ -14,6 +14,7 @@ import { FORMAT, parseScene, upgradeScene } from '../web/format.js';
 import { encoderConfig } from '../web/export.js';
 import type { Scene } from '../web/types.js';
 import { isRecord, messageOf } from '../web/dom.js';
+import type { ExportState, Streaming } from './export-job.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -43,14 +44,7 @@ const authed = (req: IncomingMessage, u: URL): boolean => (req.headers['x-toybox
 // ---- jobs in a headless browser. A job page posts its result back to this daemon.
 // The answer of a job: an error text, or the data of the result.
 interface JobResult { error?: string; [key: string]: unknown }
-// The states of a job: a picture job, an export that waits for /export/start, and an export
-// that streams video data. Only a streaming export has the files and the scene.
-interface Streaming {
-  phase: 'streaming';
-  base: string; scene: Scene; fps: number; h264: fs.WriteStream; chain: Promise<void>;
-  writeError: string | null; keepArtifacts: boolean;
-}
-type ExportState = { phase: 'waiting' } | Streaming;
+// A job is a picture job or an export job (app/export.sm.md).
 type Job = { resolve?: (r: JobResult) => void } & ({ kind: 'frame' } | { kind: 'export'; state: ExportState });
 let job: Job | null = null;
 let previewSeq = 0;
@@ -194,6 +188,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     if (p === '/export/start') {
       if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
       const j = job;
+      if (j.state.phase !== 'waiting') return send(res, 409, { error: 'The export has already started.' });
       let payload: unknown;
       try { payload = JSON.parse((await body(req)).toString('utf8')); }
       catch { return send(res, 400, { error: 'The export start data is not JSON.' }); }
