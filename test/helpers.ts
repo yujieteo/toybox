@@ -1,5 +1,6 @@
 // Typed helpers for the tests: they turn untyped data (command results, JSON files, child output) into types at one place.
 import assert from 'node:assert/strict';
+import { isRecord } from '../web/dom.js';
 
 export interface ErrInfo { code: string; message: string; path?: string }
 
@@ -11,11 +12,7 @@ export function must<T>(v: T | undefined | null, what = 'value'): T {
 
 // Reads outside data (a command result, a JSON file) as the type T. The JSON round trip is the one typed boundary.
 export function view<T>(v: unknown): T {
-  return JSON.parse(JSON.stringify(v));
-}
-
-export function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
+  return JSON.parse(JSON.stringify(v)) as T; // allow-unsafe: a test reads data that it made or a fixture, the assertions check it
 }
 
 // The result of a successful command, read as T. It fails the test when the command failed.

@@ -1,5 +1,5 @@
 // Generator for assets/catalogue.json: the Toybox kit, built from box, cylinder, sphere and wedge.
-// Run: node core/kit.ts   (writes assets/catalogue.json)
+// Run: bun core/kit.ts   (writes assets/catalogue.json)
 // It also adds the imported CC0 models in assets/models/index.json (made by tools/assets/import.ts).
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

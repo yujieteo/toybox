@@ -6,7 +6,7 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 ### Changed
 
-- All project JavaScript is strict TypeScript (`strict`, `noUncheckedIndexedAccess`) and runs with Bun. The daemon transpiles `web/*.ts` for the browser. `bun scripts/build-web.ts` writes `web/*.js` for a static host.
+- All project JavaScript is strict TypeScript (`strict`, `noUncheckedIndexedAccess`) and runs with Bun. The daemon transpiles `web/*.ts` for the browser. `bun scripts/build-web.ts` writes `dist/web/` for a static host.
 - `bun run check` runs the type check, the escape-hatch scan, the web page budget, the dead-code check, the tests and a process replay against `main`.
 
 ### Added

@@ -2,7 +2,7 @@
 // outline of facts with their sources, a local voice that sets the beats, motion words on cues of
 // the narration, the narrator and a label with raised text. The script uses only the tool commands.
 // Run it directly to make the voice files that are missing (the first run installs the voice):
-//   node evals/narrated.ts
+//   bun evals/narrated.ts
 import { fileURLToPath } from 'node:url';
 import { Builder, finish, printReport, endOf, OUT_DIR } from './lib.ts';
 import type { Args, FinishedReport } from './lib.ts';

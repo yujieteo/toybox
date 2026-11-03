@@ -41,7 +41,7 @@ The chat uses the `claude` command with only the Toybox MCP server. You need ffm
 
 The voice runs on your computer, with no cloud and no account. It is Kokoro-82M (voice `af_heart`) through kokoro-js 1.2.1 on the CPU. The first `make_voice` installs it into `~/.cache/toybox/voice` with npm and downloads the model from Hugging Face. This needs 736 MB of disk: 416 MB of packages (onnxruntime-node is 211 MB) and the 326 MB model. On the maker laptop the install and the first sentence took about 56 s. A scene without narration needs none of it.
 
-For the static viewer, run `bun scripts/build-web.ts` (it writes `web/*.js` from `web/*.ts`), then host the `web/`, `assets/` and engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
+For the static viewer, run `bun scripts/build-web.ts` (it writes `dist/web/`: the `web/` files, with each `web/*.ts` as a `.js` file), then host `dist/web/`, `assets/` and the engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
 
 ## Demos
 

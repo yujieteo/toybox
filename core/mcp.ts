@@ -1,11 +1,12 @@
 // Stdio MCP server (JSON-RPC 2.0, one JSON message per line).
-// Run: node core/mcp.ts --scene PATH [--render-url URL]
+// Run: bun core/mcp.ts --scene PATH [--render-url URL]
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { toolSpecs } from './commands.ts';
-import { callTool, errorMessage } from './session.ts';
+import { callTool } from './session.ts';
+import { isRecord, messageOf } from '../web/dom.js';
 import { VERSION } from './version.ts';
 
 export const PROTOCOL = '2025-06-18';
@@ -16,7 +17,16 @@ export interface ToolReply { content: Content[]; isError?: boolean }
 export interface RpcMessage { id?: string | number | null; method?: string; params?: { name?: string; arguments?: unknown } }
 export interface RpcResponse { jsonrpc: '2.0'; id: string | number | null | undefined; result?: unknown; error?: { code: number; message: string } }
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+// The parts of a JSON-RPC message that handle reads. Anything that is not an object is not a message.
+export function toRpcMessage(x: unknown): RpcMessage | null {
+  if (!isRecord(x)) return null;
+  const { id, method, params } = x;
+  const msg: RpcMessage = {};
+  if (id === null || typeof id === 'string' || typeof id === 'number') msg.id = id;
+  if (typeof method === 'string') msg.method = method;
+  if (isRecord(params)) msg.params = { ...(typeof params.name === 'string' ? { name: params.name } : {}), arguments: params.arguments };
+  return msg;
+}
 
 export function parseArgs(argv: string[]): McpOpts {
   const o: McpOpts = {};
@@ -50,7 +60,7 @@ async function toolCall(opts: McpOpts, name: string, args: unknown): Promise<Too
       } catch { /* a missing picture is not an MCP error: the client still gets the path */ }
       return { content };
     } catch (e) {
-      return text({ errors: [{ code: 'render_failed', message: `Cannot reach the render daemon at ${opts.renderUrl}: ${errorMessage(e)}` }] }, true);
+      return text({ errors: [{ code: 'render_failed', message: `Cannot reach the render daemon at ${opts.renderUrl}: ${messageOf(e)}` }] }, true);
     }
   }
   return text(res.result);
@@ -69,7 +79,7 @@ export async function handle(opts: McpOpts, msg: RpcMessage): Promise<RpcRespons
     case 'tools/list': return reply({ tools: toolSpecs });
     case 'tools/call': {
       if (!params?.name || !toolSpecs.some((t) => t.name === params.name)) return err(-32602, `Unknown tool: ${params?.name}`);
-      try { return reply(await toolCall(opts, params.name, params.arguments)); } catch (e) { return reply({ content: [{ type: 'text', text: JSON.stringify({ errors: [{ code: 'internal', message: errorMessage(e) }] }) }], isError: true }); }
+      try { return reply(await toolCall(opts, params.name, params.arguments)); } catch (e) { return reply({ content: [{ type: 'text', text: JSON.stringify({ errors: [{ code: 'internal', message: messageOf(e) }] }) }], isError: true }); }
     }
     default: return err(-32601, `Method not found: ${method}`);
   }
@@ -77,14 +87,16 @@ export async function handle(opts: McpOpts, msg: RpcMessage): Promise<RpcRespons
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const opts = parseArgs(process.argv.slice(2));
-  if (!opts.scene) { process.stderr.write('Usage: node core/mcp.ts --scene PATH [--render-url URL]\n'); process.exit(2); }
+  if (!opts.scene) { process.stderr.write('Usage: bun core/mcp.ts --scene PATH [--render-url URL]\n'); process.exit(2); }
   let chain = Promise.resolve();
   const rl = createInterface({ input: process.stdin });
   rl.on('line', (line) => {
     if (!line.trim()) return;
     chain = chain.then(async () => {
-      let msg;
-      try { msg = JSON.parse(line); } catch { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }) + '\n'); return; }
+      let parsed: unknown;
+      try { parsed = JSON.parse(line); } catch { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }) + '\n'); return; }
+      const msg = toRpcMessage(parsed);
+      if (!msg) { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid Request' } }) + '\n'); return; }
       const out = await handle(opts, msg);
       if (out) process.stdout.write(JSON.stringify(out) + '\n');
     });

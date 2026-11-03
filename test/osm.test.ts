@@ -7,11 +7,11 @@ import { join } from 'node:path';
 import { fetchBuildings, parseOverpass, toMapBlock, writeOdbl, tileXY, tileUrl, project, buildingHeight, OVERPASS_URL } from '../core/osm.ts';
 import { validate, newScene } from '../core/scene.ts';
 import type { OverpassResult, FetchLike } from '../core/osm.ts';
-import { must } from './helpers.ts';
+import { must, view } from './helpers.ts';
 
 interface Back { header: { license: string; credit: string }; osm: { buildings: unknown[] } }
 
-const sample: OverpassResult = JSON.parse(readFileSync(new URL('./fixtures/overpass-sample.json', import.meta.url), 'utf8'));
+const sample = view<OverpassResult>(JSON.parse(readFileSync(new URL('./fixtures/overpass-sample.json', import.meta.url), 'utf8')));
 const origin = { lat: 1.3068, lon: 103.8512 };
 
 test('projection: x east, z south, in metres', () => {
@@ -52,7 +52,7 @@ test('fetchBuildings sends the Overpass query', async () => {
 test('writeOdbl keeps the licence and the credit with the data', () => {
   const p = join(mkdtempSync(join(tmpdir(), 'tbosm-')), 'osm.json');
   const f = writeOdbl(p, parseOverpass(sample, origin), origin);
-  const back: Back = JSON.parse(readFileSync(p, 'utf8'));
+  const back = view<Back>(JSON.parse(readFileSync(p, 'utf8')));
   assert.equal(back.header.license, 'ODbL 1.0'); assert.equal(back.header.credit, '© OpenStreetMap contributors');
   assert.equal(back.osm.buildings.length, 3); assert.equal(f.header.license, 'ODbL 1.0');
 });
@@ -72,7 +72,7 @@ test('live Overpass call (skipped when the network fails)', { timeout: 30000 }, 
 });
 
 test('recorded real Overpass answer (OpenStreetMap data, ODbL 1.0)', () => {
-  const rec: OverpassResult = JSON.parse(readFileSync(new URL('./fixtures/overpass-recorded.json', import.meta.url), 'utf8'));
+  const rec = view<OverpassResult>(JSON.parse(readFileSync(new URL('./fixtures/overpass-recorded.json', import.meta.url), 'utf8')));
   const b = parseOverpass(rec, origin);
   assert.ok(b.length > 3);
   for (const x of b) { assert.ok(x.height > 0); assert.ok(x.poly.length >= 3); assert.ok(x.poly.every(([px, pz]) => Math.hypot(px, pz) < 300)); }

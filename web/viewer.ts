@@ -4,6 +4,7 @@
 // finds it by that id).
 import { poseAt, seedOf, marks } from './vid.js';
 import { context2d, isRecord } from './dom.js';
+import { isCatalogue } from './format.js';
 
 // ---------------------------------------------------------------- types
 import type { Vec2, Vec3, Scene, SceneObject, Model, Outfit, Catalogue, Motion, OsmBuilding, SceneMap, TrackValue } from './types.js';
@@ -27,10 +28,6 @@ function meshOf(m: Model): string | undefined { return typeof m.mesh === 'string
 function groupsOf(m: Model): Group[] {
   const g = m.groups;
   return Array.isArray(g) ? g.filter((x): x is Group => isRecord(x) && typeof x.color === 'string') : [];
-}
-function isCatalogue(x: unknown): x is Catalogue {
-  return isRecord(x) && Array.isArray(x.models) && x.models.every(m => isRecord(m) && typeof m.id === 'string' && Array.isArray(m.size))
-    && (x.outfits === undefined || Array.isArray(x.outfits));
 }
 interface Skeleton { bones: { name: string; parent: number; head: Vec3 }[] }
 function isSkeleton(x: unknown): x is Skeleton {

@@ -1,6 +1,7 @@
 // The version of the scene file format (the `toybox` field) and the upgrade of older files.
 // Pure, so the viewer and core/scene.ts share it. Format: docs/scene-format.md
-import type { Scene } from './types.js';
+import type { Catalogue, Scene } from './types.js';
+import { isRecord } from './dom.js';
 
 export const FORMAT = 1;
 
@@ -9,7 +10,6 @@ export const FORMAT = 1;
 export type Upgrades = Record<number, (scene: Scene) => Scene>;
 export const UPGRADES: Upgrades = {};
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const ARRAYS = ['objects', 'tracks', 'camera', 'chapters', 'captions', 'callouts', 'credits'];
 
 // The boundary between a file and the Scene type: the parts that every reader relies on are checked
@@ -36,4 +36,10 @@ export function upgradeScene(input: unknown, upgrades: Upgrades = UPGRADES, form
     s = { ...up(s), toybox: n + 1 };
   }
   return s;
+}
+
+// The boundary between a catalogue file and the Catalogue type: each model has an id and a size.
+export function isCatalogue(x: unknown): x is Catalogue {
+  return isRecord(x) && Array.isArray(x.models) && x.models.every(m => isRecord(m) && typeof m.id === 'string' && Array.isArray(m.size))
+    && (x.outfits === undefined || Array.isArray(x.outfits));
 }

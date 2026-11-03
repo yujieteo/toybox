@@ -1,6 +1,6 @@
 // The Toybox daemon. It serves the page, holds the scene file, runs the chat agent through the
 // MCP server, and renders pictures and videos with a headless browser.
-// Run: node app/serve.ts --scene PATH --engine BUILD_DIR [--port 8820]
+// Run: bun app/serve.ts --scene PATH --engine BUILD_DIR [--port 8820]
 // It listens on 127.0.0.1 only. Every /api and /export call needs the token that it prints.
 import http from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -43,12 +43,15 @@ const authed = (req: IncomingMessage, u: URL): boolean => (req.headers['x-toybox
 // ---- jobs in a headless browser. A job page posts its result back to this daemon.
 // The answer of a job: an error text, or the data of the result.
 interface JobResult { error?: string; [key: string]: unknown }
-interface Job {
-  kind: 'export' | 'frame';
-  resolve?: (r: JobResult) => void;
-  base?: string; scene?: Scene; h264?: fs.WriteStream; chain?: Promise<void>;
-  writeError?: string | null; keepArtifacts?: boolean; cfg?: { name: string; fps: number };
+// The states of a job: a picture job, an export that waits for /export/start, and an export
+// that streams video data. Only a streaming export has the files and the scene.
+interface Streaming {
+  phase: 'streaming';
+  base: string; scene: Scene; fps: number; h264: fs.WriteStream; chain: Promise<void>;
+  writeError: string | null; keepArtifacts: boolean;
 }
+type ExportState = { phase: 'waiting' } | Streaming;
+type Job = { resolve?: (r: JobResult) => void } & ({ kind: 'frame' } | { kind: 'export'; state: ExportState });
 let job: Job | null = null;
 let previewSeq = 0;
 
@@ -58,8 +61,8 @@ function removeProfile(dir: string): void {
 }
 // Remove the files of a failed job. A good export with the same name keeps its .mp4.
 function cleanupJobFiles(j: Job | null): void {
-  if (!j || !j.base || j.keepArtifacts) return;
-  for (const ext of ['.h264', '.srt', '.toybox.json']) { try { fs.rmSync(j.base + ext, { force: true }); } catch { /* already gone */ } }
+  if (!j || j.kind !== 'export' || j.state.phase !== 'streaming' || j.state.keepArtifacts) return;
+  for (const ext of ['.h264', '.srt', '.toybox.json']) { try { fs.rmSync(j.state.base + ext, { force: true }); } catch { /* already gone */ } }
 }
 function runBrowser(query: string, timeoutMs: number, mine: Job): Promise<JobResult> {
   const profile = fs.mkdtempSync(path.join(outDir, '.profile-'));
@@ -87,7 +90,7 @@ function runBrowser(query: string, timeoutMs: number, mine: Job): Promise<JobRes
 }
 async function oneJob(kind: 'export' | 'frame', query: string, timeoutMs: number): Promise<JobResult> {
   if (job) return { error: 'Another render or export is running. Wait for it to end.' };
-  const mine: Job = { kind };
+  const mine: Job = kind === 'export' ? { kind, state: { phase: 'waiting' } } : { kind };
   job = mine;
   try {
     const r = await runBrowser(query, timeoutMs, mine);
@@ -199,49 +202,45 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       try { startScene = parseScene(payload.scene); }
       catch (e) { return send(res, 400, { error: 'The export start data has no valid scene. ' + messageOf(e) }); }
       const name = (String(u.searchParams.get('name') || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
-      j.cfg = { name, fps: Number(u.searchParams.get('fps') || 30) };
-      if (!(j.cfg.fps > 0)) j.cfg.fps = 30;
-      j.base = path.join(outDir, name);
-      j.scene = startScene;          // the exact scene that the page renders and encodes
-      j.chain = Promise.resolve();
-      j.writeError = null;
-      fs.writeFileSync(j.base + '.srt', String(payload.srt || ''));
-      fs.writeFileSync(j.base + '.toybox.json', JSON.stringify(startScene, null, 2));
-      const stream = fs.createWriteStream(j.base + '.h264');
-      j.h264 = stream;
-      stream.on('error', (e) => { j.writeError = messageOf(e); });
+      const fps = Number(u.searchParams.get('fps') || 30);
+      const base = path.join(outDir, name);
+      // startScene is the exact scene that the page renders and encodes.
+      const st: Streaming = { phase: 'streaming', base, scene: startScene, fps: fps > 0 ? fps : 30, h264: fs.createWriteStream(base + '.h264'), chain: Promise.resolve(), writeError: null, keepArtifacts: false };
+      j.state = st;
+      st.h264.on('error', (e) => { st.writeError = messageOf(e); });
+      fs.writeFileSync(base + '.srt', String(payload.srt || ''));
+      fs.writeFileSync(base + '.toybox.json', JSON.stringify(startScene, null, 2));
       return send(res, 200, { ok: true });
     }
     if (p === '/export/chunk') {
       if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
-      const j = job;
+      const j = job.state;
+      if (j.phase !== 'streaming') return send(res, 409, { error: 'The export has not started.' });
       if (j.writeError) return send(res, 500, { error: 'The video data could not be written: ' + j.writeError });
       const b = await body(req);
       const out = j.h264;
-      if (!out) throw new Error('The export has not started.');
-      j.chain = (j.chain ?? Promise.resolve()).then(() => new Promise<void>((ok, fail) => out.write(b, (e) => (e ? fail(e) : ok()))));
+      j.chain = j.chain.then(() => new Promise<void>((ok, fail) => out.write(b, (e) => (e ? fail(e) : ok()))));
       try { await j.chain; }
       catch (e) { j.writeError = messageOf(e); j.chain = Promise.resolve(); return send(res, 500, { error: 'The video data could not be written: ' + j.writeError }); }
       return send(res, 200, { ok: true });
     }
     if (p === '/export/end') {
       if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
-      const j = job;
+      const mine = job, j = job.state;
+      if (j.phase !== 'streaming') return send(res, 409, { error: 'The export has not started.' });
       // Every terminal answer must resolve the job, or /api/export waits for the timeout.
       const finishError = (code: number, text: string, keep: boolean): void => {
-        j.keepArtifacts = !!keep;
-        const done = j.resolve;
+        j.keepArtifacts = keep;
+        const done = mine.resolve;
         send(res, code, { error: text });
         if (done) done({ error: text });
       };
-      const h264 = j.h264, jscene = j.scene, cfg = j.cfg, jbase = j.base;
-      if (!j.chain || !h264 || !jscene || !cfg || !jbase) throw new Error('The export has not started.');
+      const { h264, scene: jscene, fps, base: jbase } = j;
       await j.chain.catch(() => {});
       await new Promise<void>((ok) => { h264.on('close', () => ok()); h264.on('error', () => ok()); h264.end(); });
       if (j.writeError) return finishError(500, 'The video data could not be written: ' + j.writeError, false);
       const voice: VoiceBeat[] = [];
       for (const n of jscene.narration || []) if (n.voice && /^voice\/[0-9a-f]{12}\.wav$/.test(n.voice)) voice.push({ voice: n.voice, start: n.start ?? 0 });
-      const fps = cfg.fps;
       const frames = Number(u.searchParams.get('frames') || 0);
       const seconds = frames > 0 ? frames / fps : 0;
       const ffArgs = ['-y', '-loglevel', 'error', '-r', String(fps), '-f', 'h264', '-i', jbase + '.h264', ...soundArgs(voice)];
@@ -267,7 +266,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       try { odbl = writeSceneOdbl(jscene, outDir); } catch { /* the MP4 keeps the credits; the ODbL copy is for reuse */ }
       const info = Object.fromEntries(u.searchParams); delete info.token;
       Object.assign(info, { mp4: jbase + '.mp4', srt: jbase + '.srt', scene: jbase + '.toybox.json' }, odbl ? { odbl } : {});
-      const done = j.resolve;
+      const done = mine.resolve;
       send(res, 200, info);
       if (done) done(info);
       return;

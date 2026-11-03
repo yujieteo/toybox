@@ -44,7 +44,7 @@ test('import_osm stores real footprints, turns them, and writes the ODbL data fi
   const map = must(s.map), osm = must(map.osm);
   assert.equal(osm.attribution, '© OpenStreetMap contributors');
   assert.equal(osm.dataFile, 'x.osm.json'); assert.equal(map.bearing, 35);
-  const file: OdblFile = JSON.parse(readFileSync(join(dir, 'x.osm.json'), 'utf8'));
+  const file = view<OdblFile>(JSON.parse(readFileSync(join(dir, 'x.osm.json'), 'utf8')));
   assert.equal(file.header.license, 'ODbL 1.0'); assert.equal(file.bearing, 35);
   assert.equal(file.osm.buildings.length, osm.buildings.length);
   // Race Course Road runs along z after the turn: no footprint covers its centre line.

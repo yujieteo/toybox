@@ -1,18 +1,14 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isRecord } from '../web/dom.js';
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 type RunTool = (scene: unknown, name: string, args: unknown, ctx: unknown) => unknown;
 
 const [treeArg, inputsArg, outputsArg] = process.argv.slice(2);
 if (!treeArg || !inputsArg || !outputsArg) throw new Error('Usage: bun scripts/replay-worker.ts TREE_ROOT INPUTS_DIR OUTPUTS_DIR');
 const tree = resolve(treeArg);
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
 
 async function loadRunTool(): Promise<RunTool> {
   for (const ext of ['ts', 'mjs']) {
@@ -47,10 +43,12 @@ for (const file of readdirSync(inputsArg).filter((f) => f.endsWith('.json')).sor
   const ctx: Record<string, unknown> = isRecord(call['ctx']) ? { ...call['ctx'] } : {};
   for (const key of ['sceneDir', 'exportDir']) if (key in ctx) ctx[key] = sandboxDir(ctx[key], scratch, key);
   if (typeof ctx['odblPath'] === 'string') ctx['odblPath'] = join(sandboxDir(undefined, scratch, 'odbl'), 'scene.osm.json');
+  const args = isRecord(call['args']) ? { ...call['args'] } : call['args'];
+  if (isRecord(args) && typeof args['path'] === 'string' && isAbsolute(args['path'])) args['path'] = join(sandboxDir(undefined, scratch, 'path'), basename(args['path']));
   const scene = call['scene'];
-  let outcome: Json;
+  let outcome: unknown;
   try {
-    const result: unknown = runTool(scene, call['name'], call['args'], ctx);
+    const result: unknown = runTool(scene, call['name'], args, ctx);
     outcome = JSON.parse(JSON.stringify({ result: result ?? null, scene: scene ?? null }));
   } catch (e) {
     outcome = { threw: e instanceof Error ? e.message.replaceAll(scratch, '<tmp>') : String(e) };

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { commands as C } from '../core/commands.ts';
 import { newScene, blockedViews, loadCatalogue } from '../core/scene.ts';
 import type { Scene, Outfit } from '../web/types.ts';
-import { must as need, okResult, firstError, isOk } from './helpers.ts';
+import { must as need, okResult, firstError, isOk, view } from './helpers.ts';
 
 // The result of a successful command, as the type T.
 const must = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
@@ -91,7 +91,7 @@ test('outfits: listed with sources, on known bones, and checked on place', () =>
   const { outfits } = must<{ outfits: Outfit[] }>(C.list_models(s, {}));
   assert.deepEqual(outfits.map((f) => f.id).sort(), ['police', 'police-shield', 'soc-riot']);
   assert.ok(outfits.every((f) => /^https:\/\//.test(need(f.source))));
-  const skel: { bones: { name: string }[] } = JSON.parse(readFileSync(new URL('../assets/people/skel.json', import.meta.url), 'utf8'));
+  const skel = view<{ bones: { name: string }[] }>(JSON.parse(readFileSync(new URL('../assets/people/skel.json', import.meta.url), 'utf8')));
   const bones = new Set(skel.bones.map((b) => b.name));
   const cat = loadCatalogue();
   const all = need(cat.outfits);

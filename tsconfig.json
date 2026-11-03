@@ -16,5 +16,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["app", "core", "docs", "evals", "scripts", "test", "tools", "web"]
+  "include": ["types", "app", "core", "docs", "evals", "scripts", "test", "tools", "web"]
 }

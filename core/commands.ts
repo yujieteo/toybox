@@ -8,8 +8,9 @@ import { newScene, validate, loadCatalogue, objectBounds, srt, saveScene, trackO
 import { retime, cueTime, cued, narrationLength } from './narration.ts';
 import { voiceFile, voiceSeconds } from './voice.ts';
 import { captureCall } from './capture.ts';
+import { isRecord, messageOf } from '../web/dom.js';
 import { rotYaw } from './geom.ts';
-import type { Scene, SceneObject, Vec3, Cue, Catalogue, Model, TrackKey, CameraKey, Chapter, Callout, NarrationBeat, Motion, Ease, Channel, Look, Ground, Shot } from '../web/types.js';
+import type { Scene, SceneObject, SceneMap, Vec3, Cue, Catalogue, Model, TrackKey, CameraFrame, Chapter, Callout, NarrationBeat, Motion, Ease, Channel, Look, Ground, Shot } from '../web/types.js';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.ts';
 
 export interface ToolError { code: string; message: string; path?: string }
@@ -50,19 +51,15 @@ const D = Math.PI / 180;
 const r2 = (v: number): number => Math.round(v * 1000) / 1000;
 const r3 = (v: readonly number[]): Vec3 => [r2(v[0] ?? 0), r2(v[1] ?? 0), r2(v[2] ?? 0)];
 const ceilMs = (v: number): number => Math.ceil(v * 1000 - 1e-6) / 1000;
-const errText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 function nth<T>(arr: readonly T[], i: number): T {
   const v = arr[i];
   if (v === undefined) throw new Error(`Index ${i} is out of range.`);
   return v;
 }
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isXZ2 = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number');
 type XZ = [number, number] | Vec3;
 type Timed<T> = T & { t: number };
 interface Cam { eye: Vec3; target: Vec3; fov?: number }
-// CameraFrame.view is typed string in web/types.ts but holds degrees.
-interface LocalFrame { ids: string[]; view?: number; elevation?: number; margin?: number; distance?: number }
 interface FrameOpts { view?: number; elevation?: number; margin?: number; distance?: number; fov?: number }
 
 
@@ -176,15 +173,15 @@ function mutate<R>(scene: Scene, ctx: ToolContext | null | undefined, fn: (copy:
 // A framed camera key computes its eye and target again at its time, after a cue moved the key or its subject.
 function reframe(s: Scene, cat: Catalogue): void {
   for (const k of s.camera || []) if (k.frame) {
-    const { ids, view, ...opts } = k.frame;
-    const f = frameCamera(s, cat, ids, k.shot ?? 'wide', k.t, { ...opts, ...(view === undefined ? {} : { view: Number(view) }), fov: k.fov });
+    const { ids, ...opts } = k.frame;
+    const f = frameCamera(s, cat, ids, k.shot ?? 'wide', k.t, { ...opts, fov: k.fov });
     k.eye = f.eye; k.target = f.target;
   }
 }
 
 // The time that a: gives with cue (a cue of the narration) or with key (a number).
 function timeArg(s: Scene, cue: Cue | undefined, value: number | undefined, key = 't', cueKey = 'cue'): number {
-  if (cue) { try { return cueTime(s.narration, cue); } catch (e) { throw new Fail('bad_cue', errText(e)); } }
+  if (cue) { try { return cueTime(s.narration, cue); } catch (e) { throw new Fail('bad_cue', messageOf(e)); } }
   if (value === undefined) throw new Fail('bad_args', `Give ${key} or ${cueKey}.`);
   return value;
 }
@@ -268,10 +265,6 @@ interface AddMotionArgs { id: string; move: string; t?: number; cue?: Cue; d?: n
 interface RenderPreviewArgs { t: number }
 interface ExportSceneArgs { path?: string }
 interface GuideArgs { name?: string }
-// These fields are in a scene file but not yet in web/types.ts.
-type CalloutX = Callout & { source?: string; estimated?: boolean; measured?: boolean };
-type ChapterX = Chapter & { estimated?: boolean; measured?: boolean };
-type MapX = NonNullable<Scene['map']> & { source?: string; estimated?: boolean };
 
 function makeObject(s: Scene, cat: Catalogue, a: PlaceProps, extra: { at?: Vec3 } = {}): SceneObject {
   modelOrFail(cat, a.model);
@@ -400,7 +393,8 @@ const tools: ToolEntry[] = [];
 function defineTool<A>(name: ToolName, description: string, properties: Record<string, JsonSchema>, required: readonly string[],
   fn: (scene: Scene, a: A, ctx: ToolContext) => ToolResult, answer?: (s: Scene) => unknown): void {
   const inputSchema: JsonSchema = { type: 'object', properties, required, additionalProperties: false };
-  const run: ToolRun = (scene, args = {}, ctx = {}) => {
+  const run: ToolRun = (scene, args, ctx) => {
+    captureCall(name, scene, args, ctx);
     const checked = validArgs<A>(inputSchema, args || {});
     if (!checked.ok) return checked;
     try {
@@ -683,22 +677,18 @@ defineTool<SetCameraArgs>('set_camera', 'Add or replace a camera key at time t (
     let eye = a.eye, target = a.target, fov = a.fov ?? 50;
     if (ids) { const f = frameCamera(s, cat, ids, a.shot, a.t, a); eye = f.eye; target = f.target; fov = f.fov; }
     if (!eye || !target) throw new Fail('bad_args', 'Give frame (object ids) or both eye and target.');
-    const framing = ids ? { frame: { ids, ...(a.view !== undefined ? { view: a.view } : {}), ...(a.elevation !== undefined ? { elevation: a.elevation } : {}), ...(a.margin !== undefined ? { margin: a.margin } : {}), ...(a.distance !== undefined ? { distance: a.distance } : {}) } satisfies LocalFrame } : {};
+    const framing = ids ? { frame: { ids, ...(a.view !== undefined ? { view: a.view } : {}), ...(a.elevation !== undefined ? { elevation: a.elevation } : {}), ...(a.margin !== undefined ? { margin: a.margin } : {}), ...(a.distance !== undefined ? { distance: a.distance } : {}) } satisfies CameraFrame } : {};
     const key = { t: a.t, shot: a.shot, eye: r3(eye), target: r3(target), fov, ease: a.ease || 'inout', ...(a.cue ? { cue: a.cue } : {}), ...framing };
     s.camera = s.camera.filter((k) => Math.abs(k.t - a.t) > 1e-9);
     const prev = [...s.camera].reverse().find((k) => k.t < a.t);
     if (a.cut && prev) prev.ease = 'step';
-    pushCamera(s, key);
+    s.camera.push(key);
     s.camera.sort((p, q) => p.t - q.t);
     const out = { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
     const blocked = blocksAt(s, cat, key, a.frame || [], a.t);
     if (blocked.length) Object.assign(out, { blocked, warning: 'Something stands between the camera and the subject. Change the view before export.', ...(ids ? { clear_views: clearViews(s, cat, ids, a) } : {}) });
     return out;
   }));
-// CameraFrame.view is typed string in web/types.ts, a camera key here holds degrees.
-function pushCamera(s: Scene, key: Omit<CameraKey, 'frame'> & { frame?: LocalFrame }): void {
-  s.camera.push(key as CameraKey); // allow-unsafe: the only difference is frame.view, a number here and typed string in web/types.ts
-}
 
 defineTool<SetLightingArgs>('set_lighting', 'Set the lighting look from time t (or from a cue of the narration): day, dusk, night, indoor.', { t: num, cue: cueArg, look: { type: 'string', enum: LOOKS } }, ['look'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
@@ -712,7 +702,7 @@ defineTool<AddCaptionArgs>('add_caption', 'Add a caption (up to 280 characters, 
 
 defineTool<AddCalloutArgs>('add_callout', 'Add a callout label tied to an object for a time range (start and end, or cue and end_cue of the narration). The range must be inside one chapter (validate: callout_outside_chapter). ^{...} and _{...} in the text draw small raised and lowered text, for example "m^{2}" or "CO_{2}".', { start: num, end: num, cue: cueArg, end_cue: cueArg, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['text'],
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const c: CalloutX = { start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), text: a.text };
+    const c: Callout = { start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), text: a.text };
     if (a.object !== undefined) c.object = a.object;
     if (a.source !== undefined) c.source = a.source;
     if (a.estimated !== undefined) c.estimated = a.estimated;
@@ -728,7 +718,7 @@ defineTool<AddChapterArgs>('add_chapter', 'Add a chapter (a named time range: st
   (scene, a, ctx) => mutate(scene, ctx, (s) => {
     if (a.caption && s.narration?.length) throw new Fail('narrated', 'A narrated scene makes its captions from the narration. Do not give a chapter a caption.');
     const id = a.id || `c${s.chapters.length + 1}`;
-    const c: ChapterX = { id, start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
+    const c: Chapter = { id, start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
     if (a.estimated !== undefined) c.estimated = a.estimated;
     if (a.measured !== undefined) c.measured = a.measured;
     for (const f of c.focus ?? []) find(s, f);
@@ -745,7 +735,7 @@ defineTool<SetBackdropArgs>('set_backdrop', 'Set the ground and the map. ground 
     if (a.drive) s.drive = a.drive;
     s.backdrop = { ...s.backdrop, ...(a.ground ? { ground: a.ground } : {}), ...(a.size ? { size: a.size } : {}), ...(a.color ? { color: a.color } : {}) };
     if (a.origin || a.onemap) {
-      const map: MapX = s.map ?? (a.origin ? { origin: a.origin } : { onemap: a.onemap } as MapX); // allow-unsafe: a map made with onemap and no origin is checked by validate, as before
+      const map: SceneMap = s.map ?? {};
       s.map = map;
       if (a.origin) map.origin = a.origin;
       if (a.onemap) map.onemap = a.onemap;
@@ -883,22 +873,10 @@ function tool(name: ToolName): ToolRun {
   if (!run) throw new Error(`Tool "${name}" is not defined.`);
   return run;
 }
-export const list_models = tool('list_models'), new_scene = tool('new_scene'), get_scene = tool('get_scene'), place = tool('place'), place_near = tool('place_near'),
-  place_group = tool('place_group'), transform = tool('transform'), duplicate = tool('duplicate'), remove = tool('remove'), build_room = tool('build_room'),
-  build_stairs = tool('build_stairs'), place_sign = tool('place_sign'), set_pose = tool('set_pose'), animate = tool('animate'), move_along = tool('move_along'),
-  set_camera = tool('set_camera'), set_lighting = tool('set_lighting'), add_caption = tool('add_caption'), add_callout = tool('add_callout'), add_chapter = tool('add_chapter'),
-  set_backdrop = tool('set_backdrop'), import_osm = tool('import_osm'), set_cutaway = tool('set_cutaway'), add_credit = tool('add_credit'), render_preview = tool('render_preview'),
-  export_scene = tool('export_scene'), guide = tool('guide'), narrate = tool('narrate'), make_voice = tool('make_voice'), add_fact = tool('add_fact'), add_motion = tool('add_motion');
-export const validate_scene = tool('validate');
-export const commands: Record<ToolName, ToolRun> = {
-  list_models, new_scene, get_scene, place, place_near, place_group, transform, duplicate, remove, build_room, build_stairs, place_sign,
-  set_pose, animate, move_along, set_camera, set_lighting, add_caption, add_callout, add_chapter, set_backdrop, import_osm, set_cutaway, add_credit,
-  narrate, make_voice, add_fact, add_motion, validate: validate_scene, render_preview, export_scene, guide,
-};
+export const commands = Object.fromEntries(TOOL_NAMES.map((n) => [n, tool(n)])) as Record<ToolName, ToolRun>; // allow-unsafe: tool() gives a run for each name of TOOL_NAMES, or throws
 export function runTool(scene: Scene, name: string, args?: unknown, ctx?: ToolContext | null): ToolResult {
-  captureCall(name, scene, args, ctx);
   const run = byName.get(name);
-  if (!run) return fail([{ code: 'unknown_tool', message: `Unknown tool "${name}". Tools: ${Object.keys(commands).join(', ')}.` }]);
+  if (!run) return fail([{ code: 'unknown_tool', message: `Unknown tool "${name}". Tools: ${TOOL_NAMES.join(', ')}.` }]);
   return run(scene, args, ctx);
 }
 

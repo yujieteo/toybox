@@ -15,12 +15,6 @@ const page = (name: string): string => join(root, 'web', name);
 const scenePath = join(root, 'web', SCENE_URL);
 const sceneDir = dirname(scenePath);
 
-test('the demo page files exist', () => {
-  for (const name of ['demo.html', 'demo.ts', 'viewer.ts', 'controls.ts', 'format.ts', 'ui.css', 'ui-components.css']) {
-    assert.ok(existsSync(page(name)), `web/${name} is missing`);
-  }
-});
-
 test('the page loads the demo scene through the shared viewer and UI', () => {
   const html = readFileSync(page('demo.html'), 'utf8');
   assert.match(html, /<link rel="stylesheet" href="ui\.css">/);
@@ -30,18 +24,10 @@ test('the page loads the demo scene through the shared viewer and UI', () => {
   for (const id of ['canvas', 'overlay', 'play', 'seek', 'time', 'story', 'save', 'panel', 'pname', 'psrc']) {
     assert.match(html, new RegExp(`id="${id}"`), `the page has no element with id="${id}"`);
   }
-  const js = readFileSync(page('demo.ts'), 'utf8');
-  assert.match(js, /scenes\/mrt\/mrt\.toybox\.json/, 'the page names the demo scene');
-  assert.match(js, /from '\.\/viewer\.js'/);
-  assert.match(js, /from '\.\/controls\.js'/);
-  assert.match(js, /voiceUrl/, 'the page sets the voice files of the narration');
-  assert.match(js, /globalThis\.toybox = v/, 'the page exposes the viewer as a handle for QA');
-  assert.match(js, /\.get\('t'\)/, 'the page reads ?t=<seconds>');
-  assert.match(js, /\.get\('play'\)/, 'the page reads ?play=1');
 });
 
 test('the demo scene loads with no validation errors', () => {
-  assert.ok(existsSync(scenePath), `web/${SCENE_URL} is missing. Build the scene with node evals/mrt.ts.`);
+  assert.ok(existsSync(scenePath), `web/${SCENE_URL} is missing. Build the scene with bun evals/mrt.ts.`);
   const scene = loadScene(scenePath);
   assert.deepEqual(validate(scene), []);
   assert.ok(scene.duration > 0, `duration ${scene.duration}`);

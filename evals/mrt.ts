@@ -5,7 +5,7 @@
 // and tactile strip, a station wall and a fare gate.
 // The script uses only the tool commands. Run it directly to make the voice files that are missing
 // (the first run installs the voice on this computer):
-//   node evals/mrt.ts
+//   bun evals/mrt.ts
 import { fileURLToPath } from 'node:url';
 import { Builder, finish, printReport } from './lib.ts';
 import type { Args, FinishedReport } from './lib.ts';

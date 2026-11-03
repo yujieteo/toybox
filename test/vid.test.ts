@@ -8,7 +8,7 @@ import { MOVES, poseAt, seedOf, marks, plain, standIn, MAX_TEXT } from '../web/v
 import { timeline, cueTime } from '../core/narration.ts';
 import type { Cue, NarrationBeat } from '../web/types.ts';
 import type { MotionWord, Mark } from '../web/vid.js';
-import { must } from './helpers.ts';
+import { must, view } from './helpers.ts';
 
 interface Golden {
   moves: string[];
@@ -20,7 +20,7 @@ interface Golden {
   narration: { sentences: NarrationBeat[]; length: number; times: [number, number][]; cues: { cue: Cue; t?: number; error?: string }[]; standIn: number[] }[];
 }
 
-const G: Golden = JSON.parse(readFileSync(new URL('./fixtures/vid-golden.json', import.meta.url), 'utf8'));
+const G = view<Golden>(JSON.parse(readFileSync(new URL('./fixtures/vid-golden.json', import.meta.url), 'utf8')));
 
 test('vid port: the motion words, the seeds and the poses are the same as vid.js', () => {
   assert.deepEqual(MOVES, G.moves);

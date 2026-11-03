@@ -129,7 +129,7 @@ export interface OsmBuilding {
 export interface SceneMap {
   source?: string;
   estimated?: boolean;
-  origin: { lat: number; lon: number };
+  origin?: { lat: number; lon: number };
   bearing?: number;
   osm?: { attribution?: string; dataFile?: string; buildings: OsmBuilding[] };
   onemap?: { zoom?: number; style?: string };

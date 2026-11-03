@@ -37,7 +37,7 @@ function start(args: string[]): Client {
   const p = spawn(process.execPath, [MCP, ...args], { stdio: ['pipe', 'pipe', 'inherit'] });
   const rl = createInterface({ input: p.stdout });
   const waiting = new Map<number, (m: RpcReply) => void>();
-  rl.on('line', (l: string) => { const m: RpcReply = JSON.parse(l); waiting.get(m.id)?.(m); });
+  rl.on('line', (l: string) => { const m = view<RpcReply>(JSON.parse(l)); waiting.get(m.id)?.(m); });
   let id = 0;
   const call = (method: string, params?: unknown) => new Promise<RpcReply>((res) => { const i = ++id; waiting.set(i, res); p.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: i, method, params }) + '\n'); });
   return {
@@ -46,7 +46,7 @@ function start(args: string[]): Client {
     tool: async <T>(name: string, args: unknown): Promise<ToolResult<T>> => {
       const r = await call('tools/call', { name, arguments: args });
       const result = view<{ isError?: boolean; content: Block[] }>(r.result);
-      return { ...result, data: JSON.parse(must(must(result.content[0]).text)) };
+      return { ...result, data: view<T>(JSON.parse(must(must(result.content[0]).text))) };
     },
     stop: () => { p.stdin.end(); return new Promise((r) => p.on('exit', r)); },
   };

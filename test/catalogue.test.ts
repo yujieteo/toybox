@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { modelBounds } from '../core/geom.ts';
-import { must } from './helpers.ts';
+import { must, view } from './helpers.ts';
 
 type Triple = [number, number, number];
 interface Part { prim: string; color: string; pos: Triple; size: Triple; rot: Triple }
@@ -10,7 +10,7 @@ interface Group { tris: number; color: string }
 interface Model { id: string; name: string; kind: string; license: string; size: Triple; parts: Part[]; mesh?: string; source: string; groups: Group[] }
 interface CatalogueFile { models: Model[] }
 
-const cat: CatalogueFile = JSON.parse(readFileSync(new URL('../assets/catalogue.json', import.meta.url), 'utf8'));
+const cat = view<CatalogueFile>(JSON.parse(readFileSync(new URL('../assets/catalogue.json', import.meta.url), 'utf8')));
 const kit = cat.models.filter((m: Model) => !m.mesh), imported = cat.models.filter((m: Model) => m.mesh);
 const KINDS = ['vehicle', 'building', 'furniture', 'structure', 'prop', 'sign', 'road', 'nature'];
 const REQUIRED = ['car-sedan', 'car-taxi', 'car-police', 'ambulance-scdf', 'bus-public', 'bus-private', 'lorry', 'motorbike', 'shophouse-2', 'shophouse-3',

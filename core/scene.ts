@@ -7,7 +7,7 @@ import type { Bounds, Poly } from './geom.ts';
 import type { Scene, SceneObject, Catalogue, Model, Vec2, Vec3, Ease, Channel, Shot, Ground, Look, Track, TrackKey, TrackValue, SceneMap, CameraKey } from '../web/types.js';
 import { narrationErrors, narrationLength } from './narration.ts';
 import { MOVES, plain } from '../web/vid.js';
-import { FORMAT, upgradeScene } from '../web/format.js';
+import { FORMAT, isCatalogue, upgradeScene } from '../web/format.js';
 
 export type { Bounds };
 // One problem that validate, blockedViews or motionErrors found.
@@ -38,7 +38,8 @@ export const DEFAULT_CATALOGUE = join(here, '..', 'assets', 'catalogue.json');
 let catCache: Catalogue | null = null;
 export function loadCatalogue(path: string = DEFAULT_CATALOGUE): Catalogue {
   if (path === DEFAULT_CATALOGUE && catCache) return catCache;
-  const cat: Catalogue = JSON.parse(readFileSync(path, 'utf8'));
+  const cat: unknown = JSON.parse(readFileSync(path, 'utf8'));
+  if (!isCatalogue(cat)) throw new Error(`${path} is not a catalogue: it needs models, each with an id and a size.`);
   if (path === DEFAULT_CATALOGUE) catCache = cat;
   return cat;
 }

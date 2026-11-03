@@ -6,7 +6,7 @@ import { build as home } from '../evals/hometeamns.ts';
 import { build as narrated } from '../evals/narrated.ts';
 import { build as mrt } from '../evals/mrt.ts';
 import { loadScene, validate } from '../core/scene.ts';
-import { must } from './helpers.ts';
+import { must, view } from './helpers.ts';
 
 interface Odbl { header: { license: string }; osm: { buildings: unknown[] } }
 interface Report { file: string; rows: { ok: boolean }[] }
@@ -28,9 +28,9 @@ test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on fig
   assert.ok(s.duration >= 150 && s.duration <= 180, String(s.duration));
   assert.equal(s.backdrop.ground, 'street');
   const map = must(s.map), osm = must(map.osm);
-  assert.equal(map.origin.lat, 1.30888); assert.equal(Object.entries(map).find(([k]) => k === 'estimated')?.[1], true);
+  assert.equal(must(map.origin).lat, 1.30888); assert.equal(Object.entries(map).find(([k]) => k === 'estimated')?.[1], true);
   assert.ok(osm.buildings.length > 50, 'real OpenStreetMap footprints');
-  const odbl: Odbl = JSON.parse(readFileSync(new URL(`../evals/out/${must(osm.dataFile)}`, import.meta.url), 'utf8'));
+  const odbl = view<Odbl>(JSON.parse(readFileSync(new URL(`../evals/out/${must(osm.dataFile)}`, import.meta.url), 'utf8')));
   assert.equal(odbl.header.license, 'ODbL 1.0'); assert.equal(odbl.osm.buildings.length, osm.buildings.length);
   assert.ok(!s.credits.some((c) => /OpenStreetMap/.test(c)), 'the viewer adds the OpenStreetMap credit by itself');
   assert.ok(s.chapters.every((c) => /^https:\/\/en\.wikipedia\.org/.test(must(c.source)) || /^estimated/.test(must(c.source))));

@@ -3,7 +3,7 @@
 // the cache), flattens the node transforms, groups the triangles by base colour, scales to metres
 // with the base at y=0, and writes assets/models/<id>.bin. Then it writes assets/models/index.json,
 // assets/ATTRIBUTION.md and assets/catalogue.json (through core/kit.ts).
-// Run: node tools/assets/import.ts [--cache /tmp/toybox-assets/cache]
+// Run: bun tools/assets/import.ts [--cache /tmp/toybox-assets/cache]
 //
 // Mesh file (little-endian): u32 magic "TBM1", u32 group count G, f32 position scale S,
 // G x u32 vertex count, then for each group and each vertex 6 x i16: x, y, z (times S gives metres)
@@ -14,6 +14,7 @@ import { inflateRawSync, inflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { writeCatalogue } from '../../core/kit.ts';
+import { isRecord } from '../../web/dom.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ASSETS = join(here, '..', '..', 'assets');
@@ -47,7 +48,6 @@ interface PolySource extends SourceBase { from: 'polyhaven'; asset: string }
 type Source = KenneySource | PolySource;
 interface Sources { checked: string; assets: Source[] }
 
-function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === 'object' && v !== null && !Array.isArray(v); }
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isNums = (v: unknown): v is number[] => Array.isArray(v) && v.every((x) => typeof x === 'number');
 function isSource(v: unknown): v is Source {
