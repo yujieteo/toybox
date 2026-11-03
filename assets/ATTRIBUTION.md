@@ -2,7 +2,7 @@
 
 Toybox uses these third-party models. Each one is CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
 CC0 does not require credit. We give credit to thank the authors.
-tools/assets/import.mjs makes this file from tools/assets/sources.json. Do not edit it by hand.
+tools/assets/import.ts makes this file from tools/assets/sources.json. Do not edit it by hand.
 
 | id | title | author | source page | download | licence | checked | licence evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |

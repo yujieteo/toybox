@@ -52,7 +52,7 @@ Known gaps (not hidden):
 1. Fetch MakeHuman `base.obj`, `default.mhskel`, `default_weights.mhw` from github.com/makehumancommunity/makehuman (`makehuman/data`).
 2. `python3 -I tools/people/prep.py MHDIR OUTDIR` writes `mesh.bin` and `skel.json`.
 3. `GOOSE=/path/to/goose engine/build.sh BUILDDIR` (emsdk active). Copy `mesh.bin` and `skel.json` into BUILDDIR.
-4. `node engine/serve.ts OUTDIR BUILDDIR`, then open `/?mode=codec&scene=1&seconds=10&fps=30&w=1920&h=1080&people=50&name=clip` in Chrome. Modes: `bench`, `export` (raw frames), `codec`. Scenes: 0 box people, 1 crowd, 2 pose sheet.
+4. `bun engine/serve.ts OUTDIR BUILDDIR`, then open `/?mode=codec&scene=1&seconds=10&fps=30&w=1920&h=1080&people=50&name=clip` in Chrome. Modes: `bench`, `export` (raw frames), `codec`. Scenes: 0 box people, 1 crowd, 2 pose sheet.
 
 ## Follow-up after the owner chose option A (LOD, eyes, hair)
 
