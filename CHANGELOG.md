@@ -4,6 +4,11 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Changed
+
+- All project JavaScript is strict TypeScript (`strict`, `noUncheckedIndexedAccess`) and runs with Bun. The daemon transpiles `web/*.ts` for the browser. `bun scripts/build-web.ts` writes `dist/web/` for a static host.
+- `bun run check` runs the type check, the escape-hatch scan, the web page budget, the dead-code check, the tests and a process replay against `main`.
+
 ### Added
 
 - A narrated "How to board an MRT train" demo scene (`evals/mrt.mjs`, with the generated scene, captions and voice files in `web/scenes/mrt/`), its facts from Wikipedia and LTA, an MRT station kit (train car, platform screen doors, track, platform edge, station wall and fare gate) and an eval case (#11).

@@ -310,7 +310,7 @@ export "plain" fn plain() {
 }
 
 // ---------------------------------------------------------------- narration
-// Narration: 1 sentence = 1 beat. The voice (core/voice.mjs) sets the length of each beat.
+// Narration: 1 sentence = 1 beat. The voice (core/voice.ts) sets the length of each beat.
 
 let LEAD: f64 = 0.5;        // seconds of silence before the first sentence
 let GAP: f64 = 0.45;        // between sentences

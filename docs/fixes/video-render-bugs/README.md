@@ -23,7 +23,7 @@ The map test used a local tile server. The orange tile image and the red logo bo
 ## Reproduce
 
 1. Build the engine with the script: `GOOSE=/path/to/goose engine/build.sh engine-build`. You need emsdk for the C build.
-2. Run the tests: `node --test test/`.
-3. Start the daemon: `node app/serve.mjs --scene evals/out/narrated.toybox.json --engine engine-build --out out`.
+2. Run the tests: `bun test test/`.
+3. Start the daemon: `bun app/serve.ts --scene evals/out/narrated.toybox.json --engine engine-build --out out`.
 4. Export the scene: `curl -X POST 'http://127.0.0.1:8820/api/export?token=TOKEN' -H 'content-type: application/json' -d '{"name":"clip"}'`.
 5. For the engine pictures, render a frame with `POST /api/render` at t=35.4 for the `evals/out/hometeamns.toybox.json` scene.

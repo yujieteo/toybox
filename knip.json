@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["core/cli.ts", "core/mcp.ts", "app/serve.ts", "web/*.ts", "scripts/*.ts", "evals/run.ts", "evals/*.ts", "tools/assets/import.ts", "core/kit.ts", "docs/figures/architecture.ts", "test/*.test.ts"],
+  "project": ["**/*.ts"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": ["ffmpeg", "diff"],
+  "ignoreUnresolved": ["\\.\\./engine/cs\\.js", "\\./emil\\.js"]
+}
