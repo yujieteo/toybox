@@ -1,6 +1,6 @@
 # Toybox
 
-Toybox lets an agent build an animated 3D explainer scene. You talk to the agent in a chat page. The scene plays in a viewer next to the chat.
+Toybox lets an agent build an animated 3D explainer scene for you in a chat page, with a viewer next to the chat.
 
 A scene can have a narration. A voice on your computer speaks each sentence, and the scene follows the words of the voice (guide `core/guide/narration.txt`).
 
@@ -13,7 +13,7 @@ A visitor to the static viewer can orbit the camera. The visitor can also move, 
 
 ## Parts
 
-<img src="docs/figures/architecture.svg" width="560" alt="Toybox architecture. The chat page and the daemon talk to each other. The daemon starts Claude Code. Claude Code calls the MCP server, and the MCP server writes the scene file. The daemon reads the scene file. Headless Chrome renders the scene file into frames, and ffmpeg makes the MP4 video from the frames and the voice. The static viewer opens the scene file.">
+![Toybox architecture. The chat page and the daemon talk to each other. The daemon starts Claude Code. Claude Code calls the MCP server, and the MCP server writes the scene file. The daemon reads the scene file. Headless Chrome renders the scene file into frames, and ffmpeg makes the MP4 video from the frames and the voice. The static viewer opens the scene file.](docs/figures/architecture.svg)
 
 | Folder | Content |
 | --- | --- |
@@ -41,23 +41,23 @@ The chat uses the `claude` command with only the Toybox MCP server. You need ffm
 
 The voice runs on your computer, with no cloud and no account. It is Kokoro-82M (voice `af_heart`) through kokoro-js 1.2.1 on the CPU. The first `make_voice` installs it into `~/.cache/toybox/voice` with npm and downloads the model from Hugging Face. This needs 736 MB of disk: 416 MB of packages (onnxruntime-node is 211 MB) and the 326 MB model. On the maker laptop the install and the first sentence took about 56 s. A scene without narration needs none of it.
 
-For the static viewer, run `bun scripts/build-web.ts` (it writes `dist/web/`: the `web/` files, with each `web/*.ts` as a `.js` file), then host `dist/web/`, `assets/` and the engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
+For the static viewer, run `bun scripts/build-web.ts`. It writes `dist/web/`: the `web/` files, with each `web/*.ts` as a `.js` file. Host `dist/web/`, `assets/` and the engine files together. Open `viewer.html?scene=URL` or choose a file in the page.
 
 ## Demos
 
-The MRT demo page (`web/demo.html`) is a static showcase: it plays one narrated scene, lists the steps of boarding beside it, and names the sources and credits below. Build the scene first:
+The MRT demo page (`web/demo.html`) is a static page. It plays one narrated scene, lists the steps of boarding beside it, and names the sources and credits below. Build the scene first:
 
-```
+```sh
 bun evals/mrt.ts
 ```
 
 The script writes the scene file, its `.srt` captions and the voice files under `web/scenes/mrt/`. Then host `web/`, `assets/` and the engine files together. The daemon does this, for example:
 
-```
+```sh
 bun app/serve.ts --scene web/scenes/mrt/mrt.toybox.json --engine engine-build --port 8831
 ```
 
-Open `http://127.0.0.1:8831/demo.html` (a static page needs no token). Add `?t=12.5` to open the page paused at 12.5 seconds, for screenshots and checks, or `?play=1` to start the scene at once.
+Open `http://127.0.0.1:8831/demo.html`. A static page needs no token. Add `?t=12.5` to open the page paused at 12.5 seconds, for screenshots and checks. Add `?play=1` to start the scene at once.
 
 ## Numbers that we measured
 
@@ -77,9 +77,9 @@ We could not measure a real phone. A headless browser does not limit the GPU. Th
 - People differ only by colour, size, hair and outfit gear (helmet, shield, baton). The body shape is the same.
 - Clothes are colour regions of the body. Feet slide a little when a person walks. A sitting person has no chair of its own.
 - The shadow is a soft disc, not a shadow map.
-- The catalogue has few Kenney and Poly Haven models. The other models are built from boxes, cylinders, spheres and wedges.
-- An imported model shows flat colours. The engine has no textures, so the import script reduces each model to a small number of colours (`maxColors` in `tools/assets/sources.json`).
-- The voice gives no word times. A cue to a word uses the place of the word in the characters of the sentence, so a cue can be some tenths of a second early or late.
+- The catalogue has few Kenney and Poly Haven models. Boxes, cylinders, spheres and wedges make the other models.
+- An imported model shows flat colours. The engine has no textures. The import script reduces each model to a small number of colours (`maxColors` in `tools/assets/sources.json`).
+- The voice gives no word times. A cue to a word uses the place of the word in the characters of the sentence. A cue can be some tenths of a second early or late.
 - OneMap tiles load live from the OneMap server. Toybox stores none of them. A browser that blocks the tile server shows no map, and the credit text does not show.
 
 ## Licences
@@ -105,4 +105,4 @@ Excluded models: Polyfork, SimReady and Quaternius. Their licences do not fit th
 
 ## Checks
 
-`bun run check` is the local check. It runs `tsc --noEmit`, a scan that fails on `any`, `as` casts, `!` and `@ts-` directives without an `allow-unsafe: reason` on the line, the gzip budget of each web page, knip (dead code) and the tests. It then replays the inputs of the tests (`TOYBOX_REPLAY_CAPTURE`) through `runTool` on `main` and on your working tree, and fails on any difference. After a change that must change the output, read the diff and run `bun scripts/replay.ts --accept`.
+`bun run check` is the local check. It runs `tsc --noEmit`, a scan, the gzip budget of each web page, knip (dead code) and the tests. The scan fails on `any`, `as` casts, `!` and `@ts-` directives without an `allow-unsafe: reason` on the line. The check then replays the inputs of the tests (`TOYBOX_REPLAY_CAPTURE`) through `runTool` on `main` and on your working tree, and fails on any difference. After a change that must change the output, read the diff and run `bun scripts/replay.ts --accept`.
