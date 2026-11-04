@@ -4,7 +4,7 @@ Machine: Apple M5, headless Google Chrome (stable) with ANGLE Metal (hardware We
 
 ## Spike 1: MP4 export from the Goose wasm renderer
 
-Result: pass. The path has five steps. Goose, C, emcc and WebGL2 make the frames. `VideoEncoder` (WebCodecs H.264) in the page encodes them. The page sends small chunks to a node server. Then ffmpeg burns the captions.
+Result: pass. The path has four steps. Goose, C, emcc and WebGL2 make the frames. `VideoEncoder` (WebCodecs H.264) in the page encodes them. The page sends small chunks to a node server. Then ffmpeg burns the captions.
 
 | Item | Number |
 |---|---|
