@@ -1,10 +1,10 @@
 # Spikes 1 and 2: results
 
-Machine: Apple M5, headless Google Chrome (stable) with ANGLE Metal (hardware WebGL2). Phone: not measured. Proof files are in `/Users/yj/src/firstmate/data/toybox-v2/spikes-1-2/`.
+Machine: Apple M5, headless Google Chrome (stable) with ANGLE Metal (hardware WebGL2). We did not measure a phone. Proof files are in `/Users/yj/src/firstmate/data/toybox-v2/spikes-1-2/`.
 
 ## Spike 1: MP4 export from the Goose wasm renderer
 
-Result: pass. The path is Goose, C, emcc, WebGL2, then `VideoEncoder` (WebCodecs H.264) in the page, then small chunks to a node server, then ffmpeg burns the captions.
+Result: pass. The path has five steps. Goose, C, emcc and WebGL2 make the frames. `VideoEncoder` (WebCodecs H.264) in the page encodes them. The page sends small chunks to a node server. Then ffmpeg burns the captions.
 
 | Item | Number |
 |---|---|
@@ -19,6 +19,7 @@ Result: pass. The path is Goose, C, emcc, WebGL2, then `VideoEncoder` (WebCodecs
 | File size | 90 MB for 60 s at 12 Mbit/s |
 
 Faults found and fixed in this spike:
+
 1. Raw RGBA through `fetch` (8 MB a frame) took 481 ms a frame, about 15 s for 30 frames. Cause: `fetch` throughput in Chrome. Fix: encode in the page with WebCodecs. The same frame hashes came out of both paths.
 2. Parallel chunk posts changed the order and lost 4 of 300 frames. Fix: post the chunks in sequence.
 3. Goose reserves 2 GB of data stack with `mmap`. WebAssembly cannot do that. The program hung or trapped with "memory access out of bounds". Fix: compile with `-DGS_STACK_RESERVE=(16ull<<20)`.
@@ -40,12 +41,13 @@ Result: pass on the desktop, unmeasured on a phone.
 | Mesh download | 963 KB raw, 467 KB gzip, one shape |
 
 Known gaps (not hidden):
+
 - The 24 people differ by colour and scale only. Real body variety needs the MakeHuman targets (macro modifiers). Not done.
 - No hair, no eyes, no face texture. Faces are not readable in the crowd view. The owner asked for readable faces. This needs a decision.
 - Clothes are colour regions by bone, not clothes geometry. The MakeHuman clothes (MHCLO) are CC0 but not tried.
 - Feet slide on the ground. Poses are hand-written angles with no foot lock.
 - Sit has no chair.
-- The phone frame rate is not measured. 2.7 million triangles at 30 frames per second is 81 million triangles per second, which is likely too heavy for a middle phone.
+- We did not measure the phone frame rate. 2.7 million triangles at 30 frames per second is 81 million triangles per second, which is likely too heavy for a middle phone.
 
 ## Reproduce
 
@@ -56,7 +58,7 @@ Known gaps (not hidden):
 
 ## Follow-up after the owner chose option A (LOD, eyes, hair)
 
-- `tools/people/prep.py` now writes a full body (27,380 triangles, 988 KB) and a LOD body (4,148 triangles, 149 KB, vertex clustering keyed by position and main bone). Both have eye spheres with a pupil, lips and a hair region on the scalp. Hair colour, skin tone and clothes colour come from a per-person palette.
+- `tools/people/prep.py` now writes two bodies. The full body has 27,380 triangles (988 KB). The LOD body has 4,148 triangles (149 KB) from vertex clustering keyed by position and main bone. Both have eye spheres with a pupil, lips and a hair region on the scalp. Hair colour, skin tone and clothes colour come from a per-person palette.
 - A person closer than 7 m to the camera uses the full body. A person farther away uses the LOD body.
 - Crowd of 50, 1080p, render only, this M5: full bodies 9.3 ms per frame, LOD 3.4 ms per frame. 200 people with LOD: 11.8 ms. A phone-size canvas (1170 by 2532) with 50 people and LOD: 3.5 ms.
 - Faces: close-up frame `face-closeup.png` in the proof folder shows eyes with pupils, nose, lips and hair. The 24 people differ by skin tone, hair colour, clothes colour, height and width.

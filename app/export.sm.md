@@ -5,10 +5,10 @@ The daemon holds one export job at a time. test/export-machine.test.ts drives th
 
 ## Requirements
 
-- R1: The export page sends the start data once, then the video chunks, then the end, and the daemon makes the MP4. — web/export.ts:56
-- R2: A chunk or an end before the start data gets a 409 answer and changes nothing. — app/serve.ts:213
-- R3: A second start data gets a 409 answer and does not replace the open video file. — owner, review round 2: "guard /export/start so it requires phase waiting"
-- R4: Every terminal answer ends the job, or /api/export waits for the timeout. — app/serve.ts:227
+- R1: The export page sends the start data once, then the video chunks, then the end, and the daemon makes the MP4. Source: web/export.ts:56
+- R2: A chunk or an end before the start data gets a 409 answer and changes nothing. Source: app/serve.ts:213
+- R3: A second start data gets a 409 answer and does not replace the open video file. Source: owner, review round 2: "guard /export/start so it requires phase waiting"
+- R4: Every terminal answer ends the job, or /api/export waits for the timeout. Source: app/serve.ts:227
 
 ## Machine export
 

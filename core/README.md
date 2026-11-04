@@ -1,6 +1,8 @@
 # Toybox core
 
-This folder holds the server side of Toybox. It runs with Bun and has no runtime npm dependencies. The voice is the only exception: `voice.ts` installs its packages into `~/.cache/toybox/voice` at the first `make_voice`, not into the repo.
+This folder holds the server side of Toybox.
+
+It runs with Bun and has no runtime npm dependencies. The voice is the only exception. `voice.ts` installs its packages into `~/.cache/toybox/voice` at the first `make_voice`, not into the repo.
 
 ## Files
 
@@ -18,24 +20,34 @@ This folder holds the server side of Toybox. It runs with Bun and has no runtime
 
 Start the MCP server:
 
-    bun core/mcp.ts --scene /path/to/scene.toybox.json [--render-url http://127.0.0.1:PORT/render]
+```sh
+bun core/mcp.ts --scene /path/to/scene.toybox.json [--render-url http://127.0.0.1:PORT/render]
+```
 
 Run one tool from the shell:
 
-    bun core/cli.ts place '{"model":"car-sedan","at":[0,0]}' --scene /tmp/s.toybox.json
-    bun core/cli.ts validate --scene /tmp/s.toybox.json
-    bun core/cli.ts guide overview --scene /tmp/s.toybox.json
+```sh
+bun core/cli.ts place '{"model":"car-sedan","at":[0,0]}' --scene /tmp/s.toybox.json
+bun core/cli.ts validate --scene /tmp/s.toybox.json
+bun core/cli.ts guide overview --scene /tmp/s.toybox.json
+```
 
 Rebuild the catalogue after you change `kit.ts`:
 
-    bun core/kit.ts
+```sh
+bun core/kit.ts
+```
 
 ## Test
 
-    bun test test/
+```sh
+bun test test/
+```
 
 ## Evals
 
-    bun evals/run.ts
+```sh
+bun evals/run.ts
+```
 
 Each eval builds a scene only through the tool commands. It writes `evals/out/<name>.toybox.json` and `.srt`. The narrated eval also uses the voice files in `evals/out/voice/`. Run `bun evals/narrated.ts` to make them again. It prints the quality bars. The command exits with 1 when a bar fails.

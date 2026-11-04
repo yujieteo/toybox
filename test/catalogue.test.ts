@@ -119,7 +119,7 @@ test('imported models are CC0 with a source, a mesh file and an attribution entr
       assert.ok(/^#[0-9a-f]{6}$/i.test(group.color), `${m.id} colour`);
     }
     const row = must(credits.find((r) => r.id === m.id), `${m.id} in ATTRIBUTION.md`);
-    assert.equal(row['source page'], m.source);
+    assert.equal(row['source page']?.replace(/^<|>$/g, ''), m.source);
     assert.equal(row.licence, 'CC0 1.0');
     assert.ok(row.author && row.checked, m.id);
   }

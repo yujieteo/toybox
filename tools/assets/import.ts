@@ -415,6 +415,9 @@ async function polyhaven(a: PolySource, cache: string): Promise<Fetched> {
   return { tris: readGltf(json, bins, file), download: files.gltfUrl };
 }
 
+// A bare URL is a Markdown lint error: put each URL in <> so the table stays valid Markdown.
+function link(text: string): string { return text.replace(/(?:https?:\/\/|\bwww\.)[^\s)"]+/g, (u) => `<${u.startsWith('www.') ? 'https://' : ''}${u}>`); }
+
 async function main(): Promise<void> {
   const ci = process.argv.indexOf('--cache');
   const cacheArg = ci > 0 ? process.argv[ci + 1] : undefined;
@@ -428,13 +431,13 @@ async function main(): Promise<void> {
     const { entry, bin } = convert(a, tris);
     writeFileSync(join(ASSETS, entry.mesh), bin);
     entries.push(entry);
-    rows.push(`| ${a.id} | ${a.title} | ${a.author} | ${a.page} | ${download} | CC0 1.0 | ${src.checked} | ${a.evidence.replace(/\|/g, '/')} |`);
+    rows.push(`| ${a.id} | ${a.title} | ${link(a.author)} | ${link(a.page)} | ${link(download)} | CC0 1.0 | ${src.checked} | ${link(a.evidence.replace(/\|/g, '/'))} |`);
     console.log(`${a.id}: ${tris.length} triangles, ${entry.groups.length} colours, size ${entry.size.join(' x ')} m, ${bin.length} bytes`);
   }
   writeFileSync(join(ASSETS, 'models', 'index.json'), JSON.stringify(entries, null, 1) + '\n');
   writeFileSync(join(ASSETS, 'ATTRIBUTION.md'), `# Attribution
 
-Toybox uses these third-party models. Each one is CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
+Toybox uses these third-party models. Each one is CC0 1.0 (<https://creativecommons.org/publicdomain/zero/1.0/>).
 CC0 does not require credit. We give credit to thank the authors.
 tools/assets/import.ts makes this file from tools/assets/sources.json. Do not edit it by hand.
 
