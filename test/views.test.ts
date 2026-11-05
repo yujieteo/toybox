@@ -20,6 +20,7 @@ function street(): Scene {
   return s;
 }
 
+function tests1(): void {
 test('a building between the camera and the focus object is a blocked view', () => {
   const s = street();
   must(C.set_camera(s, { t: 0, shot: 'medium', eye: [0, 3, 20], target: [0, 1, 0] }));
@@ -62,7 +63,10 @@ test('set_camera reports a blocked view and gives clear views that work', () => 
   assert.equal(ok.blocked, undefined);
   assert.deepEqual(blockedViews(s), []);
 });
+}
+tests1();
 
+function tests2(): void {
 test('set_camera and validate agree when a framed object is not a chapter focus', () => {
   const s = street();
   must(C.remove(s, { id: 'house' }));
@@ -106,3 +110,5 @@ test('outfits: listed with sources, on known bones, and checked on place', () =>
   const g = must<{ ids: string[] }>(C.place_group(s, { model: 'person', count: 3, at: [0, 0, 6], outfit: 'police', seed: 2 }));
   assert.ok(g.ids.every((id) => { const o = need(s.objects.find((x) => x.id === id)); return o.outfit === 'police' && !o.colors; }));
 });
+}
+tests2();

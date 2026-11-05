@@ -11,6 +11,7 @@ import type { Vec3 } from '../web/types.ts';
 const finite = fc.double({ min: -1000, max: 1000, noNaN: true });
 const vec3 = fc.tuple(finite, finite, finite);
 
+function tests1(): void {
 test('rotYaw keeps the length, and rotating back gives the input', () => {
   fc.assert(fc.property(vec3, fc.double({ min: -720, max: 720, noNaN: true }), (v: Vec3, yaw) => {
     const r = rotYaw(v, yaw);
@@ -54,9 +55,12 @@ test('plain gives the same text for a text without markers, and find stays insid
     assert.ok(k >= -1 && k < text.length);
   }));
 });
+}
+tests1();
 
 const vec = (x: number): Vec3 => [x, 0, 0];
 
+function tests2(): void {
 test('valueAt stays between the first and last key of a number track', () => {
   fc.assert(fc.property(fc.array(fc.double({ min: -100, max: 100, noNaN: true }), { minLength: 2, maxLength: 6 }), fc.double({ min: -5, max: 50, noNaN: true }), (values, t) => {
     const keys = values.map((v, i) => ({ t: i * 2, v: vec(v) }));
@@ -66,3 +70,5 @@ test('valueAt stays between the first and last key of a number track', () => {
     assert.ok(x >= Math.min(...values) - 1e-9 && x <= Math.max(...values) + 1e-9);
   }));
 });
+}
+tests2();

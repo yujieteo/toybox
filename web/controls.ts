@@ -9,8 +9,6 @@ export interface ControlsUi {
 interface Drag { x: number; y: number; hit: string | null; moved: boolean; start: boolean; pan: boolean; snap?: boolean }
 
 export function bindControls(v: Viewer, { canvas, ui }: { canvas: HTMLCanvasElement; ui: ControlsUi }): void {
-  const px = (e: PointerEvent | MouseEvent): Vec2 => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
-  const pts = new Map<number, Vec2>(); let drag: Drag | null = null, pinch = 0;
   const fmt = () => `${v.t.toFixed(1)} / ${(v.scene ? v.scene.duration || 60 : 0).toFixed(1)} s`;
   const sync = () => {
     ui.seek.value = String(v.t); ui.time.textContent = fmt();
@@ -23,6 +21,15 @@ export function bindControls(v: Viewer, { canvas, ui }: { canvas: HTMLCanvasElem
     }
   };
   v.onframe = sync; v.onchange = sync;
+  bindPointer(v, canvas);
+  bindKeys(v, canvas);
+  bindPanel(v, ui);
+  sync();
+}
+
+function bindPointer(v: Viewer, canvas: HTMLCanvasElement): void {
+  const px = (e: PointerEvent | MouseEvent): Vec2 => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
+  const pts = new Map<number, Vec2>(); let drag: Drag | null = null, pinch = 0;
   canvas.addEventListener('pointerdown', e => {
     canvas.setPointerCapture(e.pointerId); canvas.focus();
     pts.set(e.pointerId, [e.clientX, e.clientY]);
@@ -57,6 +64,9 @@ export function bindControls(v: Viewer, { canvas, ui }: { canvas: HTMLCanvasElem
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('wheel', e => { e.preventDefault(); v.zoomBy(Math.exp(e.deltaY * 0.001)); }, { passive: false });
+}
+
+function bindKeys(v: Viewer, canvas: HTMLCanvasElement): void {
   canvas.addEventListener('keydown', e => {
     const k = e.key;
     if (k === 'ArrowLeft') v.orbitBy(-0.1, 0); else if (k === 'ArrowRight') v.orbitBy(0.1, 0);
@@ -68,6 +78,9 @@ export function bindControls(v: Viewer, { canvas, ui }: { canvas: HTMLCanvasElem
     else return;
     e.preventDefault();
   });
+}
+
+function bindPanel(v: Viewer, ui: ControlsUi): void {
   ui.play.onclick = () => (v.playing ? v.pause() : v.play());
   ui.seek.oninput = () => { v.pause(); v.seek(+ui.seek.value); };
   ui.story.onclick = () => v.storyCamera();
@@ -81,5 +94,4 @@ export function bindControls(v: Viewer, { canvas, ui }: { canvas: HTMLCanvasElem
     flip: () => v.edit('flip'), duplicate: () => v.edit('duplicate'), delete: () => v.edit('delete'), undo: () => v.undoEdit(),
   };
   ui.panel.querySelectorAll('button').forEach(b => { b.onclick = () => ops[b.dataset.op ?? '']?.(); });
-  sync();
 }

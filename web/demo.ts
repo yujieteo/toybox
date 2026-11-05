@@ -131,6 +131,44 @@ function renderSources(scene: Scene): void {
   }
 }
 
+function fitStage(v: Viewer, stage: HTMLElement, canvas: HTMLCanvasElement): void {
+  const r = stage.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.round(r.width * d), h = Math.round(r.height * d);
+  canvas.width = w; canvas.height = h; v.resize(w, h);
+  if (v.scene) v.draw(v.t);
+}
+
+// controls.js owns v.onframe and v.onchange. Keep them and add the active step. Returns the marker.
+function bindSteps(v: Viewer, steps: Step[]): () => void {
+  const controlsFrame = v.onframe, controlsChange = v.onchange;
+  const { buttons, nows } = renderSteps(steps, (time) => { v.seek(time); v.play(); });
+  let active = -2;
+  const mark = (): void => {
+    const i = activeStep(steps, v.t);
+    if (i === active) return;
+    active = i;
+    buttons.forEach((button, k) => {
+      if (k === i) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+    nows.forEach((now, k) => { now.hidden = k !== i; });
+  };
+  v.onframe = (t) => { controlsFrame?.(t); mark(); };
+  v.onchange = (why) => { controlsChange?.(why); mark(); };
+  return mark;
+}
+
+// ?t=<seconds> opens the scene paused at that time (for screenshots and QA).
+// ?play=1 starts the scene instead.
+function openFromQuery(v: Viewer): void {
+  const query = new URLSearchParams(location.search);
+  const at = query.get('t');
+  const seekTo = at !== null && at.trim() !== '' ? Number(at) : null;
+  v.pause();
+  if (seekTo !== null && Number.isFinite(seekTo)) v.seek(seekTo);
+  if (query.get('play') === '1') v.play();
+}
+
 async function start(): Promise<void> {
   const status = $('status'), error = $('error'), stage = $('stage');
   const canvas = byId('canvas', HTMLCanvasElement), overlay = byId('overlay', HTMLCanvasElement);
@@ -159,12 +197,7 @@ async function start(): Promise<void> {
     if (scene.title) $('title').textContent = scene.title;
     seekBar.max = String(scene.duration || 60);
 
-    const fit = (): void => {
-      const r = stage.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
-      const w = Math.round(r.width * d), h = Math.round(r.height * d);
-      canvas.width = w; canvas.height = h; v.resize(w, h);
-      if (v.scene) v.draw(v.t);
-    };
+    const fit = (): void => fitStage(v, stage, canvas);
     new ResizeObserver(fit).observe(stage);
     fit();
 
@@ -173,23 +206,8 @@ async function start(): Promise<void> {
       panel: $('panel'), pname: $('pname'), psrc: $('psrc'),
     } });
 
-    // controls.js owns v.onframe and v.onchange. Keep them and add the active step.
-    const controlsFrame = v.onframe, controlsChange = v.onchange;
     const steps = chapterSteps(scene);
-    const { buttons, nows } = renderSteps(steps, (time) => { v.seek(time); v.play(); });
-    let active = -2;
-    const mark = () => {
-      const i = activeStep(steps, v.t);
-      if (i === active) return;
-      active = i;
-      buttons.forEach((button, k) => {
-        if (k === i) button.setAttribute('aria-current', 'true');
-        else button.removeAttribute('aria-current');
-      });
-      nows.forEach((now, k) => { now.hidden = k !== i; });
-    };
-    v.onframe = (t) => { controlsFrame?.(t); mark(); };
-    v.onchange = (why) => { controlsChange?.(why); mark(); };
+    const mark = bindSteps(v, steps);
 
     renderSources(scene);
     $('steps-section').hidden = steps.length === 0;
@@ -198,14 +216,7 @@ async function start(): Promise<void> {
     status.hidden = true;
     stage.setAttribute('aria-busy', 'false');
 
-    // ?t=<seconds> opens the scene paused at that time (for screenshots and QA).
-    // ?play=1 starts the scene instead.
-    const query = new URLSearchParams(location.search);
-    const at = query.get('t');
-    const seekTo = at !== null && at.trim() !== '' ? Number(at) : null;
-    v.pause();
-    if (seekTo !== null && Number.isFinite(seekTo)) v.seek(seekTo);
-    if (query.get('play') === '1') v.play();
+    openFromQuery(v);
     mark();
   } catch (cause) { fail(cause); }
 }

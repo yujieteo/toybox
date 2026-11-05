@@ -45,12 +45,12 @@ class Fail extends Error {
   code: string;
   constructor(code: string, message: string) { super(message); this.code = code; }
 }
-const fail = (errors: ToolError[]): ToolFail => ({ ok: false, errors });
-const okr = <R>(result: R): ToolOk<R> => ({ ok: true, result });
+function fail(errors: ToolError[]): ToolFail { return ({ ok: false, errors }); }
+function okr<R>(result: R): ToolOk<R> { return ({ ok: true, result }); }
 const D = Math.PI / 180;
-const r2 = (v: number): number => Math.round(v * 1000) / 1000;
-const r3 = (v: readonly number[]): Vec3 => [r2(v[0] ?? 0), r2(v[1] ?? 0), r2(v[2] ?? 0)];
-const ceilMs = (v: number): number => Math.ceil(v * 1000 - 1e-6) / 1000;
+function r2(v: number): number { return Math.round(v * 1000) / 1000; }
+function r3(v: readonly number[]): Vec3 { return [r2(v[0] ?? 0), r2(v[1] ?? 0), r2(v[2] ?? 0)]; }
+function ceilMs(v: number): number { return Math.ceil(v * 1000 - 1e-6) / 1000; }
 function nth<T>(arr: readonly T[], i: number): T {
   const v = arr[i];
   if (v === undefined) throw new Error(`Index ${i} is out of range.`);
@@ -146,7 +146,11 @@ function validArgs<A>(schema: JsonSchema, args: unknown): { ok: true; args: A } 
 
 // ---------- helpers
 function cloneScene(s: Scene): Scene { return structuredClone(s); }
-function replaceScene(target: Scene, src: Scene): void { for (const k of Object.keys(target)) Reflect.deleteProperty(target, k); Object.assign(target, src); }
+function replaceScene(target: Scene, src: Scene): void {
+  const bag = target as unknown as Record<string, unknown>; // allow-unsafe: a scene is a plain object, and every key of it is dropped
+  for (const k of Object.keys(bag)) delete bag[k];
+  Object.assign(target, src);
+}
 function maxTime(s: Scene): number {
   let m = 0;
   const see = (t: unknown) => { if (typeof t === 'number' && Number.isFinite(t) && t > m) m = t; };
@@ -159,8 +163,8 @@ function maxTime(s: Scene): number {
   see(narrationLength(s.narration));
   return m;
 }
-const errKey = (e: ToolError): string => `${e.code}|${e.message}`;
-const hardErrors = (errs: ToolError[]): ToolError[] => errs.filter((e) => HARD_CODES.has(e.code));
+function errKey(e: ToolError): string { return `${e.code}|${e.message}`; }
+function hardErrors(errs: ToolError[]): ToolError[] { return errs.filter((e) => HARD_CODES.has(e.code)); }
 
 // Apply fn to a copy. Keep the copy only if it adds no new hard validation error.
 function mutate<R>(scene: Scene, ctx: ToolContext | null | undefined, fn: (copy: Scene, cat: Catalogue) => R): ToolResult<R> {
@@ -212,7 +216,7 @@ function timeArg(s: Scene, cue: Cue | undefined, value: number | undefined, key 
   return value;
 }
 const find = (s: Scene, id: string): SceneObject => { const o = s.objects.find((x) => x.id === id); if (!o) throw new Fail('unknown_object', `No object with id "${id}".`); return o; };
-const posOf = (o: SceneObject): Vec3 => o.at ?? [0, 0, 0];
+function posOf(o: SceneObject): Vec3 { return o.at ?? [0, 0, 0]; }
 function catModel(cat: Catalogue, model: string): Model {
   const m = cat.models.find((x) => x.id === model);
   if (!m) {
@@ -231,13 +235,13 @@ function uniqueId(s: Scene, base: string): string {
   let n = 1; while (used.has(`${base}-${n}`)) n++;
   return `${base}-${n}`;
 }
-const at3 = (a: XZ, y0 = 0): Vec3 => (a.length === 2 ? [a[0], y0, a[1]] : [a[0], a[1], a[2]]);
-const scaleOf = (v: number | Vec3 | undefined): Vec3 => (v === undefined ? [1, 1, 1] : typeof v === 'number' ? [v, v, v] : v);
+function at3(a: XZ, y0 = 0): Vec3 { return (a.length === 2 ? [a[0], y0, a[1]] : [a[0], a[1], a[2]]); }
+function scaleOf(v: number | Vec3 | undefined): Vec3 { return (v === undefined ? [1, 1, 1] : typeof v === 'number' ? [v, v, v] : v); }
 function mulberry32(a: number): () => number { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const SHIRTS = ['#c8553d', '#3f6e9a', '#d9b44a', '#6f9a6a', '#a99bb8', '#e8dcc0', '#5f9ea0', '#b8765f', '#8c8c86'];
 const PANTS = ['#3a3f47', '#4a5568', '#6b5b4b', '#2f4a6b', '#55595f'];
 // The item that a random number r in [0, 1) picks.
-const pick = <T,>(arr: readonly T[], r: number): T => nth(arr, Math.floor(r * arr.length));
+function pick<T>(arr: readonly T[], r: number): T { return nth(arr, Math.floor(r * arr.length)); }
 
 // ---------- argument types (each one follows the inputSchema of its tool)
 interface PlaceProps {
@@ -431,212 +435,11 @@ function defineTool<A>(name: ToolName, description: string, properties: Record<s
   tools.push({ name, description, inputSchema, run });
 }
 
-defineTool<ListModelsArgs>('list_models', 'List catalogue models. Filter by words in the id, name or tags, and by kind. "person" is always available (variant 0 to 23). It also lists the person outfits (uniforms) with their sources.',
-  { query: str, kind: { type: 'string', enum: ['vehicle', 'building', 'furniture', 'structure', 'prop', 'sign', 'road', 'nature', 'person'] } }, [],
-  (_scene, a, ctx) => {
-    const cat = ctx.catalogue || loadCatalogue();
-    const words = (a.query || '').toLowerCase().split(/\s+/).filter(Boolean);
-    const rows: { id: string; name: string; kind: string; size: Vec3; tags: string[] }[] = cat.models.map((m) => ({ id: m.id, name: m.name, kind: m.kind, size: m.size, tags: m.tags || [] }));
-    rows.unshift({ id: 'person', name: 'Person (variant 0 to 23, poses: ' + POSES.join(', ') + ')', kind: 'person', size: [0.5, 1.75, 0.35], tags: ['people', 'human'] });
-    const out = rows.filter((m) => (!a.kind || m.kind === a.kind) && words.every((w) => `${m.id} ${m.name} ${m.tags.join(' ')}`.toLowerCase().includes(w)));
-    const outfits = (cat.outfits || []).map(({ id, name, source, note }) => ({ id, name, source, note }));
-    return okr({ count: out.length, models: out, outfits });
-  });
-
-defineTool<NewSceneArgs>('new_scene', 'Start a new empty scene. This replaces the current scene.',
-  { title: str, author: str, ground: { type: 'string', enum: GROUNDS }, look: { type: 'string', enum: LOOKS }, size: { type: 'array', items: num, minItems: 2, maxItems: 2 }, color: str },
-  [], (scene, a) => { replaceScene(scene, newScene(a)); return okr({ title: scene.title }); });
-
-defineTool<GetSceneArgs>('get_scene', 'Read the scene. By default it returns a summary with every object id. Pass full true for the whole file.',
-  { full: { type: 'boolean' } }, [], (scene, a) => {
-    if (a.full) return okr(scene);
-    return okr({
-      title: scene.title, duration: scene.duration, backdrop: scene.backdrop, lighting: scene.lighting, map: scene.map ? { origin: scene.map.origin, osm: scene.map.osm ? `${scene.map.osm.buildings?.length || 0} buildings` : undefined } : undefined,
-      counts: { objects: scene.objects.length, tracks: scene.tracks.length, camera: scene.camera.length, chapters: scene.chapters.length, captions: scene.captions.length, callouts: scene.callouts.length },
-      objects: scene.objects.map((o) => ({ id: o.id, model: o.model, at: o.at, yaw: o.yaw, label: o.label || undefined, tags: o.tags?.length ? o.tags : undefined })),
-      chapters: scene.chapters.map((c) => ({ id: c.id, start: c.start, end: c.end, title: c.title, shot: c.shot })),
-      camera: scene.camera.map((k) => ({ t: k.t, shot: k.shot, ease: k.ease })),
-      narration: scene.narration?.map((n, i) => ({ i, start: n.start, end: n.end, text: n.text, voice: !!n.voice })),
-      facts: scene.facts, motions: scene.motions?.length,
-    });
-  });
-
-defineTool<PlaceArgs>('place', 'Place one model at a position. Returns the object id.', placeProps, ['model', 'at'],
-  (scene, a, ctx) => mutate(scene, ctx, (s, cat) => { const o = makeObject(s, cat, a); s.objects.push(o); return { id: o.id }; }));
-
-defineTool<PlaceNearArgs>('place_near', 'Place a model near another object. offset is [dx, dz] or [dx, dy, dz] in metres from that object.',
-  { ...placeProps, near: { type: 'string', description: 'Id of the object to place beside.' }, offset: { type: 'array', items: num, minItems: 2, maxItems: 3 } }, ['model', 'near'],
-  (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
-    const n = posOf(find(s, a.near));
-    const off: Vec3 = a.offset ? at3(a.offset) : [1.5, 0, 0];
-    const o = makeObject(s, cat, a, { at: [r2(n[0] + off[0]), r2(n[1] + off[1]), r2(n[2] + off[2])] });
-    s.objects.push(o); return { id: o.id, at: o.at };
-  }));
-
-defineTool<PlaceGroupArgs>('place_group', 'Place many models in a line, grid, ring or scatter. Same seed gives the same result. For "person" it picks variants, poses and clothes from the seed.',
-  { ...placeProps, count: { type: 'integer', minimum: 1 }, pattern: { type: 'string', enum: ['line', 'grid', 'ring', 'scatter'] }, spacing: num, seed: { type: 'integer' },
-    variants: { type: 'array', items: { type: 'integer' }, description: 'Person variants to draw from.' }, poses: { type: 'array', items: { type: 'string', enum: POSES } },
-    angle: { type: 'number', description: 'Line or grid direction in degrees (0 = along +x).' }, cols: { type: 'integer', minimum: 1 }, radius: num,
-    area: { type: 'array', items: num, minItems: 2, maxItems: 2, description: 'Scatter area [width, depth].' }, face: { type: 'string', enum: ['center', 'out', 'none'] } },
-  ['model', 'count', 'at'],
-  (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
-    modelOrFail(cat, a.model);
-    if (a.count > 500) throw new Fail('bad_args', 'count must be 500 or fewer.');
-    const rng = mulberry32(a.seed ?? 1), n = a.count, sp = a.spacing ?? 1.2, c = at3(a.at), person = a.model === 'person';
-    const pts: { p: Vec3; yaw?: number }[] = [];
-    const dirv = rotYaw([1, 0, 0], a.angle ?? 0), dirz = rotYaw([0, 0, 1], a.angle ?? 0);
-    if (a.pattern === 'line' || !a.pattern) for (let i = 0; i < n; i++) pts.push({ p: [c[0] + dirv[0] * i * sp, c[1], c[2] + dirv[2] * i * sp] });
-    else if (a.pattern === 'grid') { const cols = a.cols ?? Math.ceil(Math.sqrt(n)); for (let i = 0; i < n; i++) { const x = (i % cols) * sp, z = Math.floor(i / cols) * sp; pts.push({ p: [c[0] + dirv[0] * x + dirz[0] * z, c[1], c[2] + dirv[2] * x + dirz[2] * z] }); } }
-    else if (a.pattern === 'ring') {
-      const rad = a.radius ?? Math.max(sp * n / (2 * Math.PI), 0.3);
-      for (let i = 0; i < n; i++) { const th = (i / n) * 2 * Math.PI; const face = a.face ?? 'center'; pts.push({ p: [c[0] + Math.sin(th) * rad, c[1], c[2] + Math.cos(th) * rad], yaw: face === 'none' ? undefined : (th / D + (face === 'center' ? 180 : 0)) % 360 }); }
-    } else {
-      const [w, d] = a.area ?? [Math.sqrt(n) * sp * 1.5, Math.sqrt(n) * sp * 1.5];
-      for (let i = 0; i < n; i++) {
-        let best: Vec3 = c;
-        for (let k = 0; k < 30; k++) {
-          const p: Vec3 = [c[0] + (rng() - 0.5) * w, c[1], c[2] + (rng() - 0.5) * d];
-          best = p;
-          if (pts.every((q) => Math.hypot(q.p[0] - p[0], q.p[2] - p[2]) >= sp * 0.8)) break;
-        }
-        pts.push({ p: best, yaw: rng() * 360 });
-      }
-    }
-    const base = a.id || a.model;
-    const ids: string[] = [];
-    pts.forEach((pt, i) => {
-      const v = person ? (a.variants?.length ? pick(a.variants, rng()) : Math.floor(rng() * 24)) : undefined;
-      const colors = a.colors || (person && !a.outfit ? { shirt: pick(SHIRTS, rng()), pants: pick(PANTS, rng()) } : undefined);
-      const pose = a.poses?.length ? pick(a.poses, rng()) : a.pose;
-      const o = makeObject(s, cat, { ...a, id: uniqueId(s, `${base}-${i + 1}`), variant: v, colors, pose, yaw: pt.yaw ?? a.yaw ?? 0, tags: [...(a.tags || []), `group:${base}`] }, { at: r3(pt.p) });
-      s.objects.push(o); ids.push(o.id);
-    });
-    return { count: ids.length, ids };
-  }));
-
-defineTool<TransformArgs>('transform', 'Move, turn, scale or flip an existing object.', { id: str, at: vecXZ, yaw: num, scale: { anyOf: [num, vec3] }, flip: { type: 'boolean' } }, ['id'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const o = find(s, a.id);
-    if (a.at) o.at = at3(a.at, posOf(o)[1]);
-    if (a.yaw !== undefined) o.yaw = a.yaw;
-    if (a.scale !== undefined) o.scale = scaleOf(a.scale);
-    if (a.flip !== undefined) o.flip = a.flip;
-    return { id: o.id, at: o.at, yaw: o.yaw };
-  }));
-
-defineTool<DuplicateArgs>('duplicate', 'Copy an object. Each copy moves by offset more than the last.', { id: str, count: { type: 'integer', minimum: 1 }, offset: { type: 'array', items: num, minItems: 2, maxItems: 3 } }, ['id'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const o = find(s, a.id), off: Vec3 = a.offset ? at3(a.offset) : [1.5, 0, 0], ids: string[] = [];
-    const oat = posOf(o);
-    for (let i = 1; i <= (a.count ?? 1); i++) {
-      const c = structuredClone(o); c.id = uniqueId(s, `${o.id}-copy`); c.at = [r2(oat[0] + off[0] * i), r2(oat[1] + off[1] * i), r2(oat[2] + off[2] * i)]; s.objects.push(c); ids.push(c.id);
-    }
-    return { ids };
-  }));
-
-defineTool<RemoveArgs>('remove', 'Remove an object, its animation tracks and its children. Remove only an object that does not belong in the scene. Never remove a building, a structure or a vehicle to clear a camera view: move the camera.', { id: str }, ['id'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    find(s, a.id);
-    const gone = new Set([a.id]);
-    let grew = true; while (grew) { grew = false; for (const o of s.objects) if (o.parent && gone.has(o.parent) && !gone.has(o.id)) { gone.add(o.id); grew = true; } }
-    s.objects = s.objects.filter((o) => !gone.has(o.id));
-    s.tracks = s.tracks.filter((t) => !gone.has(t.object));
-    for (const k of s.camera) if (k.frame) { k.frame.ids = k.frame.ids.filter((f) => !gone.has(f)); if (!k.frame.ids.length) delete k.frame; }
-    for (const c of s.chapters) if (c.focus) c.focus = c.focus.filter((f) => !gone.has(f));
-    s.callouts = s.callouts.filter((c) => !(c.object !== undefined && gone.has(c.object)));
-    if (s.motions) s.motions = s.motions.filter((m) => !gone.has(m.object));
-    return { removed: [...gone] };
-  }));
 
 const openingSchema: JsonSchema = { type: 'object', required: ['wall', 'at'], properties: { wall: { type: 'string', enum: ['n', 's', 'e', 'w'] }, at: { type: 'number', description: 'Centre of the gap in metres along the wall, from its west end (n, s) or north end (e, w).' }, width: num } };
 interface Wall { L: number; yaw: number; pos: (u: number) => Vec3; lo: number; hi: number }
-defineTool<BuildRoomArgs>('build_room', 'Build a room from wall, floor and ceiling objects. at is the floor centre [x, y, z]. size is [width (x), depth (z), height]. Walls n, s, e, w face outward (yaw 180, 0, 90, 270) and carry the wall tag.',
-  { id: str, at: vecXZ, size: vec3, doors: { type: 'array', items: openingSchema }, windows: { type: 'array', items: openingSchema }, floor: { type: 'boolean' }, ceiling: { type: 'boolean' }, source: common.source, estimated: common.estimated },
-  ['id', 'at', 'size'],
-  (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
-    const [w, d, h] = a.size, c = at3(a.at), T = 0.15, made: string[] = [];
-    const meta = { source: a.source || '', estimated: !!a.estimated };
-    const push = (model: string, id: string, pos: Vec3, yaw: number, scale: Vec3, tags: string[]) => { const o = makeObject(s, cat, { model, id, yaw, scale, tags: [...tags, a.id], ...meta }, { at: r3(pos) }); s.objects.push(o); made.push(o.id); };
-    const walls: Record<string, Wall> = {
-      n: { L: w, yaw: 180, pos: (u) => [c[0] - w / 2 + u, c[1], c[2] - d / 2], lo: -T / 2, hi: w + T / 2 },
-      s: { L: w, yaw: 0, pos: (u) => [c[0] - w / 2 + u, c[1], c[2] + d / 2], lo: -T / 2, hi: w + T / 2 },
-      e: { L: d, yaw: 90, pos: (u) => [c[0] + w / 2, c[1], c[2] - d / 2 + u], lo: T / 2, hi: d - T / 2 },
-      w: { L: d, yaw: 270, pos: (u) => [c[0] - w / 2, c[1], c[2] - d / 2 + u], lo: T / 2, hi: d - T / 2 },
-    };
-    const ops = (key: string, list: Opening[] | undefined, kind: 'door' | 'window') => (list || []).filter((o) => o.wall === key).map((o) => {
-      const wd = o.width ?? (kind === 'door' ? 1.0 : 1.2);
-      return { u0: o.at - wd / 2, u1: o.at + wd / 2, kind, wd, y0: kind === 'door' ? 0 : 0.9, y1: 2.1 };
-    });
-    for (const [key, W] of Object.entries(walls)) {
-      const list = [...ops(key, a.doors, 'door'), ...ops(key, a.windows, 'window')].sort((p, q) => p.u0 - q.u0);
-      let cur = W.lo, k = 1;
-      for (const op of list) {
-        if (op.u0 < cur + 0.05 || op.u1 > W.hi - 0.05) throw new Fail('bad_opening', `Opening on wall ${key} at ${((op.u0 + op.u1) / 2).toFixed(2)} m does not fit. Walls ${key} runs 0 to ${W.L} m and openings must not touch each other or the corners.`);
-        seg(cur, op.u0, 0, h, key, W, k++);
-        if (op.y0 > 0) seg(op.u0, op.u1, 0, op.y0, key, W, k++);
-        if (h > op.y1) seg(op.u0, op.u1, op.y1, h, key, W, k++);
-        const fx = op.kind === 'door' ? 'door' : 'window', fw = fx === 'door' ? 1.05 : 1.2;
-        const q = W.pos((op.u0 + op.u1) / 2);
-        push(fx, `${a.id}-${key}-${fx}-${k++}`, [q[0], q[1] + op.y0, q[2]], W.yaw, [op.wd / fw, 1, 1], ['wall']);
-        cur = op.u1;
-      }
-      seg(cur, W.hi, 0, h, key, W, k++);
-    }
-    function seg(u0: number, u1: number, y0: number, y1: number, key: string, W: Wall, k: number): void {
-      const len = u1 - u0; if (len < 0.01 || y1 - y0 < 0.01) return;
-      const m = len > 4 ? 'wall-5' : 'wall-3', base = m === 'wall-5' ? 5 : 3;
-      const p = W.pos((u0 + u1) / 2); p[1] += y0;
-      push(m, `${a.id}-${key}-wall-${k}`, p, W.yaw, [len / base, (y1 - y0) / 2.8, 1], ['wall']);
-    }
-    if (a.floor !== false) push('floor-tile', `${a.id}-floor`, [c[0], c[1], c[2]], 0, [w / 2, 1, d / 2], ['floor']);
-    if (a.ceiling !== false) push('ceiling-tile', `${a.id}-ceiling`, [c[0], c[1] + h - 0.05, c[2]], 0, [w / 2, 1, d / 2], ['ceiling']);
-    return { count: made.length, ids: made };
-  }));
-
-defineTool<BuildStairsArgs>('build_stairs', 'Place a flight of 14 steps. from is the foot of the stairs at the middle of the first step [x, y, z]. yaw is the climbing direction (0 climbs toward +z). Returns a path for move_along.',
-  { id: str, from: vecXZ, yaw: num, height: { type: 'number', description: 'Total rise in metres. Default 2.38.' }, width: { type: 'number', description: 'Default 1.2 m.' }, source: common.source, estimated: common.estimated },
-  ['from'],
-  (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
-    const m = catModel(cat, 'stairs-14'), yaw = a.yaw ?? 0, hgt = a.height ?? m.size[1], wd = a.width ?? m.size[0];
-    const f = at3(a.from), fw = rotYaw([0, 0, 1], yaw), len = m.size[2];
-    const at: Vec3 = [f[0] + fw[0] * len / 2, f[1], f[2] + fw[2] * len / 2];
-    const o = makeObject(s, cat, { model: 'stairs-14', id: a.id, yaw, scale: [wd / m.size[0], hgt / m.size[1], 1], tags: ['stairs'], source: a.source, estimated: a.estimated }, { at: r3(at) });
-    s.objects.push(o);
-    const top = r3([f[0] + fw[0] * len, f[1] + hgt, f[2] + fw[2] * len]);
-    return { id: o.id, bottom: f, top, path: [f, top] };
-  }));
-
-defineTool<PlaceSignArgs>('place_sign', 'Place a sign model. Its text shows as a label next to it, only in the chapters that list the sign in focus (always when the scene has no chapters).', { text: str, at: vecXZ, yaw: num, model: str, id: str, source: common.source, estimated: common.estimated, scale: placeProps.scale },
-  ['text', 'at'],
-  (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
-    if (a.text.length > 60) throw new Fail('sign_text_too_long', 'Sign text must be 60 characters or fewer.');
-    const o = makeObject(s, cat, { model: a.model || 'sign', id: a.id || uniqueId(s, 'sign'), at: a.at, yaw: a.yaw, scale: a.scale, label: a.text, tags: ['sign'], source: a.source, estimated: a.estimated });
-    s.objects.push(o); return { id: o.id };
-  }));
-
-defineTool<SetPoseArgs>('set_pose', 'Set the pose of an object at time t (or at a cue of the narration). Without t (or t = 0) it sets the starting pose.', { id: str, t: num, cue: cueArg, pose: { type: 'string', enum: POSES } }, ['id', 'pose'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const o = find(s, a.id);
-    if (a.cue) {
-      if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }], false);
-      const t = timeArg(s, a.cue, a.t);
-      mergeKeys(s, o.id, 'pose', [{ t, v: a.pose, ease: 'step', cue: a.cue }], false);
-      return { id: o.id, t, pose: a.pose };
-    }
-    if (!a.t) { o.pose = a.pose; if (trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: a.pose, ease: 'step' }], false); return { id: o.id, t: 0, pose: a.pose }; }
-    if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }], false);
-    mergeKeys(s, o.id, 'pose', [{ t: a.t, v: a.pose, ease: 'step' }], false);
-    return { id: o.id, t: a.t, pose: a.pose };
-  }));
 
 const keySchema: JsonSchema = { type: 'object', required: ['v'], properties: { t: num, cue: cueArg, v: { description: 'Value: [x,y,z] for at, a number for yaw, number or [x,y,z] for scale, a pose name for pose.' }, ease: { type: 'string', enum: EASES } } };
-defineTool<AnimateArgs>('animate', 'Write a whole animation track (replaces the track). Each key has t or a cue of the narration. Keys need strictly rising t. Never scale a building, a structure or a vehicle to nothing to clear a camera view (validate: object_vanishes). A vehicle may be swapped for another vehicle at the same place and time.', { id: str, channel: { type: 'string', enum: CHANNELS }, keys: { type: 'array', items: keySchema, minItems: 1 } }, ['id', 'channel', 'keys'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    find(s, a.id);
-    s.tracks = s.tracks.filter((t) => !(t.object === a.id && t.channel === a.channel));
-    s.tracks.push({ object: a.id, channel: a.channel, keys: a.keys.map((k) => ({ t: timeArg(s, k.cue, k.t), v: a.channel === 'at' && isXZ2(k.v) ? at3(k.v) : trackValue(k.v), ease: k.ease || (a.channel === 'pose' ? 'step' : 'linear'), ...(k.cue ? { cue: k.cue } : {}) })) });
-    return { id: a.id, channel: a.channel, keys: a.keys.length };
-  }));
 // The value of a key: the schema does not give it a type, the file format does.
 function trackValue(v: unknown): TrackKey['v'] {
   if (typeof v === 'number' || typeof v === 'string') return v;
@@ -644,254 +447,488 @@ function trackValue(v: unknown): TrackKey['v'] {
   throw new Fail('bad_args', 'A key value must be a number, a pose name or [x, y, z].');
 }
 
-defineTool<MoveAlongArgs>('move_along', 'Move an object along a path of points. Writes at, yaw and pose tracks. Use speed (m/s) or times (one absolute time per point). With cue (a cue of the narration) the move starts at the cue, and times count from it. It uses the walk pose (run above 3 m/s) while it moves and stand at the end. When the moving object passes into another object, leaves the ground or drives in the wrong lane, the answer has "collisions". See guide "motion".',
-  { id: str, path: { type: 'array', items: { type: 'array', items: num, minItems: 2, maxItems: 3 }, minItems: 2 }, speed: num, times: { type: 'array', items: num }, start: num, cue: cueArg, pose: { type: 'string', enum: POSES }, end_pose: { type: 'string', enum: POSES } },
-  ['id', 'path'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const o = find(s, a.id), start = a.cue ? timeArg(s, a.cue, a.start, 'start') : a.start ?? 0;
-    const y0 = posOf(o)[1];
-    const P = a.path.map((p) => at3(p, y0));
-    let times: number[];
-    if (a.times) {
-      const given = a.times;
-      if (given.length !== P.length) throw new Fail('bad_args', 'times needs one value per path point.');
-      times = a.cue ? given.map((t) => r2(start + t - nth(given, 0))) : given;
-    } else {
-      const sp = a.speed ?? 1.4; times = [start];
-      for (let i = 1; i < P.length; i++) times.push(r2(nth(times, i - 1) + Math.max(Math.hypot(nth(P, i)[0] - nth(P, i - 1)[0], nth(P, i)[1] - nth(P, i - 1)[1], nth(P, i)[2] - nth(P, i - 1)[2]) / sp, 0.05)));
-    }
-    for (let i = 1; i < times.length; i++) if (nth(times, i) <= nth(times, i - 1)) throw new Fail('time_backwards', `times must rise: ${nth(times, i)} is not after ${nth(times, i - 1)}.`);
-    const t0 = nth(times, 0), tEnd = nth(times, times.length - 1);
-    const speed = (a.speed ?? Math.hypot(nth(P, 1)[0] - nth(P, 0)[0], nth(P, 1)[2] - nth(P, 0)[2]) / (nth(times, 1) - nth(times, 0)));
-    const moving = a.pose || (speed > 3 ? 'run' : 'walk');
-    const [ci, word, off] = a.cue ? cueParts(a.cue) : [0, '', 0];
-    const follow = (ks: TrackKey[]): TrackKey[] => (a.cue ? ks.map((k) => ({ ...k, cue: [ci, word, r2(off + k.t - t0)] satisfies Cue })) : ks);
-    mergeKeys(s, o.id, 'at', follow(P.map((p, i): TrackKey => ({ t: nth(times, i), v: r3(p), ease: 'linear' }))), true);
-    // yaw: face the direction of travel, turning over 0.24 s at corners
-    const yk: TrackKey[] = []; let yaw = o.yaw ?? 0;
-    const segYaw = (i: number) => Math.atan2(nth(P, i + 1)[0] - nth(P, i)[0], nth(P, i + 1)[2] - nth(P, i)[2]) / D;
-    const first = trackOf(s, o.id, 'yaw')?.keys.filter((k) => k.t < t0).pop();
-    yaw = wrapYaw(typeof first?.v === 'number' ? first.v : yaw, segYaw(0));
-    yk.push({ t: t0, v: r2(yaw), ease: 'linear' });
-    for (let i = 1; i < P.length - 1; i++) {
-      const ny = wrapYaw(yaw, segYaw(i));
-      if (Math.abs(ny - yaw) > 1) {
-        const h = Math.min(0.12, (nth(times, i) - nth(times, i - 1)) / 3, (nth(times, i + 1) - nth(times, i)) / 3);
-        yk.push({ t: r2(nth(times, i) - h), v: r2(yaw), ease: 'linear' }, { t: r2(nth(times, i) + h), v: r2(ny), ease: 'linear' });
-        yaw = ny;
-      }
-    }
-    mergeKeys(s, o.id, 'yaw', follow(yk), true);
-    if (o.model === 'person') {
-      if (!trackOf(s, o.id, 'pose') && t0 > 0) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }], false);
-      mergeKeys(s, o.id, 'pose', follow([{ t: t0, v: moving, ease: 'step' }, { t: tEnd, v: a.end_pose || 'stand', ease: 'step' }]), false);
-    }
-    if (!trackOf(s, o.id, 'at')?.keys.some((k) => k.t < t0)) o.at = r3(nth(P, 0));
-    const out = { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
-    const hits = motionErrors(s, ctx.catalogue || loadCatalogue(), { only: [o.id], from: t0, to: tEnd });
-    if (hits.length) Object.assign(out, { collisions: hits.slice(0, 5).map((e) => e.message), warning: 'The path runs into something. Change the path or the times before export.' });
-    return out;
-  }));
-
-defineTool<SetCameraArgs>('set_camera', 'Add or replace a camera key at time t (or at a cue of the narration). Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
-  { t: num, cue: cueArg, shot: { type: 'string', enum: SHOTS }, frame: strArr, eye: vec3, target: vec3, fov: num, ease: { type: 'string', enum: EASES },
-    view: { type: 'number', description: 'Camera side in degrees: 0 looks north from the south side, 90 looks west from the east side.' }, elevation: num, margin: num, distance: num, cut: { type: 'boolean' } },
-  ['shot'],
-  (scene, args, ctx) => mutate(scene, ctx, (s, cat) => {
-    const a: Timed<SetCameraArgs> = { ...args, t: timeArg(s, args.cue, args.t) };
-    const ids = a.frame?.length ? a.frame : undefined;
-    let eye = a.eye, target = a.target, fov = a.fov ?? 50;
-    if (ids) { const f = frameCamera(s, cat, ids, a.shot, a.t, a); eye = f.eye; target = f.target; fov = f.fov; }
-    if (!eye || !target) throw new Fail('bad_args', 'Give frame (object ids) or both eye and target.');
-    const framing = ids ? { frame: { ids, ...(a.view !== undefined ? { view: a.view } : {}), ...(a.elevation !== undefined ? { elevation: a.elevation } : {}), ...(a.margin !== undefined ? { margin: a.margin } : {}), ...(a.distance !== undefined ? { distance: a.distance } : {}) } satisfies CameraFrame } : {};
-    const key = { t: a.t, shot: a.shot, eye: r3(eye), target: r3(target), fov, ease: a.ease || 'inout', ...(a.cue ? { cue: a.cue } : {}), ...framing };
-    s.camera = s.camera.filter((k) => Math.abs(k.t - a.t) > 1e-9);
-    const prev = [...s.camera].reverse().find((k) => k.t < a.t);
-    if (a.cut && prev) prev.ease = 'step';
-    s.camera.push(key);
-    s.camera.sort((p, q) => p.t - q.t);
-    const out = { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
-    const blocked = blocksAt(s, cat, key, a.frame || [], a.t);
-    if (blocked.length) Object.assign(out, { blocked, warning: 'Something stands between the camera and the subject. Change the view before export.', ...(ids ? { clear_views: clearViews(s, cat, ids, a) } : {}) });
-    return out;
-  }));
-
-defineTool<SetLightingArgs>('set_lighting', 'Set the lighting look from time t (or from a cue of the narration): day, dusk, night, indoor.', { t: num, cue: cueArg, look: { type: 'string', enum: LOOKS } }, ['look'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const t = timeArg(s, a.cue, a.t);
-    s.lighting = (s.lighting || []).filter((k) => k.t !== t); s.lighting.push({ t, look: a.look, ...(a.cue ? { cue: a.cue } : {}) }); s.lighting.sort((p, q) => p.t - q.t); return { t, look: a.look };
-  }));
-
-defineTool<AddCaptionArgs>('add_caption', 'Add a caption (up to 280 characters, at least 0.06 s per character on screen, no overlap with other captions). A scene with narration makes its captions from the narration: do not add captions to it.', { start: num, end: num, text: str }, ['start', 'end', 'text'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    if (s.narration?.length) throw new Fail('narrated', 'This scene has narration. Its captions are the sentences of the narration. Change the narration with narrate.'); s.captions.push({ start: a.start, end: a.end, text: a.text }); return { index: s.captions.length - 1, chars: a.text.length }; }));
-
-defineTool<AddCalloutArgs>('add_callout', 'Add a callout label tied to an object for a time range (start and end, or cue and end_cue of the narration). The range must be inside one chapter (validate: callout_outside_chapter). ^{...} and _{...} in the text draw small raised and lowered text, for example "m^{2}" or "CO_{2}".', { start: num, end: num, cue: cueArg, end_cue: cueArg, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['text'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    const c: Callout = { start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), text: a.text };
-    if (a.object !== undefined) c.object = a.object;
-    if (a.source !== undefined) c.source = a.source;
-    if (a.estimated !== undefined) c.estimated = a.estimated;
-    if (a.measured !== undefined) c.measured = a.measured;
-    if (a.cue) c.cue = a.cue;
-    if (a.end_cue) c.endCue = a.end_cue;
-    s.callouts.push(c); return { index: s.callouts.length - 1 };
-  }));
-
-defineTool<AddChapterArgs>('add_chapter', 'Add a chapter (a named time range: start and end, or cue and end_cue of the narration). With caption it also adds the caption for the whole chapter (not in a scene with narration). focus lists the objects the shot must show. source says where the chapter facts come from.',
-  { start: num, end: num, cue: cueArg, end_cue: cueArg, title: str, clock: str, caption: str, focus: strArr, shot: { type: 'string', enum: SHOTS }, source: common.source, estimated: common.estimated, measured: common.measured, id: str },
-  ['title'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    if (a.caption && s.narration?.length) throw new Fail('narrated', 'A narrated scene makes its captions from the narration. Do not give a chapter a caption.');
-    const id = a.id || `c${s.chapters.length + 1}`;
-    const c: Chapter = { id, start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
-    if (a.estimated !== undefined) c.estimated = a.estimated;
-    if (a.measured !== undefined) c.measured = a.measured;
-    for (const f of c.focus ?? []) find(s, f);
-    s.chapters.push(c);
-    if (a.caption) s.captions.push({ start: c.start, end: c.end, text: a.caption });
-    return { id };
-  }));
-
-defineTool<SetBackdropArgs>('set_backdrop', 'Set the ground and the map. ground is grass, street, floor, plain or map. Ground "map" with an origin shows OneMap tiles. origin is {lat, lon}. onemap is {zoom, style} for the tiles. drive is the side of the road that traffic keeps to: "left" (Singapore, the default) or "right".',
-  { ground: { type: 'string', enum: GROUNDS }, size: { type: 'array', items: num, minItems: 2, maxItems: 2 }, color: str,
-    origin: { type: 'object', properties: { lat: num, lon: num }, required: ['lat', 'lon'] }, onemap: { type: 'object' }, source: str, estimated: { type: 'boolean' },
-    drive: { type: 'string', enum: ['left', 'right'] } }, [],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    if (a.drive) s.drive = a.drive;
-    s.backdrop = { ...s.backdrop, ...(a.ground ? { ground: a.ground } : {}), ...(a.size ? { size: a.size } : {}), ...(a.color ? { color: a.color } : {}) };
-    if (a.origin || a.onemap) {
-      const map: SceneMap = s.map ?? {};
-      s.map = map;
-      if (a.origin) map.origin = a.origin;
-      if (a.onemap) map.onemap = a.onemap;
-      if (a.source !== undefined) map.source = a.source;
-      if (a.estimated !== undefined) map.estimated = a.estimated;
-    }
-    return { backdrop: s.backdrop };
-  }));
-
-defineTool<ImportOsmArgs>('import_osm', 'Import the OpenStreetMap building footprints inside bbox [south, west, north, east] in degrees (at most 0.01 degrees a side). The scene origin becomes the bbox centre when the scene has no origin. bearing (degrees) turns the map so that a street with that compass bearing runs along z. The scene shows the OpenStreetMap credit by itself. The tool writes the ODbL data file next to the scene.',
-  { bbox: { type: 'array', items: num, minItems: 4, maxItems: 4 }, bearing: num }, ['bbox'],
-  (scene, a, ctx) => {
-    const r = mutate(scene, ctx, (s) => {
-      const [so, w, n, e] = a.bbox;
-      if (!validBbox(a.bbox)) throw new Fail('bad_args', 'bbox is [south, west, north, east] with south < north, west < east and at most 0.01 degrees a side.');
-      if (!ctx.overpass) throw new Fail('no_osm_data', 'No OpenStreetMap answer. Call import_osm through the MCP server or the command line.');
-      const origin = s.map?.origin || { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
-      const map = s.map ?? { origin };
-      s.map = map;
-      map.origin = origin;
-      const found = parseOverpass(ctx.overpass, origin);
-      if (!found.length) throw new Fail('no_buildings', 'OpenStreetMap has no building footprints inside this bbox.');
-      const osm: NonNullable<NonNullable<Scene['map']>['osm']> = toMapBlock(found, origin, a.bearing || 0);
-      map.osm = osm;
-      if (a.bearing) map.bearing = a.bearing; else delete map.bearing;
-      if (ctx.odblPath) osm.dataFile = basename(ctx.odblPath);
-      return { buildings: found.length, origin, bearing: a.bearing || 0, dataFile: osm.dataFile };
-    });
-    if (r.ok && ctx.odblPath) writeSceneOdbl(scene, dirname(ctx.odblPath));
-    return r;
-  });
-
-defineTool<SetCutawayArgs>('set_cutaway', 'Hide ceilings and the walls between the camera and its target, for rooms made with build_room only. It never hides buildings, vehicles or other objects. Outdoors, move the camera instead.', { ceilings: { type: 'boolean' }, nearWalls: { type: 'boolean' } }, [],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => { s.cutaway = { ceilings: a.ceilings ?? true, nearWalls: a.nearWalls ?? true }; return s.cutaway; }));
-
-defineTool<AddCreditArgs>('add_credit', 'Add a credit line that the export draws (for example a data licence credit).', { text: str }, ['text'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => { s.credits = s.credits || []; if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; }));
-
 // ---------- narration, facts and motion words (guide "narration")
 const beats = (s: Scene) => ({ length: s.captions.at(-1)?.end ?? 0, beats: (s.narration || []).map((n, i) => ({ i, start: n.start, end: n.end, text: n.text, voice: !!n.voice })) });
 const sentence: JsonSchema = { anyOf: [str, { type: 'object', required: ['text'], additionalProperties: false, properties: {
   text: str, pause: { type: 'number', minimum: 0, description: 'Seconds of silence after the sentence: the picture holds after a change.' }, facts: { ...strArr, description: 'Ids of the facts (add_fact) that the sentence states.' } } }] };
-defineTool<NarrateArgs>('narrate', 'Set the narration (replaces it). 1 sentence = 1 beat, and each sentence is also the caption of its beat. A sentence that has a voice file keeps it. Others get stand-in times until make_voice. Returns the start and end of each beat. Read guide "narration".',
-  { sentences: { type: 'array', items: sentence, minItems: 1 } }, ['sentences'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    s.narration = a.sentences.map((x) => {
-      const n: NarrationBeat = typeof x === 'string' ? { text: x } : { ...x };
-      if (!n.text.trim()) throw new Fail('bad_args', 'A sentence needs a text.');
-      const sec = ctx.sceneDir ? voiceSeconds(ctx.sceneDir, n.text) : null;
-      if (sec) Object.assign(n, { voice: voiceFile(n.text), seconds: sec });
-      return n;
-    });
-    s.captions = [];
-    return null;
-  }), (s) => beats(s));
-
-defineTool<NoArgs>('make_voice', 'Make the voice of each sentence of the narration on this computer (Kokoro, voice af_heart) and time the beats with it. The first call on a computer installs the voice (about 750 MB in ~/.cache/toybox/voice) and can take some minutes. Cued times move with the new beats.', {}, [],
-  (scene, _a, ctx) => mutate(scene, ctx, (s) => {
-    if (!s.narration?.length) throw new Fail('no_narration', 'The scene has no narration. Call narrate first.');
-    if (!ctx.sceneDir) throw new Fail('no_voice', 'No voice here. Call make_voice through the MCP server or the command line.');
-    for (const n of s.narration) {
-      const sec = voiceSeconds(ctx.sceneDir, n.text);
-      if (!sec) throw new Fail('no_voice', `No voice file for "${n.text}".`);
-      Object.assign(n, { voice: voiceFile(n.text), seconds: sec });
-    }
-    return null;
-  }), (s) => beats(s));
-
-defineTool<AddFactArgs>('add_fact', 'Add a fact of the outline with its source. Use only facts that you read in a source. Never guess a fact: leave out a fact that has no source. A sentence of the narration lists the ids of the facts that it states.',
-  { id: str, text: str, source: { type: 'string', description: 'The URL or the document where you read the fact.' } }, ['text', 'source'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    s.facts = s.facts || [];
-    const id = a.id || `f${s.facts.length + 1}`;
-    if (s.facts.some((f) => f.id === id)) throw new Fail('duplicate_id', `Fact ${id} exists.`);
-    s.facts.push({ id, text: a.text, source: a.source });
-    return { id };
-  }));
-
-defineTool<AddMotionArgs>('add_motion', `Add a motion word to an object at time t (or at a cue of the narration): ${MOVES.join(', ')}. pop grows it from nothing, out shrinks it to nothing, hop jumps (h: height in half-heights of the model, d: seconds), squash presses it down, wave rocks it (deg). blink, squint, look (x and y from -1 to 1: right and up, for d seconds), glance and spin move the eyes of a character (the model "narrator"). A model with motions stays a pure function of time. Never pop or out a building, a structure or a vehicle.`,
-  { id: str, move: { type: 'string', enum: MOVES }, t: num, cue: cueArg, d: { type: 'number', description: 'Seconds.' }, h: num, x: num, y: num, deg: num }, ['id', 'move'],
-  (scene, a, ctx) => mutate(scene, ctx, (s) => {
-    find(s, a.id);
-    const m: Motion = { object: a.id, move: a.move, t: timeArg(s, a.cue, a.t) };
-    if (a.d !== undefined) m.d = a.d;
-    if (a.h !== undefined) m.h = a.h;
-    if (a.x !== undefined) m.x = a.x;
-    if (a.y !== undefined) m.y = a.y;
-    if (a.deg !== undefined) m.deg = a.deg;
-    if (a.cue) m.cue = a.cue;
-    s.motions = s.motions || [];
-    s.motions.push(m);
-    return { id: a.id, move: a.move, t: m.t };
-  }));
-
-defineTool<NoArgs>('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid. It also tests every chapter for a blocked view (code view_blocked): a building, structure or vehicle between the camera and a focus object, or in front of much of the frame, for more than 0.5 s. And it tests motion every 0.25 s: collision (two objects pass into each other), off_ground (a person or a vehicle floats or sinks) and wrong_lane (a vehicle drives on the wrong side).', {}, [],
-  (scene, _a, ctx) => { const errs = checkScene(scene, ctx.catalogue || loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
-
-defineTool<RenderPreviewArgs>('render_preview', 'Render a picture of the scene at time t so you can look at it. The daemon does the rendering.', { t: num }, ['t'],
-  (_scene, a) => okr({ stub: true, t: a.t, message: 'Not rendered here. The Toybox daemon renders the picture and replaces this answer.' }));
-
-defineTool<ExportSceneArgs>('export_scene', 'Write the scene to a .toybox.json file (and the captions to a .srt file next to it). Without path it returns the scene.', { path: str }, [],
-  (scene, a, ctx) => {
-    const errs = checkScene(scene, ctx.catalogue || loadCatalogue());
-    if (!a.path) return okr({ errors: errs.length, scene });
-    let file = a.path;
-    if (ctx.exportDir) {
-      file = resolve(ctx.exportDir, a.path);
-      const rel = relative(ctx.exportDir, file);
-      if (!rel || rel.startsWith('..') || isAbsolute(rel) || !file.endsWith('.toybox.json')) throw new Fail('bad_path', `path must be a .toybox.json file inside ${ctx.exportDir}.`);
-    }
-    saveScene(file, scene);
-    if (ctx.sceneDir && resolve(dirname(file)) !== resolve(ctx.sceneDir)) for (const n of scene.narration || []) if (n.voice) {
-      mkdirSync(join(dirname(file), 'voice'), { recursive: true });
-      copyFileSync(join(ctx.sceneDir, n.voice), join(dirname(file), n.voice));
-    }
-    const srtPath = file.replace(/(\.toybox)?\.json$/, '') + '.srt';
-    writeFileSync(srtPath, srt(scene));
-    const odbl = writeSceneOdbl(scene, dirname(resolve(file)));
-    return okr({ path: file, srt: srtPath, ...(odbl ? { odbl } : {}), errors: errs.length });
-  });
 
 const GUIDE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'guide');
-defineTool<GuideArgs>('guide', 'Read a how-to guide. Start with "overview". Others: people, motion, camera, indoor, map, explainer, narration.', { name: str }, [],
-  (_scene, a) => {
-    const names = readdirSync(GUIDE_DIR).filter((f) => f.endsWith('.txt')).map((f) => f.slice(0, -4));
-    const name = a.name || 'overview';
-    if (!names.includes(name)) throw new Fail('unknown_guide', `No guide "${name}". Guides: ${names.join(', ')}.`);
-    return okr({ name, text: readFileSync(join(GUIDE_DIR, `${name}.txt`), 'utf8') });
-  });
+function defineTools1(): void {
+  defineTool<ListModelsArgs>('list_models', 'List catalogue models. Filter by words in the id, name or tags, and by kind. "person" is always available (variant 0 to 23). It also lists the person outfits (uniforms) with their sources.',
+    { query: str, kind: { type: 'string', enum: ['vehicle', 'building', 'furniture', 'structure', 'prop', 'sign', 'road', 'nature', 'person'] } }, [],
+    (_scene, a, ctx) => {
+      const cat = ctx.catalogue || loadCatalogue();
+      const words = (a.query || '').toLowerCase().split(/\s+/).filter(Boolean);
+      const rows: { id: string; name: string; kind: string; size: Vec3; tags: string[] }[] = cat.models.map((m) => ({ id: m.id, name: m.name, kind: m.kind, size: m.size, tags: m.tags || [] }));
+      rows.unshift({ id: 'person', name: 'Person (variant 0 to 23, poses: ' + POSES.join(', ') + ')', kind: 'person', size: [0.5, 1.75, 0.35], tags: ['people', 'human'] });
+      const out = rows.filter((m) => (!a.kind || m.kind === a.kind) && words.every((w) => `${m.id} ${m.name} ${m.tags.join(' ')}`.toLowerCase().includes(w)));
+      const outfits = (cat.outfits || []).map(({ id, name, source, note }) => ({ id, name, source, note }));
+      return okr({ count: out.length, models: out, outfits });
+    });
 
+  defineTool<NewSceneArgs>('new_scene', 'Start a new empty scene. This replaces the current scene.',
+    { title: str, author: str, ground: { type: 'string', enum: GROUNDS }, look: { type: 'string', enum: LOOKS }, size: { type: 'array', items: num, minItems: 2, maxItems: 2 }, color: str },
+    [], (scene, a) => { replaceScene(scene, newScene(a)); return okr({ title: scene.title }); });
+
+  defineTool<GetSceneArgs>('get_scene', 'Read the scene. By default it returns a summary with every object id. Pass full true for the whole file.',
+    { full: { type: 'boolean' } }, [], (scene, a) => {
+      if (a.full) return okr(scene);
+      return okr({
+        title: scene.title, duration: scene.duration, backdrop: scene.backdrop, lighting: scene.lighting, map: scene.map ? { origin: scene.map.origin, osm: scene.map.osm ? `${scene.map.osm.buildings?.length || 0} buildings` : undefined } : undefined,
+        counts: { objects: scene.objects.length, tracks: scene.tracks.length, camera: scene.camera.length, chapters: scene.chapters.length, captions: scene.captions.length, callouts: scene.callouts.length },
+        objects: scene.objects.map((o) => ({ id: o.id, model: o.model, at: o.at, yaw: o.yaw, label: o.label || undefined, tags: o.tags?.length ? o.tags : undefined })),
+        chapters: scene.chapters.map((c) => ({ id: c.id, start: c.start, end: c.end, title: c.title, shot: c.shot })),
+        camera: scene.camera.map((k) => ({ t: k.t, shot: k.shot, ease: k.ease })),
+        narration: scene.narration?.map((n, i) => ({ i, start: n.start, end: n.end, text: n.text, voice: !!n.voice })),
+        facts: scene.facts, motions: scene.motions?.length,
+      });
+    });
+
+  defineTool<PlaceArgs>('place', 'Place one model at a position. Returns the object id.', placeProps, ['model', 'at'],
+    (scene, a, ctx) => mutate(scene, ctx, (s, cat) => { const o = makeObject(s, cat, a); s.objects.push(o); return { id: o.id }; }));
+
+  defineTool<PlaceNearArgs>('place_near', 'Place a model near another object. offset is [dx, dz] or [dx, dy, dz] in metres from that object.',
+    { ...placeProps, near: { type: 'string', description: 'Id of the object to place beside.' }, offset: { type: 'array', items: num, minItems: 2, maxItems: 3 } }, ['model', 'near'],
+    (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
+      const n = posOf(find(s, a.near));
+      const off: Vec3 = a.offset ? at3(a.offset) : [1.5, 0, 0];
+      const o = makeObject(s, cat, a, { at: [r2(n[0] + off[0]), r2(n[1] + off[1]), r2(n[2] + off[2])] });
+      s.objects.push(o); return { id: o.id, at: o.at };
+    }));
+}
+function defineTools2(): void {
+
+  defineTool<PlaceGroupArgs>('place_group', 'Place many models in a line, grid, ring or scatter. Same seed gives the same result. For "person" it picks variants, poses and clothes from the seed.',
+    { ...placeProps, count: { type: 'integer', minimum: 1 }, pattern: { type: 'string', enum: ['line', 'grid', 'ring', 'scatter'] }, spacing: num, seed: { type: 'integer' },
+      variants: { type: 'array', items: { type: 'integer' }, description: 'Person variants to draw from.' }, poses: { type: 'array', items: { type: 'string', enum: POSES } },
+      angle: { type: 'number', description: 'Line or grid direction in degrees (0 = along +x).' }, cols: { type: 'integer', minimum: 1 }, radius: num,
+      area: { type: 'array', items: num, minItems: 2, maxItems: 2, description: 'Scatter area [width, depth].' }, face: { type: 'string', enum: ['center', 'out', 'none'] } },
+    ['model', 'count', 'at'],
+    (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
+      modelOrFail(cat, a.model);
+      if (a.count > 500) throw new Fail('bad_args', 'count must be 500 or fewer.');
+      const rng = mulberry32(a.seed ?? 1), n = a.count, sp = a.spacing ?? 1.2, c = at3(a.at), person = a.model === 'person';
+      const pts: { p: Vec3; yaw?: number }[] = [];
+      const dirv = rotYaw([1, 0, 0], a.angle ?? 0), dirz = rotYaw([0, 0, 1], a.angle ?? 0);
+      if (a.pattern === 'line' || !a.pattern) for (let i = 0; i < n; i++) pts.push({ p: [c[0] + dirv[0] * i * sp, c[1], c[2] + dirv[2] * i * sp] });
+      else if (a.pattern === 'grid') { const cols = a.cols ?? Math.ceil(Math.sqrt(n)); for (let i = 0; i < n; i++) { const x = (i % cols) * sp, z = Math.floor(i / cols) * sp; pts.push({ p: [c[0] + dirv[0] * x + dirz[0] * z, c[1], c[2] + dirv[2] * x + dirz[2] * z] }); } }
+      else if (a.pattern === 'ring') {
+        const rad = a.radius ?? Math.max(sp * n / (2 * Math.PI), 0.3);
+        for (let i = 0; i < n; i++) { const th = (i / n) * 2 * Math.PI; const face = a.face ?? 'center'; pts.push({ p: [c[0] + Math.sin(th) * rad, c[1], c[2] + Math.cos(th) * rad], yaw: face === 'none' ? undefined : (th / D + (face === 'center' ? 180 : 0)) % 360 }); }
+      } else {
+        const [w, d] = a.area ?? [Math.sqrt(n) * sp * 1.5, Math.sqrt(n) * sp * 1.5];
+        for (let i = 0; i < n; i++) {
+          let best: Vec3 = c;
+          for (let k = 0; k < 30; k++) {
+            const p: Vec3 = [c[0] + (rng() - 0.5) * w, c[1], c[2] + (rng() - 0.5) * d];
+            best = p;
+            if (pts.every((q) => Math.hypot(q.p[0] - p[0], q.p[2] - p[2]) >= sp * 0.8)) break;
+          }
+          pts.push({ p: best, yaw: rng() * 360 });
+        }
+      }
+      const base = a.id || a.model;
+      const ids: string[] = [];
+      pts.forEach((pt, i) => {
+        const v = person ? (a.variants?.length ? pick(a.variants, rng()) : Math.floor(rng() * 24)) : undefined;
+        const colors = a.colors || (person && !a.outfit ? { shirt: pick(SHIRTS, rng()), pants: pick(PANTS, rng()) } : undefined);
+        const pose = a.poses?.length ? pick(a.poses, rng()) : a.pose;
+        const o = makeObject(s, cat, { ...a, id: uniqueId(s, `${base}-${i + 1}`), variant: v, colors, pose, yaw: pt.yaw ?? a.yaw ?? 0, tags: [...(a.tags || []), `group:${base}`] }, { at: r3(pt.p) });
+        s.objects.push(o); ids.push(o.id);
+      });
+      return { count: ids.length, ids };
+    }));
+
+  defineTool<TransformArgs>('transform', 'Move, turn, scale or flip an existing object.', { id: str, at: vecXZ, yaw: num, scale: { anyOf: [num, vec3] }, flip: { type: 'boolean' } }, ['id'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      const o = find(s, a.id);
+      if (a.at) o.at = at3(a.at, posOf(o)[1]);
+      if (a.yaw !== undefined) o.yaw = a.yaw;
+      if (a.scale !== undefined) o.scale = scaleOf(a.scale);
+      if (a.flip !== undefined) o.flip = a.flip;
+      return { id: o.id, at: o.at, yaw: o.yaw };
+    }));
+}
+function defineTools3(): void {
+
+  defineTool<DuplicateArgs>('duplicate', 'Copy an object. Each copy moves by offset more than the last.', { id: str, count: { type: 'integer', minimum: 1 }, offset: { type: 'array', items: num, minItems: 2, maxItems: 3 } }, ['id'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      const o = find(s, a.id), off: Vec3 = a.offset ? at3(a.offset) : [1.5, 0, 0], ids: string[] = [];
+      const oat = posOf(o);
+      for (let i = 1; i <= (a.count ?? 1); i++) {
+        const c = structuredClone(o); c.id = uniqueId(s, `${o.id}-copy`); c.at = [r2(oat[0] + off[0] * i), r2(oat[1] + off[1] * i), r2(oat[2] + off[2] * i)]; s.objects.push(c); ids.push(c.id);
+      }
+      return { ids };
+    }));
+
+  defineTool<RemoveArgs>('remove', 'Remove an object, its animation tracks and its children. Remove only an object that does not belong in the scene. Never remove a building, a structure or a vehicle to clear a camera view: move the camera.', { id: str }, ['id'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      find(s, a.id);
+      const gone = new Set([a.id]);
+      let grew = true; while (grew) { grew = false; for (const o of s.objects) if (o.parent && gone.has(o.parent) && !gone.has(o.id)) { gone.add(o.id); grew = true; } }
+      s.objects = s.objects.filter((o) => !gone.has(o.id));
+      s.tracks = s.tracks.filter((t) => !gone.has(t.object));
+      for (const k of s.camera) if (k.frame) { k.frame.ids = k.frame.ids.filter((f) => !gone.has(f)); if (!k.frame.ids.length) delete k.frame; }
+      for (const c of s.chapters) if (c.focus) c.focus = c.focus.filter((f) => !gone.has(f));
+      s.callouts = s.callouts.filter((c) => !(c.object !== undefined && gone.has(c.object)));
+      if (s.motions) s.motions = s.motions.filter((m) => !gone.has(m.object));
+      return { removed: [...gone] };
+    }));
+}
+function defineTools4(): void {
+  defineTool<BuildRoomArgs>('build_room', 'Build a room from wall, floor and ceiling objects. at is the floor centre [x, y, z]. size is [width (x), depth (z), height]. Walls n, s, e, w face outward (yaw 180, 0, 90, 270) and carry the wall tag.',
+    { id: str, at: vecXZ, size: vec3, doors: { type: 'array', items: openingSchema }, windows: { type: 'array', items: openingSchema }, floor: { type: 'boolean' }, ceiling: { type: 'boolean' }, source: common.source, estimated: common.estimated },
+    ['id', 'at', 'size'],
+    (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
+      const [w, d, h] = a.size, c = at3(a.at), T = 0.15, made: string[] = [];
+      const meta = { source: a.source || '', estimated: !!a.estimated };
+      const push = (model: string, id: string, pos: Vec3, yaw: number, scale: Vec3, tags: string[]) => { const o = makeObject(s, cat, { model, id, yaw, scale, tags: [...tags, a.id], ...meta }, { at: r3(pos) }); s.objects.push(o); made.push(o.id); };
+      const walls: Record<string, Wall> = {
+        n: { L: w, yaw: 180, pos: (u) => [c[0] - w / 2 + u, c[1], c[2] - d / 2], lo: -T / 2, hi: w + T / 2 },
+        s: { L: w, yaw: 0, pos: (u) => [c[0] - w / 2 + u, c[1], c[2] + d / 2], lo: -T / 2, hi: w + T / 2 },
+        e: { L: d, yaw: 90, pos: (u) => [c[0] + w / 2, c[1], c[2] - d / 2 + u], lo: T / 2, hi: d - T / 2 },
+        w: { L: d, yaw: 270, pos: (u) => [c[0] - w / 2, c[1], c[2] - d / 2 + u], lo: T / 2, hi: d - T / 2 },
+      };
+      const ops = (key: string, list: Opening[] | undefined, kind: 'door' | 'window') => (list || []).filter((o) => o.wall === key).map((o) => {
+        const wd = o.width ?? (kind === 'door' ? 1.0 : 1.2);
+        return { u0: o.at - wd / 2, u1: o.at + wd / 2, kind, wd, y0: kind === 'door' ? 0 : 0.9, y1: 2.1 };
+      });
+      for (const [key, W] of Object.entries(walls)) {
+        const list = [...ops(key, a.doors, 'door'), ...ops(key, a.windows, 'window')].sort((p, q) => p.u0 - q.u0);
+        let cur = W.lo, k = 1;
+        for (const op of list) {
+          if (op.u0 < cur + 0.05 || op.u1 > W.hi - 0.05) throw new Fail('bad_opening', `Opening on wall ${key} at ${((op.u0 + op.u1) / 2).toFixed(2)} m does not fit. Walls ${key} runs 0 to ${W.L} m and openings must not touch each other or the corners.`);
+          seg(cur, op.u0, 0, h, key, W, k++);
+          if (op.y0 > 0) seg(op.u0, op.u1, 0, op.y0, key, W, k++);
+          if (h > op.y1) seg(op.u0, op.u1, op.y1, h, key, W, k++);
+          const fx = op.kind === 'door' ? 'door' : 'window', fw = fx === 'door' ? 1.05 : 1.2;
+          const q = W.pos((op.u0 + op.u1) / 2);
+          push(fx, `${a.id}-${key}-${fx}-${k++}`, [q[0], q[1] + op.y0, q[2]], W.yaw, [op.wd / fw, 1, 1], ['wall']);
+          cur = op.u1;
+        }
+        seg(cur, W.hi, 0, h, key, W, k++);
+      }
+      function seg(u0: number, u1: number, y0: number, y1: number, key: string, W: Wall, k: number): void {
+        const len = u1 - u0; if (len < 0.01 || y1 - y0 < 0.01) return;
+        const m = len > 4 ? 'wall-5' : 'wall-3', base = m === 'wall-5' ? 5 : 3;
+        const p = W.pos((u0 + u1) / 2); p[1] += y0;
+        push(m, `${a.id}-${key}-wall-${k}`, p, W.yaw, [len / base, (y1 - y0) / 2.8, 1], ['wall']);
+      }
+      if (a.floor !== false) push('floor-tile', `${a.id}-floor`, [c[0], c[1], c[2]], 0, [w / 2, 1, d / 2], ['floor']);
+      if (a.ceiling !== false) push('ceiling-tile', `${a.id}-ceiling`, [c[0], c[1] + h - 0.05, c[2]], 0, [w / 2, 1, d / 2], ['ceiling']);
+      return { count: made.length, ids: made };
+    }));
+
+  defineTool<BuildStairsArgs>('build_stairs', 'Place a flight of 14 steps. from is the foot of the stairs at the middle of the first step [x, y, z]. yaw is the climbing direction (0 climbs toward +z). Returns a path for move_along.',
+    { id: str, from: vecXZ, yaw: num, height: { type: 'number', description: 'Total rise in metres. Default 2.38.' }, width: { type: 'number', description: 'Default 1.2 m.' }, source: common.source, estimated: common.estimated },
+    ['from'],
+    (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
+      const m = catModel(cat, 'stairs-14'), yaw = a.yaw ?? 0, hgt = a.height ?? m.size[1], wd = a.width ?? m.size[0];
+      const f = at3(a.from), fw = rotYaw([0, 0, 1], yaw), len = m.size[2];
+      const at: Vec3 = [f[0] + fw[0] * len / 2, f[1], f[2] + fw[2] * len / 2];
+      const o = makeObject(s, cat, { model: 'stairs-14', id: a.id, yaw, scale: [wd / m.size[0], hgt / m.size[1], 1], tags: ['stairs'], source: a.source, estimated: a.estimated }, { at: r3(at) });
+      s.objects.push(o);
+      const top = r3([f[0] + fw[0] * len, f[1] + hgt, f[2] + fw[2] * len]);
+      return { id: o.id, bottom: f, top, path: [f, top] };
+    }));
+}
+function defineTools5(): void {
+
+  defineTool<PlaceSignArgs>('place_sign', 'Place a sign model. Its text shows as a label next to it, only in the chapters that list the sign in focus (always when the scene has no chapters).', { text: str, at: vecXZ, yaw: num, model: str, id: str, source: common.source, estimated: common.estimated, scale: placeProps.scale },
+    ['text', 'at'],
+    (scene, a, ctx) => mutate(scene, ctx, (s, cat) => {
+      if (a.text.length > 60) throw new Fail('sign_text_too_long', 'Sign text must be 60 characters or fewer.');
+      const o = makeObject(s, cat, { model: a.model || 'sign', id: a.id || uniqueId(s, 'sign'), at: a.at, yaw: a.yaw, scale: a.scale, label: a.text, tags: ['sign'], source: a.source, estimated: a.estimated });
+      s.objects.push(o); return { id: o.id };
+    }));
+
+  defineTool<SetPoseArgs>('set_pose', 'Set the pose of an object at time t (or at a cue of the narration). Without t (or t = 0) it sets the starting pose.', { id: str, t: num, cue: cueArg, pose: { type: 'string', enum: POSES } }, ['id', 'pose'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      const o = find(s, a.id);
+      if (a.cue) {
+        if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }], false);
+        const t = timeArg(s, a.cue, a.t);
+        mergeKeys(s, o.id, 'pose', [{ t, v: a.pose, ease: 'step', cue: a.cue }], false);
+        return { id: o.id, t, pose: a.pose };
+      }
+      if (!a.t) { o.pose = a.pose; if (trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: a.pose, ease: 'step' }], false); return { id: o.id, t: 0, pose: a.pose }; }
+      if (!trackOf(s, o.id, 'pose')) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }], false);
+      mergeKeys(s, o.id, 'pose', [{ t: a.t, v: a.pose, ease: 'step' }], false);
+      return { id: o.id, t: a.t, pose: a.pose };
+    }));
+  defineTool<AnimateArgs>('animate', 'Write a whole animation track (replaces the track). Each key has t or a cue of the narration. Keys need strictly rising t. Never scale a building, a structure or a vehicle to nothing to clear a camera view (validate: object_vanishes). A vehicle may be swapped for another vehicle at the same place and time.', { id: str, channel: { type: 'string', enum: CHANNELS }, keys: { type: 'array', items: keySchema, minItems: 1 } }, ['id', 'channel', 'keys'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      find(s, a.id);
+      s.tracks = s.tracks.filter((t) => !(t.object === a.id && t.channel === a.channel));
+      s.tracks.push({ object: a.id, channel: a.channel, keys: a.keys.map((k) => ({ t: timeArg(s, k.cue, k.t), v: a.channel === 'at' && isXZ2(k.v) ? at3(k.v) : trackValue(k.v), ease: k.ease || (a.channel === 'pose' ? 'step' : 'linear'), ...(k.cue ? { cue: k.cue } : {}) })) });
+      return { id: a.id, channel: a.channel, keys: a.keys.length };
+    }));
+}
+function defineTools6(): void {
+
+  defineTool<MoveAlongArgs>('move_along', 'Move an object along a path of points. Writes at, yaw and pose tracks. Use speed (m/s) or times (one absolute time per point). With cue (a cue of the narration) the move starts at the cue, and times count from it. It uses the walk pose (run above 3 m/s) while it moves and stand at the end. When the moving object passes into another object, leaves the ground or drives in the wrong lane, the answer has "collisions". See guide "motion".',
+    { id: str, path: { type: 'array', items: { type: 'array', items: num, minItems: 2, maxItems: 3 }, minItems: 2 }, speed: num, times: { type: 'array', items: num }, start: num, cue: cueArg, pose: { type: 'string', enum: POSES }, end_pose: { type: 'string', enum: POSES } },
+    ['id', 'path'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      const o = find(s, a.id), start = a.cue ? timeArg(s, a.cue, a.start, 'start') : a.start ?? 0;
+      const y0 = posOf(o)[1];
+      const P = a.path.map((p) => at3(p, y0));
+      let times: number[];
+      if (a.times) {
+        const given = a.times;
+        if (given.length !== P.length) throw new Fail('bad_args', 'times needs one value per path point.');
+        times = a.cue ? given.map((t) => r2(start + t - nth(given, 0))) : given;
+      } else {
+        const sp = a.speed ?? 1.4; times = [start];
+        for (let i = 1; i < P.length; i++) times.push(r2(nth(times, i - 1) + Math.max(Math.hypot(nth(P, i)[0] - nth(P, i - 1)[0], nth(P, i)[1] - nth(P, i - 1)[1], nth(P, i)[2] - nth(P, i - 1)[2]) / sp, 0.05)));
+      }
+      for (let i = 1; i < times.length; i++) if (nth(times, i) <= nth(times, i - 1)) throw new Fail('time_backwards', `times must rise: ${nth(times, i)} is not after ${nth(times, i - 1)}.`);
+      const t0 = nth(times, 0), tEnd = nth(times, times.length - 1);
+      const speed = (a.speed ?? Math.hypot(nth(P, 1)[0] - nth(P, 0)[0], nth(P, 1)[2] - nth(P, 0)[2]) / (nth(times, 1) - nth(times, 0)));
+      const moving = a.pose || (speed > 3 ? 'run' : 'walk');
+      const [ci, word, off] = a.cue ? cueParts(a.cue) : [0, '', 0];
+      const follow = (ks: TrackKey[]): TrackKey[] => (a.cue ? ks.map((k) => ({ ...k, cue: [ci, word, r2(off + k.t - t0)] satisfies Cue })) : ks);
+      mergeKeys(s, o.id, 'at', follow(P.map((p, i): TrackKey => ({ t: nth(times, i), v: r3(p), ease: 'linear' }))), true);
+      // yaw: face the direction of travel, turning over 0.24 s at corners
+      const yk: TrackKey[] = []; let yaw = o.yaw ?? 0;
+      const segYaw = (i: number) => Math.atan2(nth(P, i + 1)[0] - nth(P, i)[0], nth(P, i + 1)[2] - nth(P, i)[2]) / D;
+      const first = trackOf(s, o.id, 'yaw')?.keys.filter((k) => k.t < t0).pop();
+      yaw = wrapYaw(typeof first?.v === 'number' ? first.v : yaw, segYaw(0));
+      yk.push({ t: t0, v: r2(yaw), ease: 'linear' });
+      for (let i = 1; i < P.length - 1; i++) {
+        const ny = wrapYaw(yaw, segYaw(i));
+        if (Math.abs(ny - yaw) > 1) {
+          const h = Math.min(0.12, (nth(times, i) - nth(times, i - 1)) / 3, (nth(times, i + 1) - nth(times, i)) / 3);
+          yk.push({ t: r2(nth(times, i) - h), v: r2(yaw), ease: 'linear' }, { t: r2(nth(times, i) + h), v: r2(ny), ease: 'linear' });
+          yaw = ny;
+        }
+      }
+      mergeKeys(s, o.id, 'yaw', follow(yk), true);
+      if (o.model === 'person') {
+        if (!trackOf(s, o.id, 'pose') && t0 > 0) mergeKeys(s, o.id, 'pose', [{ t: 0, v: o.pose || 'stand', ease: 'step' }], false);
+        mergeKeys(s, o.id, 'pose', follow([{ t: t0, v: moving, ease: 'step' }, { t: tEnd, v: a.end_pose || 'stand', ease: 'step' }]), false);
+      }
+      if (!trackOf(s, o.id, 'at')?.keys.some((k) => k.t < t0)) o.at = r3(nth(P, 0));
+      const out = { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
+      const hits = motionErrors(s, ctx.catalogue || loadCatalogue(), { only: [o.id], from: t0, to: tEnd });
+      if (hits.length) Object.assign(out, { collisions: hits.slice(0, 5).map((e) => e.message), warning: 'The path runs into something. Change the path or the times before export.' });
+      return out;
+    }));
+}
+function defineTools7(): void {
+
+  defineTool<SetCameraArgs>('set_camera', 'Add or replace a camera key at time t (or at a cue of the narration). Give frame (object ids, the tool computes eye and target) or eye and target. The camera moves between keys. Two keys with different shots may be 1.5 s apart at most, unless cut is true (hold the old shot, then cut). When a building, structure or vehicle stands between the camera and a focus object of the chapter at t (the framed objects when no chapter holds t), or covers much of the frame, the answer has "blocked" and "clear_views" (view and elevation values that give a clear view).',
+    { t: num, cue: cueArg, shot: { type: 'string', enum: SHOTS }, frame: strArr, eye: vec3, target: vec3, fov: num, ease: { type: 'string', enum: EASES },
+      view: { type: 'number', description: 'Camera side in degrees: 0 looks north from the south side, 90 looks west from the east side.' }, elevation: num, margin: num, distance: num, cut: { type: 'boolean' } },
+    ['shot'],
+    (scene, args, ctx) => mutate(scene, ctx, (s, cat) => {
+      const a: Timed<SetCameraArgs> = { ...args, t: timeArg(s, args.cue, args.t) };
+      const ids = a.frame?.length ? a.frame : undefined;
+      let eye = a.eye, target = a.target, fov = a.fov ?? 50;
+      if (ids) { const f = frameCamera(s, cat, ids, a.shot, a.t, a); eye = f.eye; target = f.target; fov = f.fov; }
+      if (!eye || !target) throw new Fail('bad_args', 'Give frame (object ids) or both eye and target.');
+      const framing = ids ? { frame: { ids, ...(a.view !== undefined ? { view: a.view } : {}), ...(a.elevation !== undefined ? { elevation: a.elevation } : {}), ...(a.margin !== undefined ? { margin: a.margin } : {}), ...(a.distance !== undefined ? { distance: a.distance } : {}) } satisfies CameraFrame } : {};
+      const key = { t: a.t, shot: a.shot, eye: r3(eye), target: r3(target), fov, ease: a.ease || 'inout', ...(a.cue ? { cue: a.cue } : {}), ...framing };
+      s.camera = s.camera.filter((k) => Math.abs(k.t - a.t) > 1e-9);
+      const prev = [...s.camera].reverse().find((k) => k.t < a.t);
+      if (a.cut && prev) prev.ease = 'step';
+      s.camera.push(key);
+      s.camera.sort((p, q) => p.t - q.t);
+      const out = { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
+      const blocked = blocksAt(s, cat, key, a.frame || [], a.t);
+      if (blocked.length) Object.assign(out, { blocked, warning: 'Something stands between the camera and the subject. Change the view before export.', ...(ids ? { clear_views: clearViews(s, cat, ids, a) } : {}) });
+      return out;
+    }));
+
+  defineTool<SetLightingArgs>('set_lighting', 'Set the lighting look from time t (or from a cue of the narration): day, dusk, night, indoor.', { t: num, cue: cueArg, look: { type: 'string', enum: LOOKS } }, ['look'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      const t = timeArg(s, a.cue, a.t);
+      s.lighting = (s.lighting || []).filter((k) => k.t !== t); s.lighting.push({ t, look: a.look, ...(a.cue ? { cue: a.cue } : {}) }); s.lighting.sort((p, q) => p.t - q.t); return { t, look: a.look };
+    }));
+
+  defineTool<AddCaptionArgs>('add_caption', 'Add a caption (up to 280 characters, at least 0.06 s per character on screen, no overlap with other captions). A scene with narration makes its captions from the narration: do not add captions to it.', { start: num, end: num, text: str }, ['start', 'end', 'text'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      if (s.narration?.length) throw new Fail('narrated', 'This scene has narration. Its captions are the sentences of the narration. Change the narration with narrate.'); s.captions.push({ start: a.start, end: a.end, text: a.text }); return { index: s.captions.length - 1, chars: a.text.length }; }));
+
+  defineTool<AddCalloutArgs>('add_callout', 'Add a callout label tied to an object for a time range (start and end, or cue and end_cue of the narration). The range must be inside one chapter (validate: callout_outside_chapter). ^{...} and _{...} in the text draw small raised and lowered text, for example "m^{2}" or "CO_{2}".', { start: num, end: num, cue: cueArg, end_cue: cueArg, text: str, object: str, source: common.source, estimated: common.estimated, measured: common.measured }, ['text'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      const c: Callout = { start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), text: a.text };
+      if (a.object !== undefined) c.object = a.object;
+      if (a.source !== undefined) c.source = a.source;
+      if (a.estimated !== undefined) c.estimated = a.estimated;
+      if (a.measured !== undefined) c.measured = a.measured;
+      if (a.cue) c.cue = a.cue;
+      if (a.end_cue) c.endCue = a.end_cue;
+      s.callouts.push(c); return { index: s.callouts.length - 1 };
+    }));
+}
+function defineTools8(): void {
+
+  defineTool<AddChapterArgs>('add_chapter', 'Add a chapter (a named time range: start and end, or cue and end_cue of the narration). With caption it also adds the caption for the whole chapter (not in a scene with narration). focus lists the objects the shot must show. source says where the chapter facts come from.',
+    { start: num, end: num, cue: cueArg, end_cue: cueArg, title: str, clock: str, caption: str, focus: strArr, shot: { type: 'string', enum: SHOTS }, source: common.source, estimated: common.estimated, measured: common.measured, id: str },
+    ['title'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      if (a.caption && s.narration?.length) throw new Fail('narrated', 'A narrated scene makes its captions from the narration. Do not give a chapter a caption.');
+      const id = a.id || `c${s.chapters.length + 1}`;
+      const c: Chapter = { id, start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
+      if (a.estimated !== undefined) c.estimated = a.estimated;
+      if (a.measured !== undefined) c.measured = a.measured;
+      for (const f of c.focus ?? []) find(s, f);
+      s.chapters.push(c);
+      if (a.caption) s.captions.push({ start: c.start, end: c.end, text: a.caption });
+      return { id };
+    }));
+
+  defineTool<SetBackdropArgs>('set_backdrop', 'Set the ground and the map. ground is grass, street, floor, plain or map. Ground "map" with an origin shows OneMap tiles. origin is {lat, lon}. onemap is {zoom, style} for the tiles. drive is the side of the road that traffic keeps to: "left" (Singapore, the default) or "right".',
+    { ground: { type: 'string', enum: GROUNDS }, size: { type: 'array', items: num, minItems: 2, maxItems: 2 }, color: str,
+      origin: { type: 'object', properties: { lat: num, lon: num }, required: ['lat', 'lon'] }, onemap: { type: 'object' }, source: str, estimated: { type: 'boolean' },
+      drive: { type: 'string', enum: ['left', 'right'] } }, [],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      if (a.drive) s.drive = a.drive;
+      s.backdrop = { ...s.backdrop, ...(a.ground ? { ground: a.ground } : {}), ...(a.size ? { size: a.size } : {}), ...(a.color ? { color: a.color } : {}) };
+      if (a.origin || a.onemap) {
+        const map: SceneMap = s.map ?? {};
+        s.map = map;
+        if (a.origin) map.origin = a.origin;
+        if (a.onemap) map.onemap = a.onemap;
+        if (a.source !== undefined) map.source = a.source;
+        if (a.estimated !== undefined) map.estimated = a.estimated;
+      }
+      return { backdrop: s.backdrop };
+    }));
+
+  defineTool<ImportOsmArgs>('import_osm', 'Import the OpenStreetMap building footprints inside bbox [south, west, north, east] in degrees (at most 0.01 degrees a side). The scene origin becomes the bbox centre when the scene has no origin. bearing (degrees) turns the map so that a street with that compass bearing runs along z. The scene shows the OpenStreetMap credit by itself. The tool writes the ODbL data file next to the scene.',
+    { bbox: { type: 'array', items: num, minItems: 4, maxItems: 4 }, bearing: num }, ['bbox'],
+    (scene, a, ctx) => {
+      const r = mutate(scene, ctx, (s) => {
+        const [so, w, n, e] = a.bbox;
+        if (!validBbox(a.bbox)) throw new Fail('bad_args', 'bbox is [south, west, north, east] with south < north, west < east and at most 0.01 degrees a side.');
+        if (!ctx.overpass) throw new Fail('no_osm_data', 'No OpenStreetMap answer. Call import_osm through the MCP server or the command line.');
+        const origin = s.map?.origin || { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
+        const map = s.map ?? { origin };
+        s.map = map;
+        map.origin = origin;
+        const found = parseOverpass(ctx.overpass, origin);
+        if (!found.length) throw new Fail('no_buildings', 'OpenStreetMap has no building footprints inside this bbox.');
+        const osm: NonNullable<NonNullable<Scene['map']>['osm']> = toMapBlock(found, origin, a.bearing || 0);
+        map.osm = osm;
+        if (a.bearing) map.bearing = a.bearing; else delete map.bearing;
+        if (ctx.odblPath) osm.dataFile = basename(ctx.odblPath);
+        return { buildings: found.length, origin, bearing: a.bearing || 0, dataFile: osm.dataFile };
+      });
+      if (r.ok && ctx.odblPath) writeSceneOdbl(scene, dirname(ctx.odblPath));
+      return r;
+    });
+}
+function defineTools9(): void {
+
+  defineTool<SetCutawayArgs>('set_cutaway', 'Hide ceilings and the walls between the camera and its target, for rooms made with build_room only. It never hides buildings, vehicles or other objects. Outdoors, move the camera instead.', { ceilings: { type: 'boolean' }, nearWalls: { type: 'boolean' } }, [],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => { s.cutaway = { ceilings: a.ceilings ?? true, nearWalls: a.nearWalls ?? true }; return s.cutaway; }));
+
+  defineTool<AddCreditArgs>('add_credit', 'Add a credit line that the export draws (for example a data licence credit).', { text: str }, ['text'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => { s.credits = s.credits || []; if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; }));
+  defineTool<NarrateArgs>('narrate', 'Set the narration (replaces it). 1 sentence = 1 beat, and each sentence is also the caption of its beat. A sentence that has a voice file keeps it. Others get stand-in times until make_voice. Returns the start and end of each beat. Read guide "narration".',
+    { sentences: { type: 'array', items: sentence, minItems: 1 } }, ['sentences'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      s.narration = a.sentences.map((x) => {
+        const n: NarrationBeat = typeof x === 'string' ? { text: x } : { ...x };
+        if (!n.text.trim()) throw new Fail('bad_args', 'A sentence needs a text.');
+        const sec = ctx.sceneDir ? voiceSeconds(ctx.sceneDir, n.text) : null;
+        if (sec) Object.assign(n, { voice: voiceFile(n.text), seconds: sec });
+        return n;
+      });
+      s.captions = [];
+      return null;
+    }), (s) => beats(s));
+
+  defineTool<NoArgs>('make_voice', 'Make the voice of each sentence of the narration on this computer (Kokoro, voice af_heart) and time the beats with it. The first call on a computer installs the voice (about 750 MB in ~/.cache/toybox/voice) and can take some minutes. Cued times move with the new beats.', {}, [],
+    (scene, _a, ctx) => mutate(scene, ctx, (s) => {
+      if (!s.narration?.length) throw new Fail('no_narration', 'The scene has no narration. Call narrate first.');
+      if (!ctx.sceneDir) throw new Fail('no_voice', 'No voice here. Call make_voice through the MCP server or the command line.');
+      for (const n of s.narration) {
+        const sec = voiceSeconds(ctx.sceneDir, n.text);
+        if (!sec) throw new Fail('no_voice', `No voice file for "${n.text}".`);
+        Object.assign(n, { voice: voiceFile(n.text), seconds: sec });
+      }
+      return null;
+    }), (s) => beats(s));
+
+  defineTool<AddFactArgs>('add_fact', 'Add a fact of the outline with its source. Use only facts that you read in a source. Never guess a fact: leave out a fact that has no source. A sentence of the narration lists the ids of the facts that it states.',
+    { id: str, text: str, source: { type: 'string', description: 'The URL or the document where you read the fact.' } }, ['text', 'source'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      s.facts = s.facts || [];
+      const id = a.id || `f${s.facts.length + 1}`;
+      if (s.facts.some((f) => f.id === id)) throw new Fail('duplicate_id', `Fact ${id} exists.`);
+      s.facts.push({ id, text: a.text, source: a.source });
+      return { id };
+    }));
+}
+function defineTools10(): void {
+
+  defineTool<AddMotionArgs>('add_motion', `Add a motion word to an object at time t (or at a cue of the narration): ${MOVES.join(', ')}. pop grows it from nothing, out shrinks it to nothing, hop jumps (h: height in half-heights of the model, d: seconds), squash presses it down, wave rocks it (deg). blink, squint, look (x and y from -1 to 1: right and up, for d seconds), glance and spin move the eyes of a character (the model "narrator"). A model with motions stays a pure function of time. Never pop or out a building, a structure or a vehicle.`,
+    { id: str, move: { type: 'string', enum: MOVES }, t: num, cue: cueArg, d: { type: 'number', description: 'Seconds.' }, h: num, x: num, y: num, deg: num }, ['id', 'move'],
+    (scene, a, ctx) => mutate(scene, ctx, (s) => {
+      find(s, a.id);
+      const m: Motion = { object: a.id, move: a.move, t: timeArg(s, a.cue, a.t) };
+      if (a.d !== undefined) m.d = a.d;
+      if (a.h !== undefined) m.h = a.h;
+      if (a.x !== undefined) m.x = a.x;
+      if (a.y !== undefined) m.y = a.y;
+      if (a.deg !== undefined) m.deg = a.deg;
+      if (a.cue) m.cue = a.cue;
+      s.motions = s.motions || [];
+      s.motions.push(m);
+      return { id: a.id, move: a.move, t: m.t };
+    }));
+
+  defineTool<NoArgs>('validate', 'Check the whole scene. Returns every error with code, path and message. An empty list means valid. It also tests every chapter for a blocked view (code view_blocked): a building, structure or vehicle between the camera and a focus object, or in front of much of the frame, for more than 0.5 s. And it tests motion every 0.25 s: collision (two objects pass into each other), off_ground (a person or a vehicle floats or sinks) and wrong_lane (a vehicle drives on the wrong side).', {}, [],
+    (scene, _a, ctx) => { const errs = checkScene(scene, ctx.catalogue || loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
+
+  defineTool<RenderPreviewArgs>('render_preview', 'Render a picture of the scene at time t so you can look at it. The daemon does the rendering.', { t: num }, ['t'],
+    (_scene, a) => okr({ stub: true, t: a.t, message: 'Not rendered here. The Toybox daemon renders the picture and replaces this answer.' }));
+
+  defineTool<ExportSceneArgs>('export_scene', 'Write the scene to a .toybox.json file (and the captions to a .srt file next to it). Without path it returns the scene.', { path: str }, [],
+    (scene, a, ctx) => {
+      const errs = checkScene(scene, ctx.catalogue || loadCatalogue());
+      if (!a.path) return okr({ errors: errs.length, scene });
+      let file = a.path;
+      if (ctx.exportDir) {
+        file = resolve(ctx.exportDir, a.path);
+        const rel = relative(ctx.exportDir, file);
+        if (!rel || rel.startsWith('..') || isAbsolute(rel) || !file.endsWith('.toybox.json')) throw new Fail('bad_path', `path must be a .toybox.json file inside ${ctx.exportDir}.`);
+      }
+      saveScene(file, scene);
+      if (ctx.sceneDir && resolve(dirname(file)) !== resolve(ctx.sceneDir)) for (const n of scene.narration || []) if (n.voice) {
+        mkdirSync(join(dirname(file), 'voice'), { recursive: true });
+        copyFileSync(join(ctx.sceneDir, n.voice), join(dirname(file), n.voice));
+      }
+      const srtPath = file.replace(/(\.toybox)?\.json$/, '') + '.srt';
+      writeFileSync(srtPath, srt(scene));
+      const odbl = writeSceneOdbl(scene, dirname(resolve(file)));
+      return okr({ path: file, srt: srtPath, ...(odbl ? { odbl } : {}), errors: errs.length });
+    });
+  defineTool<GuideArgs>('guide', 'Read a how-to guide. Start with "overview". Others: people, motion, camera, indoor, map, explainer, narration.', { name: str }, [],
+    (_scene, a) => {
+      const names = readdirSync(GUIDE_DIR).filter((f) => f.endsWith('.txt')).map((f) => f.slice(0, -4));
+      const name = a.name || 'overview';
+      if (!names.includes(name)) throw new Fail('unknown_guide', `No guide "${name}". Guides: ${names.join(', ')}.`);
+      return okr({ name, text: readFileSync(join(GUIDE_DIR, `${name}.txt`), 'utf8') });
+    });
+
+}
+function defineAllTools(): void {
+  defineTools1();
+  defineTools2();
+  defineTools3();
+  defineTools4();
+  defineTools5();
+  defineTools6();
+  defineTools7();
+  defineTools8();
+  defineTools9();
+  defineTools10();
+}
+defineAllTools();
 export const toolSpecs: ToolSpec[] = tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 const byName = new Map<string, ToolRun>(tools.map((t) => [t.name, t.run]));
 function tool(name: ToolName): ToolRun {

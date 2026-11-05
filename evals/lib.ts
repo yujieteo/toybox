@@ -44,13 +44,11 @@ export interface Report { name: string; rows: Row[]; ok: boolean; stats: { objec
 export interface FinishedReport extends Report { file: string; calls: number }
 export interface ReportOpts { fullPeople?: boolean; dir?: string }
 
-export function report(scene: Scene, name: string, opts: ReportOpts = {}): Report {
-  const rows: Row[] = [];
-  const bar = (id: string, label: string, ok: unknown, detail: string) => rows.push({ bar: id, label, ok: !!ok, detail });
-  const errs = validate(scene);
-  bar('valid', 'validate() returns no errors', errs.length === 0, errs.slice(0, 5).map((e) => `${e.code} ${e.message}`).join(' ; ') || 'none');
+type Bar = (id: string, label: string, ok: unknown, detail: string) => number;
+type Problems = ReturnType<typeof validate>;
 
-  // (b) people
+// (b) people
+function barPeople(bar: Bar, scene: Scene, opts: ReportOpts): void {
   const people = scene.objects.filter((o) => o.model === 'person');
   const variants = new Set(people.map((p) => p.variant));
   const poses = new Set<string>();
@@ -62,8 +60,10 @@ export function report(scene: Scene, name: string, opts: ReportOpts = {}): Repor
     bar('b', 'at least 8 poses', poses.size >= 8, `${poses.size} poses: ${[...poses].join(', ')}`);
   }
   bar('b', 'a walk cycle is present', walks, walks ? 'walk pose used' : 'no walk');
+}
 
-  // (e) camera
+// (e) camera
+function barCamera(bar: Bar, scene: Scene, errs: Problems): void {
   const ch = scene.chapters;
   const noShot = ch.filter((c) => !c.shot || !scene.camera.some((k) => k.t >= c.start - MAX_SHOT_MOVE - 1e-9 && k.t <= c.end));
   bar('e', 'a shot in every chapter', noShot.length === 0 && ch.length > 0, noShot.length ? `missing: ${noShot.map((c) => c.id).join(', ')}` : `${ch.length} chapters`);
@@ -75,24 +75,31 @@ export function report(scene: Scene, name: string, opts: ReportOpts = {}): Repor
   bar('e', 'no hidden focus object', hidden.length === 0, hidden.map((e) => e.message).join(' ; ') || 'all focus objects in view');
   const blocked = blockedViews(scene);
   bar('e', 'no blocked view (ray test on every chapter)', blocked.length === 0, blocked.map((e) => e.message.split('. Move')[0]).join(' ; ') || 'clear');
+}
 
-  // (j) motion, every 0.25 s
+// (j) motion, every 0.25 s
+function barMotion(bar: Bar, scene: Scene): void {
   const motion = motionErrors(scene);
   const motionBars: [string, string][] = [['collision', 'no object passes into another'], ['off_ground', 'people and vehicles stay on the ground'], ['wrong_lane', 'vehicles keep to their lane']];
   for (const [code, label] of motionBars) {
     const bad = motion.filter((e) => e.code === code);
     bar('j', label, bad.length === 0, bad.length ? `${bad.length}: ${bad.slice(0, 3).map((e) => e.message.split('. ')[0]).join(' ; ')}` : 'none');
   }
+}
 
-  // (f) layout sources
+// (f) layout sources
+function barSources(bar: Bar, scene: Scene, errs: Problems): void {
+  const ch = scene.chapters;
   const unsourced = scene.objects.filter((o) => !o.source && o.estimated !== true);
   bar('f', 'every object has a source or the estimated flag', unsourced.length === 0, `${scene.objects.length - unsourced.length} of ${scene.objects.length} labelled`);
   const csrc = ch.filter((c) => !c.source);
   bar('f', 'every chapter has a source', csrc.length === 0, `${ch.length - csrc.length} of ${ch.length}`);
   const measuredBad = errs.filter((e) => e.code === 'measured_no_source' || e.code === 'estimate_not_flagged');
   bar('f', 'measured values have sources and estimates are flagged', measuredBad.length === 0, `${measuredBad.length} problems`);
+}
 
-  // (g) text
+// (g) text
+function barText(bar: Bar, scene: Scene): void {
   const caps = scene.captions;
   const longest = Math.max(0, ...caps.map((c) => c.text.length));
   bar('g', `captions at most ${MAX_CAPTION} characters`, longest <= MAX_CAPTION, `longest ${longest}`);
@@ -100,19 +107,39 @@ export function report(scene: Scene, name: string, opts: ReportOpts = {}): Repor
   const minRate = Math.min(...caps.map((c) => (c.end - c.start) / Math.max(1, c.text.length)));
   bar('g', `reading time at least ${MIN_SEC_PER_CHAR} s per character`, tight.length === 0, `tightest ${minRate.toFixed(3)} s per character`);
   bar('g', 'caption contrast at least 4.5 to 1', contrast_ok(CAPTION_STYLE.fg, CAPTION_STYLE.bg), `${CAPTION_STYLE.fg} on ${CAPTION_STYLE.bg}`);
+}
 
-  // (n) narration: the voice sets the beats, and every fact of the outline has a source
+// (n) narration: the voice sets the beats, and every fact of the outline has a source
+function barNarration(bar: Bar, scene: Scene): void {
   if (scene.narration?.length) {
     const silent = scene.narration.filter((n) => !n.voice).length, facts = scene.facts || [];
     bar('n', 'every sentence has its voice', silent === 0, `${scene.narration.length - silent} of ${scene.narration.length}`);
     bar('n', 'every fact has a source', facts.every((f) => f.source), `${facts.filter((f) => f.source).length} of ${facts.length}`);
   }
+}
 
-  // (i) srt
+// (i) srt
+function barSrt(bar: Bar, scene: Scene): void {
+  const caps = scene.captions;
   const text = srt(scene);
   const blocks = text.trim() ? text.trim().split(/\n\n/).length : 0;
   bar('i', 'srt has one block for each caption', blocks === caps.length && blocks > 0, `${blocks} blocks`);
-  return { name, rows, ok: rows.every((r) => r.ok), stats: { objects: scene.objects.length, tracks: scene.tracks.length, chapters: ch.length, captions: caps.length, duration: scene.duration } };
+}
+
+export function report(scene: Scene, name: string, opts: ReportOpts = {}): Report {
+  const rows: Row[] = [];
+  const bar = (id: string, label: string, ok: unknown, detail: string) => rows.push({ bar: id, label, ok: !!ok, detail });
+  const errs = validate(scene);
+  bar('valid', 'validate() returns no errors', errs.length === 0, errs.slice(0, 5).map((e) => `${e.code} ${e.message}`).join(' ; ') || 'none');
+
+  barPeople(bar, scene, opts);
+  barCamera(bar, scene, errs);
+  barMotion(bar, scene);
+  barSources(bar, scene, errs);
+  barText(bar, scene);
+  barNarration(bar, scene);
+  barSrt(bar, scene);
+  return { name, rows, ok: rows.every((r) => r.ok), stats: { objects: scene.objects.length, tracks: scene.tracks.length, chapters: scene.chapters.length, captions: scene.captions.length, duration: scene.duration } };
 }
 
 export function finish(builder: Builder, name: string, opts: ReportOpts = {}): FinishedReport {

@@ -228,7 +228,9 @@ function vec3Of(row: number[], what: string): Vec3 {
   return [x, y, z];
 }
 
-function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tri[] {
+// The vectors and numbers of the accessors of a glTF file.
+interface Readers { accV3: (i: number) => Vec3[]; accV2: (i: number) => [number, number][]; accScalar: (i: number) => number[] }
+function accessorReaders(json: Gltf, bins: Buffer[]): Readers {
   const acc = (i: number): number[][] => {
     const a = at(json.accessors, i, 'accessors'), bv = at(json.bufferViews, a.bufferView, 'bufferViews'), buf = at(bins, bv.buffer, 'buffers');
     const n = GLTF_COMPONENTS[a.type], size = GLTF_BYTES[a.componentType];
@@ -245,6 +247,11 @@ function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tr
     return [u, v];
   });
   const accScalar = (i: number): number[] => acc(i).map((row) => at(row, 0, `accessor ${i}`));
+  return { accV3, accV2, accScalar };
+}
+
+// The colour of a material at a texture coordinate. Returns the function that finds it.
+function colourReader(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): (matIndex: number | undefined, uv: [number, number] | null) => Vec3 {
   const cache: (Png | undefined)[] = [];
   const image = (k: number): Png => cache[k] || (cache[k] = (() => {
     const im = at(json.images, k, 'images');
@@ -266,6 +273,12 @@ function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tr
     }
     return per((i) => Math.round(Math.min(1, Math.max(0, f[i] ?? 1)) * t[i]));
   };
+  return colourOf;
+}
+
+function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tri[] {
+  const { accV3, accV2, accScalar } = accessorReaders(json, bins);
+  const colourOf = colourReader(json, bins, file);
   const tris: Tri[] = [];
   const visit = (ni: number, parent: Mat4): [number, Mat4][] => {
     const node = at(json.nodes, ni, 'nodes'), m = mul(parent, mat4(node));

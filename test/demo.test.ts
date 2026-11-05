@@ -15,6 +15,7 @@ const page = (name: string): string => join(root, 'web', name);
 const scenePath = join(root, 'web', SCENE_URL);
 const sceneDir = dirname(scenePath);
 
+function tests1(): void {
 test('the page loads the demo scene through the shared viewer and UI', () => {
   const html = readFileSync(page('demo.html'), 'utf8');
   assert.match(html, /<link rel="stylesheet" href="ui\.css">/);
@@ -47,7 +48,10 @@ test('each narration sentence has its voice file next to the scene', () => {
     assert.equal(readFileSync(file).subarray(0, 4).toString('latin1'), 'RIFF', `${voice} is not a WAV file`);
   }
 });
+}
+tests1();
 
+function tests2(): void {
 test('every chapter becomes one step of the page, and every sentence is in a step', () => {
   const scene = loadScene(scenePath);
   const steps = chapterSteps(scene);
@@ -66,3 +70,5 @@ test('every chapter becomes one step of the page, and every sentence is in a ste
     assert.ok(must(inside[0]).sentences.includes(plain(caption.text)), `caption at ${caption.start} s shows in its step`);
   }
 });
+}
+tests2();

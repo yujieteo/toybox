@@ -53,6 +53,7 @@ function start(args: string[]): Client {
   };
 }
 
+function tests1(): void {
 test('MCP server over stdio: handshake, tools, saving, errors', async () => {
   const scene = join(mkdtempSync(join(tmpdir(), 'tbmcp-')), 's.toybox.json');
   const c = start(['--scene', scene]);
@@ -94,7 +95,10 @@ test('render_preview posts t to the render url and returns the image path', asyn
   assert.equal(r.content.length, 1, 'a picture that cannot be read gives the text block only');
   await c.stop(); srv.close();
 });
+}
+tests1();
 
+function tests2(): void {
 test('render_preview gives the picture to the agent as an MCP image block', async () => {
   // A 1x1 PNG: the daemon writes the real frame; this only proves the bytes reach the client.
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -124,3 +128,5 @@ test('CLI runs a tool, a guide and validate', () => {
   r = run('guide', 'camera'); assert.match(r.stdout, /CAMERA/);
   r = run('guide', 'zzz'); assert.equal(r.status, 1);
 });
+}
+tests2();

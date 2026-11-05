@@ -27,13 +27,17 @@ function readMachine(): Machine {
   return { initial, final, rows };
 }
 
+function tests1(): void {
 test('the export machine has the states of ExportState', () => {
   const m = readMachine();
   const states = new Set(m.rows.flatMap((r) => [r.state, r.next]).filter((s) => s !== '*' && s !== '-' && !m.final.includes(s)));
   assert.deepEqual([...states].sort(), [...EXPORT_PHASES].sort());
   assert.ok(EXPORT_PHASES.some((p) => p === m.initial), m.initial);
 });
+}
+tests1();
 
+function tests2(): void {
 test('the daemon does each row of the export machine', async (tc: TestContext) => {
   const dir = mkdtempSync(join(tmpdir(), 'tbsm-')), scene = join(dir, 's.toybox.json');
   const chrome = join(dir, 'chrome.sh');
@@ -88,3 +92,5 @@ test('the daemon does each row of the export machine', async (tc: TestContext) =
   assert.deepEqual(both.map((r) => r.status).sort(), [200, 409], 'two start data at the same time: one stream only');
   await finish(); await exported;
 });
+}
+tests2();

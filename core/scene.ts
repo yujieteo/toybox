@@ -384,76 +384,94 @@ function inFootprint(s: Solid, poly: Poly): boolean {
 }
 const RUN_CODES: Record<string, string> = { c: 'collision', g: 'off_ground', l: 'wrong_lane' };
 interface Run { t0: number; t1: number; make: (r: Run) => string }
+interface MotionCtx {
+  scene: Scene; models: Map<string, Model>; movers: Set<string>; only: Set<string> | null;
+  osm: ReturnType<typeof prism>[]; drive: string; roads: SceneObject[];
+  seen: (key: string, t: number, make: (r: Run) => string) => void;
+}
+type Solids = ReturnType<typeof solidsAt>['solids'];
+function mineOf(ctx: MotionCtx, s: Solid): boolean { return !ctx.only || ctx.only.has(s.o.id); }
+function collisionsAt(ctx: MotionCtx, t: number, solids: Solids): void {
+  const { movers } = ctx;
+  const order = [...solids].sort((a, b) => a.box[0] - b.box[0]);
+  for (const [i, A] of order.entries()) {
+    for (let j = i + 1; j < order.length; j++) {
+      const B = order[j];
+      if (!B || !(B.box[0] < A.box[2])) break;
+      if (!mineOf(ctx, A) && !mineOf(ctx, B)) continue;
+      if (!movers.has(A.o.id) && !movers.has(B.o.id) && A.kind !== 'person' && B.kind !== 'person') continue; // the overlap check of validate
+      if (B.box[1] >= A.box[3] || A.box[1] >= B.box[3] || A.y0 >= B.y1 || B.y0 >= A.y1 || mayShare(A, B)) continue;
+      if (overlapRatio(A.poly, B.poly) <= TOUCH) continue;
+      const [p, q]: [string, string] = A.o.id <= B.o.id ? [A.o.id, B.o.id] : [B.o.id, A.o.id];
+      ctx.seen(`c|${p}|${q}`, t, (r) => `${p} and ${q} pass into each other from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Change a path or a time so that they keep apart: another lane, a gap, a wait, or a way round.`);
+    }
+  }
+}
+function heldUp(ctx: MotionCtx, S: Solid, bt: Record<string, ObjectBounds>, c: Vec2): boolean {
+  const y = S.y0;
+  return ctx.scene.objects.some((o) => {
+    const b = bt[o.id], m = ctx.models.get(o.model);
+    if (!b || o.id === S.o.id || o.model === 'person' || !inPoly(c, b.corners)) return false;
+    if ((o.tags || []).includes('stairs') || (m?.tags || []).includes('stairs') || o.model === 'escalator') return y >= b.min[1] - 0.05 && y <= b.max[1] + 0.05;
+    return Math.abs(b.max[1] - y) <= 0.1;
+  });
+}
+function groundAt(ctx: MotionCtx, t: number, S: Solid, bt: Record<string, ObjectBounds>): void {
+  for (const b of ctx.osm) if (S.box[2] > b.box[0] && S.box[0] < b.box[2] && S.box[3] > b.box[1] && S.box[1] < b.box[3] && S.y0 < b.y1 && inFootprint(S, b.poly))
+    ctx.seen(`c|${S.o.id}|${b.id}`, t, (r) => `${S.o.id} is inside the building ${b.id} from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Keep people and vehicles out of building footprints.`);
+  // ground contact: the ground (y 0), or the top of a floor, a structure or furniture under the centre
+  const y = S.y0, c: Vec2 = [S.b.at[0], S.b.at[2]];
+  if (Math.abs(y) > 0.05 && !heldUp(ctx, S, bt, c)) ctx.seen(`g|${S.o.id}`, t, (r) => `${S.o.id} ${y > 0 ? 'floats above' : 'sinks into'} the ground from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s (y ${y.toFixed(2)} m). Put it on the ground, a floor or stairs.`);
+}
+// lanes: a driving vehicle on a straight road keeps to the side of the road given by scene.drive
+function laneAt(ctx: MotionCtx, t: number, S: Solid, bt: Record<string, ObjectBounds>, before: ObjectBounds): void {
+  const { drive } = ctx;
+  const a = before.at, v: Vec2 = [S.b.at[0] - a[0], S.b.at[2] - a[2]], sp = Math.hypot(...v) / VIEW_STEP;
+  const road = sp >= MIN_SPEED ? ctx.roads.find((r) => { const rb = bt[r.id]; return rb && inPoly(c2(S.b.at), rb.corners); }) : undefined;
+  const rb = road && bt[road.id];
+  if (!road || !rb) return;
+  const ax = rotYaw([0, 0, 1], rb.yaw), along = v[0] * ax[0] + v[1] * ax[2];
+  const dir: Vec2 = along >= 0 ? [ax[0], ax[2]] : [-ax[0], -ax[2]], right: Vec2 = [-dir[1], dir[0]];
+  const side = (S.b.at[0] - rb.at[0]) * right[0] + (S.b.at[2] - rb.at[2]) * right[1];
+  if (Math.abs(along) > 0.5 * Math.hypot(...v) && (drive === 'left' ? side > 0.3 : side < -0.3))
+    ctx.seen(`l|${S.o.id}`, t, (r) => `${S.o.id} drives on the ${drive === 'left' ? 'right' : 'left'} side of ${road.id} from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Traffic keeps ${drive} (scene drive "${drive}"): move the path to the ${drive} lane for its direction.`);
+}
+function solidsStep(ctx: MotionCtx, t: number, solids: Solids, bt: Record<string, ObjectBounds>, prev: Record<string, ObjectBounds> | null): void {
+  collisionsAt(ctx, t, solids);
+  for (const S of solids) {
+    if (!mineOf(ctx, S)) continue;
+    if (S.kind === 'person' || S.kind === 'vehicle') groundAt(ctx, t, S, bt);
+    const before = prev?.[S.o.id];
+    if (S.kind === 'vehicle' && ctx.movers.has(S.o.id) && before) laneAt(ctx, t, S, bt, before);
+  }
+}
 // [{ code, path, message }] for collision (two solids pass into each other), off_ground (a person or a
 // vehicle floats or sinks) and wrong_lane (a driving vehicle is on the wrong side of the road). Each
 // problem is reported once, with the time span in which it holds.
 export function motionErrors(scene: Scene, catalogue?: Catalogue | null, opts: { only?: Iterable<string> | null; from?: number; to?: number } = {}): ValidationError[] {
   const cat = catalogue || loadCatalogue(), models = new Map(cat.models.map((m): [string, Model] => [m.id, m]));
-  const movers = new Set((scene.tracks || []).filter((k) => MOVE_CHANNELS.has(k.channel)).map((k) => k.object));
-  const only = opts.only ? new Set(opts.only) : null;
-  const osm = (scene.map?.osm?.buildings || []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9));
-  const drive = scene.drive || 'left';
-  const roads = scene.objects.filter((o) => ['road-straight', 'road-zebra'].includes(o.model) && !o.parent);
-  const runs = new Map<string, Run[]>(), errs: ValidationError[] = [];
+  const runs = new Map<string, Run[]>();
   const seen = (key: string, t: number, make: (r: Run) => string): void => {
     let rs = runs.get(key);
     if (!rs) { rs = []; runs.set(key, rs); }
     const r = rs.at(-1);
     if (r && t - r.t1 <= VIEW_STEP + 1e-9) r.t1 = t; else rs.push({ t0: t, t1: t, make });
   };
+  const ctx: MotionCtx = {
+    scene, models, seen, drive: scene.drive || 'left',
+    movers: new Set((scene.tracks || []).filter((k) => MOVE_CHANNELS.has(k.channel)).map((k) => k.object)),
+    only: opts.only ? new Set(opts.only) : null,
+    osm: (scene.map?.osm?.buildings || []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9)),
+    roads: scene.objects.filter((o) => ['road-straight', 'road-zebra'].includes(o.model) && !o.parent),
+  };
   const t0 = opts.from ?? 0, t1 = opts.to ?? scene.duration ?? 0, n = Math.max(0, Math.round((t1 - t0) / VIEW_STEP));
   let prev: Record<string, ObjectBounds> | null = null;
   for (let k = 0; k <= n; k++) {
     const t = Math.min(t1, t0 + k * VIEW_STEP), { bt, solids } = solidsAt(scene, cat, models, t);
-    const mine = (s: Solid): boolean => !only || only.has(s.o.id);
-    // collisions: sweep along x
-    const order = [...solids].sort((a, b) => a.box[0] - b.box[0]);
-    for (const [i, A] of order.entries()) {
-      for (let j = i + 1; j < order.length; j++) {
-        const B = order[j];
-        if (!B || !(B.box[0] < A.box[2])) break;
-        if (!mine(A) && !mine(B)) continue;
-        if (!movers.has(A.o.id) && !movers.has(B.o.id) && A.kind !== 'person' && B.kind !== 'person') continue; // the overlap check of validate
-        if (B.box[1] >= A.box[3] || A.box[1] >= B.box[3] || A.y0 >= B.y1 || B.y0 >= A.y1 || mayShare(A, B)) continue;
-        if (overlapRatio(A.poly, B.poly) <= TOUCH) continue;
-        const [p, q]: [string, string] = A.o.id <= B.o.id ? [A.o.id, B.o.id] : [B.o.id, A.o.id];
-        seen(`c|${p}|${q}`, t, (r) => `${p} and ${q} pass into each other from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Change a path or a time so that they keep apart: another lane, a gap, a wait, or a way round.`);
-      }
-    }
-    for (const S of solids) {
-      if (!mine(S)) continue;
-      if (S.kind === 'person' || S.kind === 'vehicle') {
-        for (const b of osm) if (S.box[2] > b.box[0] && S.box[0] < b.box[2] && S.box[3] > b.box[1] && S.box[1] < b.box[3] && S.y0 < b.y1 && inFootprint(S, b.poly))
-          seen(`c|${S.o.id}|${b.id}`, t, (r) => `${S.o.id} is inside the building ${b.id} from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Keep people and vehicles out of building footprints.`);
-        // ground contact: the ground (y 0), or the top of a floor, a structure or furniture under the centre
-        const y = S.y0, c: Vec2 = [S.b.at[0], S.b.at[2]];
-        if (Math.abs(y) > 0.05) {
-          const held = scene.objects.some((o) => {
-            const b = bt[o.id], m = models.get(o.model);
-            if (!b || o.id === S.o.id || o.model === 'person' || !inPoly(c, b.corners)) return false;
-            if ((o.tags || []).includes('stairs') || (m?.tags || []).includes('stairs') || o.model === 'escalator') return y >= b.min[1] - 0.05 && y <= b.max[1] + 0.05;
-            return Math.abs(b.max[1] - y) <= 0.1;
-          });
-          if (!held) seen(`g|${S.o.id}`, t, (r) => `${S.o.id} ${y > 0 ? 'floats above' : 'sinks into'} the ground from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s (y ${y.toFixed(2)} m). Put it on the ground, a floor or stairs.`);
-        }
-      }
-      // lanes: a driving vehicle on a straight road keeps to the side of the road given by scene.drive
-      const before = prev?.[S.o.id];
-      if (S.kind === 'vehicle' && movers.has(S.o.id) && before) {
-        const a = before.at, v: Vec2 = [S.b.at[0] - a[0], S.b.at[2] - a[2]], sp = Math.hypot(...v) / VIEW_STEP;
-        const road = sp >= MIN_SPEED ? roads.find((r) => { const rb = bt[r.id]; return rb && inPoly(c2(S.b.at), rb.corners); }) : undefined;
-        const rb = road && bt[road.id];
-        if (road && rb) {
-          const ax = rotYaw([0, 0, 1], rb.yaw), along = v[0] * ax[0] + v[1] * ax[2];
-          const dir: Vec2 = along >= 0 ? [ax[0], ax[2]] : [-ax[0], -ax[2]], right: Vec2 = [-dir[1], dir[0]];
-          const side = (S.b.at[0] - rb.at[0]) * right[0] + (S.b.at[2] - rb.at[2]) * right[1];
-          if (Math.abs(along) > 0.5 * Math.hypot(...v) && (drive === 'left' ? side > 0.3 : side < -0.3))
-            seen(`l|${S.o.id}`, t, (r) => `${S.o.id} drives on the ${drive === 'left' ? 'right' : 'left'} side of ${road.id} from ${r.t0.toFixed(2)} s to ${r.t1.toFixed(2)} s. Traffic keeps ${drive} (scene drive "${drive}"): move the path to the ${drive} lane for its direction.`);
-        }
-      }
-    }
+    solidsStep(ctx, t, solids, bt, prev);
     prev = bt;
   }
+  const errs: ValidationError[] = [];
   for (const [key, rs] of runs) for (const r of rs) errs.push({ code: RUN_CODES[key.charAt(0)] ?? 'collision', path: 'objects', message: r.make(r) });
   return errs;
 }
@@ -488,28 +506,28 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const isVec = (v: unknown, n = 3): boolean => Array.isArray(v) && v.length === n && v.every(isNum);
 const isHex = (v: unknown): boolean => typeof v === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
 
-export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationError[] {
-  const cat = catalogue || loadCatalogue();
-  const errs: ValidationError[] = [];
-  const E = (code: string, path: string, message: string): void => { errs.push({ code, path, message }); };
-  if (!raw || typeof raw !== 'object') { E('schema', '', 'Scene is not an object.'); return errs; }
-  if (raw.toybox !== FORMAT) E('schema', 'toybox', `toybox must be ${FORMAT}.`);
+interface V {
+  scene: Scene; cat: Catalogue; models: Map<string, Model>; ids: Set<unknown>; errs: ValidationError[];
+  E: (code: string, path: string, message: string) => void; seeT: (t: unknown) => void; maxT: number;
+}
+function sceneOf(raw: Scene, E: V['E']): Scene {
   // A list that is not an array is reported and then read as an empty list.
   const list = <T>(k: string, v: T[] | undefined): T[] => {
     if (!Array.isArray(v)) { E('schema', k, `${k} must be an array.`); return []; }
     return v;
   };
-  const scene: Scene = { ...raw, objects: list('objects', raw.objects), tracks: list('tracks', raw.tracks), camera: list('camera', raw.camera),
+  return { ...raw, objects: list('objects', raw.objects), tracks: list('tracks', raw.tracks), camera: list('camera', raw.camera),
     chapters: list('chapters', raw.chapters), captions: list('captions', raw.captions), callouts: list('callouts', raw.callouts) };
+}
+function checkTop(v: V): void {
+  const { scene, E } = v;
   if (!isNum(scene.duration) || scene.duration < 0) E('schema', 'duration', 'duration must be a number of seconds.');
   if (scene.backdrop && !oneOf(GROUNDS, scene.backdrop.ground)) E('schema', 'backdrop.ground', `ground must be one of ${GROUNDS.join(', ')}.`);
   if (scene.backdrop?.ground === 'map' && scene.map?.bearing) E('schema', 'map.bearing', 'OneMap tiles cannot turn. Use a ground other than "map" when the map has a bearing.');
   if (scene.lighting !== undefined && !Array.isArray(scene.lighting)) E('schema', 'lighting', 'lighting must be an array.');
-  const models = new Map(cat.models.map((m): [string, Model] => [m.id, m]));
-  const ids = new Set();
-  let maxT = 0;
-  const seeT = (t: unknown): void => { if (isNum(t) && t > maxT) maxT = t; };
-
+}
+function checkObjects(v: V): void {
+  const { scene, cat, models, ids, E } = v;
   scene.objects.forEach((o, i) => {
     const p = `objects[${i}]`;
     if (!o || typeof o.id !== 'string' || !o.id) { E('schema', p, 'Object needs a string id.'); return; }
@@ -532,8 +550,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     if (o.measured === true && !o.source) E('measured_no_source', p, `Object ${o.id} is measured but has no source.`);
     if (typeof o.source === 'string' && /^estimated/i.test(o.source) && o.estimated !== true) E('estimate_not_flagged', p, `Object ${o.id} has an estimated source but estimated is not true.`);
   });
+}
 
-  // tracks
+function checkTracks(v: V): void {
+  const { scene, ids, E, seeT } = v;
   scene.tracks.forEach((tr, i) => {
     const p = `tracks[${i}]`;
     if (!ids.has(tr.object)) E('unknown_object', `${p}.object`, `Track object ${tr.object} does not exist.`);
@@ -550,8 +570,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
       if (j > 0 && pk && isNum(k.t) && k.t <= pk.t) E('time_backwards', kp, `Key time ${k.t} is not after ${pk.t}.`);
     });
   });
+}
 
-  // camera
+function checkCamera(v: V): void {
+  const { scene, E, seeT } = v;
   scene.camera.forEach((k, i) => {
     const p = `camera[${i}]`;
     if (!isNum(k.t) || k.t < 0) E('schema', `${p}.t`, 't must be a number of seconds >= 0.'); else seeT(k.t);
@@ -564,8 +586,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     if (i > 0 && pk && isNum(k.t) && k.shot !== pk.shot && pk.ease !== 'step' && k.t - pk.t > MAX_SHOT_MOVE + 1e-9)
       E('shot_move_too_long', p, `Camera moves from ${pk.shot} to ${k.shot} over ${(k.t - pk.t).toFixed(2)} s. Use at most ${MAX_SHOT_MOVE} s, or cut (ease "step" on the earlier key).`);
   });
+}
 
-  // lighting
+function checkLighting(v: V): void {
+  const { scene, E, seeT } = v;
   const lights = Array.isArray(scene.lighting) ? scene.lighting : [];
   lights.forEach((l, i) => {
     if (!oneOf(LOOKS, l.look)) E('schema', `lighting[${i}].look`, `look must be one of ${LOOKS.join(', ')}.`);
@@ -573,10 +597,11 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     const pl = lights[i - 1];
     if (i > 0 && pl && isNum(l.t) && l.t <= pl.t) E('time_backwards', `lighting[${i}]`, 'Lighting times must increase.');
   });
+}
 
-  // chapters, captions, callouts
+function checkChapters(v: V): void {
+  const { scene, ids, E, seeT } = v;
   let prevEnd = -Infinity;
-  const capsSorted = [...scene.captions].sort((a, b) => a.start - b.start);
   scene.chapters.forEach((c, i) => {
     const p = `chapters[${i}]`;
     if (!isNum(c.start) || !isNum(c.end)) { E('schema', p, 'Chapter needs numeric start and end.'); return; }
@@ -592,6 +617,11 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     if (typeof c.source === 'string' && /^estimated/i.test(c.source) && c.estimated !== true) E('estimate_not_flagged', p, `Chapter ${c.id} has an estimated source but estimated is not true.`);
     for (const f of c.focus || []) if (!ids.has(f)) E('unknown_object', `${p}.focus`, `Focus object ${f} does not exist.`);
   });
+}
+
+function checkCaptions(v: V): void {
+  const { scene, E, seeT } = v;
+  const capsSorted = [...scene.captions].sort((a, b) => a.start - b.start);
   scene.captions.forEach((c, i) => {
     const p = `captions[${i}]`;
     if (!isNum(c.start) || !isNum(c.end) || typeof c.text !== 'string') { E('schema', p, 'Caption needs start, end and text.'); return; }
@@ -607,6 +637,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     const cur = capsSorted[i], before = capsSorted[i - 1];
     if (cur && before && cur.start < before.end - 1e-9) E('caption_overlap', `captions[${scene.captions.indexOf(cur)}]`, 'Captions overlap in time.');
   }
+}
+
+function checkCallouts(v: V): void {
+  const { scene, ids, E, seeT } = v;
   scene.callouts.forEach((c, i) => {
     const p = `callouts[${i}]`;
     if (!isNum(c.start) || !isNum(c.end)) { E('schema', p, 'Callout needs start and end.'); return; }
@@ -622,6 +656,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     if (isNum(c.start) && isNum(c.end) && !scene.chapters.some((k) => c.start >= k.start - 1e-9 && c.end <= k.end + 1e-9))
       E('callout_outside_chapter', `callouts[${i}]`, `Callout "${c.text}" (${c.start} s to ${c.end} s) is not inside one chapter. A callout shows only in the chapter that it belongs to.`);
   });
+}
+
+function checkMotions(v: V): void {
+  const { scene, ids, E, seeT } = v;
   // motions: words such as pop and hop (engine/vid.goose)
   if (scene.motions !== undefined && !Array.isArray(scene.motions)) E('schema', 'motions', 'motions must be an array.');
   (Array.isArray(scene.motions) ? scene.motions : []).forEach((m, i) => {
@@ -632,18 +670,25 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     if (m.d !== undefined && !(isNum(m.d) && m.d > 0)) E('schema', `${p}.d`, 'd must be more than 0 seconds.');
     for (const k of ['h', 'x', 'y', 'deg'] as const) if (m[k] !== undefined && !isNum(m[k])) E('schema', `${p}.${k}`, `${k} must be a number.`);
   });
-  errs.push(...narrationErrors(scene));
+}
+
+function checkDuration(v: V): void {
+  const { scene, E, seeT } = v;
+  v.errs.push(...narrationErrors(scene));
   // The voice is content too: the last sentence end and the tail after it must fit in duration,
   // even when a bad scene file has no captions to carry the narration length.
   for (const n of Array.isArray(scene.narration) ? scene.narration : []) seeT(n.end);
   seeT(narrationLength(scene.narration));
-  if (isNum(scene.duration) && scene.duration < maxT - 5e-4) E('duration_too_short', 'duration', `duration is ${scene.duration} s but the last time in the scene is ${maxT} s.`);
+  if (isNum(scene.duration) && scene.duration < v.maxT - 5e-4) E('duration_too_short', 'duration', `duration is ${scene.duration} s but the last time in the scene is ${v.maxT} s.`);
 
   if (scene.chapters.length >= 12) {
     const shots = new Set([...scene.chapters.map((c) => c.shot), ...scene.camera.map((k) => k.shot)].filter(Boolean));
     if (shots.size < 3) E('too_few_shot_types', 'camera', `A scene with ${scene.chapters.length} chapters needs at least 3 shot types. It has ${shots.size}.`);
   }
+}
 
+function checkGeometry(v: V): void {
+  const { scene, cat, models, E } = v;
   // geometry checks need valid models
   const bounds = objectBounds(scene, cat, 0);
   scene.objects.forEach((o, i) => {
@@ -664,6 +709,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     const ratio = overlapRatio(ba.corners, bb.corners);
     if (ratio > 0.2) E('overlap', `objects[${scene.objects.indexOf(B)}]`, `Objects ${A.id} and ${B.id} overlap by ${(ratio * 100).toFixed(0)} percent of the smaller footprint.`);
   }
+}
+
+function checkVanishing(v: V): void {
+  const { scene, models, E } = v;
   // real objects stay in the scene: nothing is hidden, and no building, structure or vehicle disappears
   // to clear a camera view. A vehicle may be swapped for another one (a car that burns) at the same place.
   scene.objects.forEach((o, i) => { if (o.hidden) E('object_hidden', `objects[${i}]`, `Object ${o.id} is hidden. Do not hide an object to clear a view: move the camera. Remove an object only when it does not belong in the scene.`); });
@@ -689,6 +738,10 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     if ((o.tags || []).some((t) => t === 'wall' || t === 'ceiling') && ['building', 'vehicle', 'nature'].includes(kindOf(o) ?? ''))
       E('cutaway_outdoor', `objects[${i}].tags`, `${o.id} is a ${kindOf(o)} with a wall or ceiling tag, so the cutaway hides it. The cutaway is for room walls and ceilings from build_room only.`);
   });
+}
+
+function checkFocus(v: V): void {
+  const { scene, cat, E } = v;
   // focus visibility at chapter start
   scene.chapters.forEach((c, i) => {
     if (!c.focus?.length || !isNum(c.start)) return;
@@ -703,6 +756,19 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
       if (fb && !boundsVisible(cam, fb)) E('focus_out_of_view', `chapters[${i}].focus`, `Focus object ${f} is outside the camera view at ${c.start} s.`);
     }
   });
+}
+
+export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationError[] {
+  const cat = catalogue || loadCatalogue();
+  const errs: ValidationError[] = [];
+  const E: V['E'] = (code, path, message) => { errs.push({ code, path, message }); };
+  if (!raw || typeof raw !== 'object') { E('schema', '', 'Scene is not an object.'); return errs; }
+  if (raw.toybox !== FORMAT) E('schema', 'toybox', `toybox must be ${FORMAT}.`);
+  const scene = sceneOf(raw, E);
+  const v: V = { scene, cat, errs, E, models: new Map(cat.models.map((m): [string, Model] => [m.id, m])), ids: new Set(), maxT: 0,
+    seeT: (t) => { if (isNum(t) && t > v.maxT) v.maxT = t; } };
+  checkTop(v);
+  for (const check of [checkObjects, checkTracks, checkCamera, checkLighting, checkChapters, checkCaptions, checkCallouts, checkMotions, checkDuration, checkGeometry, checkVanishing, checkFocus]) check(v);
   return errs;
 }
 

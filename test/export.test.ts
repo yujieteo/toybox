@@ -10,6 +10,7 @@ import { view } from './helpers.ts';
 // A scene that has only captions: the SRT reads nothing else.
 const withCaptions = (captions: Scene['captions']): Scene => view<Scene>({ captions });
 
+function tests1(): void {
 test('the export .srt is in time order and writes raised and lowered text as plain text', () => {
   const scene = withCaptions([{ start: 5, end: 7, text: 'B ^{raised} and _{low}.' }, { start: 1, end: 3, text: 'A' }]);
   assert.equal(srt(scene), '1\n00:00:01,000 --> 00:00:03,000\nA\n\n2\n00:00:05,000 --> 00:00:07,000\nB raised and low.\n');
@@ -53,3 +54,5 @@ test('the export module loads in Node, so the daemon can share encoderConfig', a
   assert.equal(typeof m.srt, 'function');
   assert.equal(typeof m.encoderConfig, 'function');
 });
+}
+tests1();

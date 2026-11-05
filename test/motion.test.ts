@@ -17,6 +17,7 @@ function road(): Scene {
   return s;
 }
 
+function tests1(): void {
 test('two cars that drive through each other are a collision', () => {
   const s = road();
   must(C.place(s, { model: 'car-sedan', at: [-2.2, 0, 20], id: 'a', yaw: 180 }));
@@ -64,7 +65,10 @@ test('a hidden object and a building that shrinks to nothing fail validate', () 
   must(C.animate(s, { id: 'house', channel: 'scale', keys: [{ t: 0, v: [1, 1, 1] }, { t: 2, v: [0.001, 0.001, 0.001], ease: 'step' }] }));
   assert.ok(codes(validate(s, cat)).includes('object_vanishes'));
 });
+}
+tests1();
 
+function tests2(): void {
 test('a building that is tiny from the start fails validate', () => {
   const s = newScene({ duration: 4 });
   must(C.place(s, { model: 'shophouse-2', at: [0, 0, 8], id: 'house', scale: [0.001, 0.001, 0.001] }));
@@ -108,7 +112,10 @@ test('a vehicle may be swapped for its wreck at the same place and time', () => 
   assert.ok(!codes(validate(s, cat)).includes('object_vanishes'));
   assert.deepEqual(motionErrors(s, cat), []);
 });
+}
+tests2();
 
+function tests3(): void {
 test('a callout outside its chapter and an outdoor cutaway fail validate', () => {
   const s = newScene({ duration: 8 });
   must(C.place(s, { model: 'person', at: [0, 0], id: 'p', variant: 1 }));
@@ -131,3 +138,5 @@ test('held gear is on the forearm or the wrist, and the guide list has motion', 
   const r = C.guide(newScene({}), { name: 'motion' });
   assert.ok(isOk(r), JSON.stringify(r));
 });
+}
+tests3();

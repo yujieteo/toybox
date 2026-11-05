@@ -22,6 +22,7 @@ const REQUIRED = ['car-sedan', 'car-taxi', 'car-police', 'ambulance-scdf', 'bus-
 // One number of a vector.
 function at3(v: readonly number[], i: number): number { return must(v[i], `component ${i}`); }
 
+function tests1(): void {
 test('at least 45 models, unique ids, required ids present', () => {
   assert.ok(cat.models.length >= 45);
   const ids = cat.models.map((m: Model) => m.id);
@@ -51,7 +52,10 @@ test('parts bounding box matches size, centred on the footprint, sitting on the 
     assert.ok(Math.abs(at3(b.min, 0) + at3(b.max, 0)) < 0.01 && Math.abs(at3(b.min, 2) + at3(b.max, 2)) < 0.01, `${m.id} centred`);
   }
 });
+}
+tests1();
 
+function tests2(): void {
 test('real sizes are plausible', () => {
   const find = (id: string): Model => must(cat.models.find((m: Model) => m.id === id), id);
   const get = (id: string): Triple => find(id).size;
@@ -74,6 +78,8 @@ test('real sizes are plausible', () => {
   assert.ok(get('station-wall')[0] >= 4 && get('station-wall')[1] >= 3.5 && get('station-wall')[1] <= 5);
   const track = find('mrt-track'); assert.equal(track.kind, 'road'); assert.equal(track.size[0], 24); assert.ok(track.size[1] <= 0.15 && track.size[2] >= 3 && track.size[2] <= 5);
 });
+}
+tests2();
 
 // The rows of the table in assets/ATTRIBUTION.md, as objects keyed by the header cells.
 function attribution(): Record<string, string | undefined>[] {
@@ -98,6 +104,7 @@ function readMesh(file: URL): { counts: number[]; min: Triple; max: Triple } {
   return { counts, min, max };
 }
 
+function tests3(): void {
 test('imported models are CC0 with a source, a mesh file and an attribution entry', () => {
   assert.ok(imported.some((m: Model) => m.source.startsWith('https://kenney.nl/')), 'a Kenney model');
   assert.ok(imported.some((m: Model) => m.source.startsWith('https://polyhaven.com/')), 'a Poly Haven model');
@@ -124,3 +131,5 @@ test('imported models are CC0 with a source, a mesh file and an attribution entr
     assert.ok(row.author && row.checked, m.id);
   }
 });
+}
+tests3();

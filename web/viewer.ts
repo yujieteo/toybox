@@ -16,7 +16,7 @@ export function isScene(x: unknown): x is Scene {
   return isRecord(x) && Array.isArray(x.objects);
 }
 // Fields that the scene format allows but web/types.ts does not name yet.
-function flag(x: object, key: string): boolean { return key in x && Reflect.get(x, key) === true; }
+function flag(x: object, key: string): boolean { return isRecord(x) && x[key] === true; }
 function vec3Of(x: unknown): Vec3 | undefined {
   if (!Array.isArray(x) || x.length !== 3) return undefined;
   const [a, b, c] = x;
@@ -157,61 +157,83 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
+// The state that the viewer functions share. v is the public object; the rest is private.
+interface Ctx {
+  M: Engine; v: Viewer; w: number; h: number;
+  overlay: HTMLCanvasElement | null | undefined; octx: CanvasRenderingContext2D | null;
+  models: Map<string, Model>; outfits: Map<string, Outfit>;
+  meshIds: Map<string, number[]>;   // imported model id -> engine mesh ids
+  audios: Map<string, HTMLAudioElement>;   // URL -> Audio
+  mapGeneration: number;   // raised at each scene load, so a slow tile load cannot repaint a newer scene
+  dragFrame: number; last: number;
+}
+type EditOp = 'move' | 'scale' | 'rotate' | 'flip' | 'duplicate' | 'delete';
+
+const FONT = '"DM Sans", system-ui, sans-serif';
+const up = (c: Ctx): number => c.M._toybox_up_buf();
+
+async function loadPeople(M: Engine, assetsUrl: string): Promise<void> {
+  const sk: unknown = await (await fetch(`${assetsUrl}/people/skel.json`)).json();
+  if (!isSkeleton(sk)) throw new Error('The skeleton file has no bones.');
+  sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
+  sk.bones.forEach((b, i) => BONES.set(b.name, i));
+  const skins: [number, string][] = [[0, 'mesh_full.bin'], [1, 'mesh_lod.bin']];
+  for (const [id, f] of skins) {
+    const buf = new Uint8Array(await (await fetch(`${assetsUrl}/people/${f}`)).arrayBuffer());
+    const [nv0 = 0, nv1 = 0] = new Uint32Array(buf.buffer, 0, 2);
+    M.HEAPU8.set(buf.subarray(8), M._toybox_up_buf());
+    M._toybox_load_skin(id, nv0, nv1);
+  }
+}
+
+// Imported CC0 models (Kenney, Poly Haven): each colour group becomes one engine mesh, ids 16 to 511
+// (0 to 3 are the primitives, 8 to 10 the map buildings, 512 is MAX_MESH in engine/gl_shim.h).
+// File format: see tools/assets/import.ts.
+async function loadMeshes(M: Engine, assetsUrl: string, catalogue: Catalogue): Promise<Map<string, number[]>> {
+  const meshIds = new Map<string, number[]>();
+  const meshModels = catalogue.models.filter(m => meshOf(m));
+  const files = await Promise.all(meshModels.map(async m => (await fetch(`${assetsUrl}/${meshOf(m)}`)).arrayBuffer()));
+  let next = 16;
+  meshModels.forEach((m, i) => {
+    const buf = nth(files, i), head = new DataView(buf), g = head.getUint32(4, true), s = head.getFloat32(8, true);
+    if (head.getUint32(0, true) !== 0x314d4254 || next + g > 512) return;
+    const ids: number[] = [];
+    let off = 12 + 4 * g;
+    for (let k = 0; k < g; k++) {
+      const n = head.getUint32(12 + 4 * k, true), q = new Int16Array(buf, off, n * 6), f = new Float32Array(n * 6);
+      for (let j = 0; j < f.length; j++) f[j] = j % 6 < 3 ? (q[j] ?? 0) * s : (q[j] ?? 0) / 32767;
+      off += n * 12;
+      M.HEAPF32.set(f, M._toybox_up_buf() >> 2);
+      M._toybox_mesh_upload(next, f.length);
+      ids.push(next++);
+    }
+    meshIds.set(m.id, ids);
+  });
+  return meshIds;
+}
+
 export async function createViewer(opts: ViewerOptions): Promise<Viewer> {
   const { overlay, engineUrl = 'engine/toybox.js', assetsUrl = 'assets' } = opts;
   await loadScript(engineUrl);
   const M = await ToyboxModule({ locateFile: (f: string) => engineUrl.replace(/[^/]*$/, '') + f });
-  let W = opts.width || 1280, H = opts.height || 720;
-  M._scene_init(W, H);
-  const octx = overlay ? context2d(overlay) : null;
-
-  // ---- assets: people meshes and the catalogue
-  const up = () => M._toybox_up_buf();
-  {
-    const sk: unknown = await (await fetch(`${assetsUrl}/people/skel.json`)).json();
-    if (!isSkeleton(sk)) throw new Error('The skeleton file has no bones.');
-    sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
-    sk.bones.forEach((b, i) => BONES.set(b.name, i));
-    const skins: [number, string][] = [[0, 'mesh_full.bin'], [1, 'mesh_lod.bin']];
-    for (const [id, f] of skins) {
-      const buf = new Uint8Array(await (await fetch(`${assetsUrl}/people/${f}`)).arrayBuffer());
-      const [nv0 = 0, nv1 = 0] = new Uint32Array(buf.buffer, 0, 2);
-      M.HEAPU8.set(buf.subarray(8), up());
-      M._toybox_load_skin(id, nv0, nv1);
-    }
-  }
+  const w = opts.width || 1280, h = opts.height || 720;
+  M._scene_init(w, h);
+  await loadPeople(M, assetsUrl);
   const catalogueData: unknown = await (await fetch(`${assetsUrl}/catalogue.json`)).json();
   if (!isCatalogue(catalogueData)) throw new Error('The catalogue file has no models.');
   const catalogue: Catalogue = catalogueData;
   const models = new Map(catalogue.models.map((m): [string, Model] => [m.id, m]));
-  const meshIds = new Map<string, number[]>();   // imported model id -> engine mesh ids
   const outfits = new Map((catalogue.outfits || []).map((f): [string, Outfit] => [f.id, f]));
-  // Imported CC0 models (Kenney, Poly Haven): each colour group becomes one engine mesh, ids 16 to 511
-  // (0 to 3 are the primitives, 8 to 10 the map buildings, 512 is MAX_MESH in engine/gl_shim.h).
-  // File format: see tools/assets/import.ts.
-  {
-    const meshModels = catalogue.models.filter(m => meshOf(m));
-    const files = await Promise.all(meshModels.map(async m => (await fetch(`${assetsUrl}/${meshOf(m)}`)).arrayBuffer()));
-    let next = 16;
-    meshModels.forEach((m, i) => {
-      const buf = nth(files, i), head = new DataView(buf), g = head.getUint32(4, true), s = head.getFloat32(8, true);
-      if (head.getUint32(0, true) !== 0x314d4254 || next + g > 512) return;
-      const ids: number[] = [];
-      let off = 12 + 4 * g;
-      for (let k = 0; k < g; k++) {
-        const n = head.getUint32(12 + 4 * k, true), q = new Int16Array(buf, off, n * 6), f = new Float32Array(n * 6);
-        for (let j = 0; j < f.length; j++) f[j] = j % 6 < 3 ? (q[j] ?? 0) * s : (q[j] ?? 0) / 32767;
-        off += n * 12;
-        M.HEAPF32.set(f, up() >> 2);
-        M._toybox_mesh_upload(next, f.length);
-        ids.push(next++);
-      }
-      meshIds.set(m.id, ids);
-    });
-  }
+  const meshIds = await loadMeshes(M, assetsUrl, catalogue);
+  const v = makeViewer(() => c, M, catalogue, models);
+  const c: Ctx = { M, v, w, h, overlay, octx: overlay ? context2d(overlay) : null, models, outfits, meshIds, audios: new Map(), mapGeneration: 0, dragFrame: 0, last: 0 };
+  return v;
+}
 
-  // The methods are function declarations below, so this literal can name them all.
-  const v: Viewer = {
+// The public object. Its methods run on the shared state, which exists once createViewer is done.
+function makeViewer(ctx: () => Ctx, M: Engine, catalogue: Catalogue, models: Map<string, Model>): Viewer {
+  const bind = <A extends unknown[], R>(f: (c: Ctx, ...a: A) => R) => (...a: A): R => f(ctx(), ...a);
+  return {
     M, catalogue, models, scene: null, t: 0, playing: false, selected: null,
     userCam: false, orbit: { yaw: 0, pitch: 0.4, dist: 12, tx: 0, ty: 1, tz: 0 },
     showOverlay: true, undo: [], onchange: null, onframe: null, onedit: null, exporting: false,
@@ -221,526 +243,563 @@ export async function createViewer(opts: ViewerOptions): Promise<Viewer> {
     voiceUrl: null,       // file -> URL of a voice file of the narration, or null for no sound
     clips: [],            // the voice of each sentence: { start, end, audio, on }
     tilesReady: Promise.resolve(),
-    size, resize, sizeOf, load, oneMap, loadLogo, project, draw, drawOverlay, camState, orbitBy, zoomBy, panBy, storyCamera,
-    pick, select, groundPoint, undoEdit, edit, beginDrag, moveSelectedTo, endDrag, play, pause, seek, download, readPixels,
+    size: () => [ctx().w, ctx().h], resize: bind(resize), sizeOf: bind(sizeOf),
+    load: (s, keep = true) => loadScene(ctx(), s, keep), oneMap, loadLogo: bind(loadLogo),
+    project: bind(project), draw: bind(draw), drawOverlay: bind(drawOverlay), camState: () => ({ eye: [M._cam_x(), M._cam_y(), M._cam_z()] }),
+    orbitBy: bind(orbitBy), zoomBy: bind(zoomBy), panBy: bind(panBy), storyCamera: bind(storyCamera), pick: bind(pick), select: bind(select),
+    groundPoint: bind(groundPoint), undoEdit: bind(undoEdit), edit: bind(edit), beginDrag: bind(beginDrag), moveSelectedTo: bind(moveSelectedTo),
+    endDrag: bind(endDrag), play: bind(play), pause: bind(pause), seek: bind(seek), download: bind(download), readPixels: bind(readPixels),
   };
-  // The scene that is loaded, or an error when there is none.
-  const cur = (): Scene => { if (!v.scene) throw new Error('viewer: no scene is loaded'); return v.scene; };
-
-  function size(): Vec2 { return [W, H]; }
-  function resize(w: number, h: number): void {
-    W = w; H = h; M._scene_resize(w, h);
-    if (overlay) { overlay.width = w; overlay.height = h; }
-  }
-
-  // ---- build the engine scene from the scene file
-  const flagsOf = (o: SceneObject): number => (o.hidden ? FLAG.hidden : 0) | ((o.tags || []).includes('ceiling') ? FLAG.ceiling : 0) | ((o.tags || []).includes('wall') ? FLAG.wall : 0);
-  function add(prim: number, mesh: number, parent: number, flags: number, variant: number, pose: number, flip: boolean | undefined,
-    at: Vec3, yaw: number, rot: Vec3, sc: Vec3, c1: Vec3, c2: Vec3, shadow: number): number {
-    return M._obj_add(prim, mesh, parent, flags, variant, pose, flip ? 1 : 0, at[0], at[1], at[2], yaw, rot[0], rot[1], rot[2],
-      sc[0], sc[1], sc[2], c1[0], c1[1], c1[2], c2[0], c2[1], c2[2], shadow);
-  }
-  function sizeOf(o: { model: string }): Vec3 { return o.model === 'person' ? PERSON_SIZE : models.get(o.model)?.size || [1, 1, 1]; }
-
-  function load(scene: Scene, keepTime = true): void {
-    v.scene = scene;
-    if (!keepTime) v.t = 0;
-    M._scene_reset();
-    v.rootIds.clear();
-    const bd: Partial<Scene['backdrop']> = scene.backdrop || {};
-    const bc = hexRGB(bd.color || '#9fb88c');
-    M._set_backdrop(GROUND[bd.ground || 'grass'] ?? 0, (bd.size || [80, 80])[0], (bd.size || [80, 80])[1], bc[0], bc[1], bc[2]);
-    M._set_cutaway(scene.cutaway && scene.cutaway.ceilings ? 1 : 0, scene.cutaway && scene.cutaway.nearWalls ? 1 : 0);
-    const done = new Set();
-    const addObj = (first: SceneObject): void => {
-      const chain: SceneObject[] = [];
-      for (let o: SceneObject | undefined = first; o && !done.has(o.id); o = o.parent ? scene.objects.find(x => x.id === o?.parent) : undefined) {
-        done.add(o.id);
-        chain.push(o);
-      }
-      for (const o of chain.reverse()) addOne(o); // parents first
-    };
-    const addOne = (o: SceneObject): void => {
-      const po = o.parent ? scene.objects.find(x => x.id === o.parent) : undefined;
-      const parent = po ? v.rootIds.get(po.id) ?? -1 : -1;
-      const at = atOf(o), sc = scaleOf(o);
-      const flags = flagsOf(o);
-      const structural = (o.tags || []).some(t => t === 'wall' || t === 'floor' || t === 'ceiling');
-      if (o.model === 'person') {
-        const n = o.variant || 0;
-        const fit = o.outfit ? outfits.get(o.outfit) : undefined;
-        const col = { ...(fit && fit.colors), ...o.colors };
-        const id = add(4, 0, parent, flags, n, POSES[o.pose || 'stand'] ?? 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc,
-          hexRGB(col.shirt || SHIRTS[n % SHIRTS.length]), hexRGB(col.pants || PANTS[n % PANTS.length]), 0.32);
-        v.rootIds.set(o.id, id);
-        for (const p of fit ? fit.parts : []) {
-          const prim = PRIMS[p.prim] ?? 0;
-          M._obj_bone(add(prim, 0, id, flags, 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, hexRGB(p.color), [0, 0, 0], 0), BONES.get(p.bone || '') ?? -1);
-        }
-        return;
-      }
-      const m = models.get(o.model);
-      if (!m) return;
-      const shadow = structural || ['road', 'building'].includes(m.kind || '') ? 0 : 0.45 * Math.max(m.size[0], m.size[2]);
-      const root = add(6, 0, parent, flags, 0, 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc, [0, 0, 0], [0, 0, 0], shadow);
-      v.rootIds.set(o.id, root);
-      if (meshOf(m)) (meshIds.get(m.id) || []).forEach((id, k) => {
-        const gr = nth(groupsOf(m), k);
-        add(5, id, root, flags, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], hexRGB((o.colors && gr.slot && o.colors[gr.slot]) || gr.color), [0, 0, 0], 0);
-      });
-      else for (const p of m.parts) {
-        const c = hexRGB((o.colors && p.slot && o.colors[p.slot]) || p.color);
-        const prim = PRIMS[p.prim] ?? 0;
-        add(prim, 0, root, flags | (p.eye ? FLAG.eye : 0), 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, c, [0, 0, 0], 0);
-      }
-    };
-    scene.objects.forEach(addObj);
-    v.posed = [];
-    for (const o of scene.objects) {
-      const motions = (scene.motions || []).filter(m => m.object === o.id), id = v.rootIds.get(o.id);
-      const character = (models.get(o.model)?.tags || []).includes('character');
-      if (id === undefined || (!motions.length && !character)) continue;
-      const size = sizeOf(o), sy = o.scale ? (Array.isArray(o.scale) ? o.scale[1] : o.scale) : 1;
-      v.posed.push({ id, motions, seed: character ? seedOf(o.id) : null, unit: size[1] * sy / 2, pivot: size[1] / 2 });
-    }
-    hush();
-    const voiceUrl = v.voiceUrl;
-    v.clips = [];
-    if (voiceUrl) for (const n of scene.narration || []) {
-      if (!n.voice || n.start === undefined || n.end === undefined) continue;
-      const url = voiceUrl(n.voice);
-      let audio = audios.get(url);
-      if (!audio) { audio = Object.assign(new Audio(url), { preload: 'auto' }); audios.set(url, audio); }
-      v.clips.push({ start: n.start, end: n.end, audio, on: false });
-    }
-    for (const tr of scene.tracks || []) {
-      const id = v.rootIds.get(tr.object);
-      if (id === undefined || !tr.keys.length) continue;
-      const ch = CHANNELS[tr.channel];
-      if (ch === undefined) continue;
-      M._trk_begin(id, ch);
-      const ease = (e: string | undefined): number => EASE[e ?? ''] ?? 0;
-      for (const k of tr.keys) {
-        if (tr.channel === 'at') { const [a, b, c] = vec3Of(k.v) || [0, 0, 0]; M._key_add(k.t, a, b, c, ease(k.ease)); }
-        else if (tr.channel === 'yaw') M._key_add(k.t, numberOf(k.v), 0, 0, ease(k.ease));
-        else if (tr.channel === 'scale') { const [a, b, c] = vec3Of(k.v) || [numberOf(k.v), numberOf(k.v), numberOf(k.v)]; M._key_add(k.t, a, b, c, ease(k.ease)); }
-        else M._key_add(k.t, typeof k.v === 'string' ? POSES[k.v] ?? 0 : 0, 0, 0, 2);
-      }
-    }
-    for (const c of scene.camera || []) M._cam_add(c.t, c.eye[0], c.eye[1], c.eye[2], c.target[0], c.target[1], c.target[2], c.fov || 50, EASE[c.ease ?? ''] ?? 1);
-    const looks = scene.lighting && scene.lighting.length ? scene.lighting : [{ t: 0, look: bd.ground === 'floor' ? 'indoor' : 'day' }];
-    for (const l of looks) M._light_add(l.t, LOOKS[l.look] ?? 0);
-    buildMap(scene);
-    v.draw(v.t);
-    if (v.onchange) v.onchange('load');
-  }
-
-  const audios = new Map<string, HTMLAudioElement>();   // URL -> Audio
-  function hush() { for (const c of v.clips) if (c.on) { c.audio.pause(); c.on = false; } }
-
-  // ---- map: OSM footprints extruded, OneMap tiles live
-  function ear(poly: Vec2[]): Vec3[] {  // simple ear clipping, poly = [[x,z],...], returns triangles of indices
-    const n = poly.length, idx = [...Array(n).keys()], tris: Vec3[] = [];
-    let area = 0;
-    for (let i = 0; i < n; i++) { const [x1, z1] = nth(poly, i), [x2, z2] = nth(poly, (i + 1) % n); area += x1 * z2 - x2 * z1; }
-    if (area < 0) idx.reverse();
-    const cross = (a: number, b: number, c: number): number => {
-      const pa = nth(poly, a), pb = nth(poly, b), pc = nth(poly, c);
-      return (pb[0] - pa[0]) * (pc[1] - pa[1]) - (pb[1] - pa[1]) * (pc[0] - pa[0]);
-    };
-    const inside = (p: number, a: number, b: number, c: number): boolean => cross(a, b, p) >= 0 && cross(b, c, p) >= 0 && cross(c, a, p) >= 0;
-    let guard = 0;
-    while (idx.length > 3 && guard++ < 5000) {
-      let cut = false;
-      for (let i = 0; i < idx.length; i++) {
-        const a = nth(idx, (i + idx.length - 1) % idx.length), b = nth(idx, i), c = nth(idx, (i + 1) % idx.length);
-        if (cross(a, b, c) <= 0) continue;
-        if (idx.some(p => p !== a && p !== b && p !== c && inside(p, a, b, c))) continue;
-        tris.push([a, b, c]); idx.splice(i, 1); cut = true; break;
-      }
-      if (!cut) break;
-    }
-    if (idx.length === 3) tris.push([nth(idx, 0), nth(idx, 1), nth(idx, 2)]);
-    return tris;
-  }
-  function extrude(b: OsmBuilding, out: number[]): void {
-    const p = b.poly.slice();
-    if (p.length > 1) { const first = nth(p, 0), end = nth(p, p.length - 1); if (first[0] === end[0] && first[1] === end[1]) p.pop(); }
-    if (p.length < 3) return;
-    const h = b.height || 9;
-    let area = 0;
-    for (let i = 0; i < p.length; i++) { const [x1, z1] = nth(p, i), [x2, z2] = nth(p, (i + 1) % p.length); area += x1 * z2 - x2 * z1; }
-    const q = area < 0 ? p.slice().reverse() : p;     // counter-clockwise seen from +y with z south
-    for (let i = 0; i < q.length; i++) {
-      const [x1, z1] = nth(q, i), [x2, z2] = nth(q, (i + 1) % q.length);
-      const dx = x2 - x1, dz = z2 - z1, l = Math.hypot(dx, dz) || 1, nx = dz / l, nz = -dx / l;
-      const v4: Vec3[] = [[x1, 0, z1], [x2, 0, z2], [x2, h, z2], [x1, h, z1]];
-      for (const k of [0, 2, 1, 0, 3, 2]) out.push(...nth(v4, k), nx, 0, nz);
-    }
-    for (const [a, c, d] of ear(q)) for (const k of [a, d, c]) out.push(nth(q, k)[0], h, nth(q, k)[1], 0, 1, 0);
-  }
-  let mapGeneration = 0;   // raised at each scene load, so a slow tile load cannot repaint a newer scene
-  function buildMap(scene: Scene): Promise<void> {
-    const generation = ++mapGeneration;
-    const map = scene.map;
-    M._ground_map(0, 0, 0, 0, 0);
-    v.mapImage = false;
-    v.tilesReady = Promise.resolve();
-    if (!map) return v.tilesReady;
-    if (map.osm && map.osm.buildings && map.osm.buildings.length) {
-      const palette: Vec3[] = [[0.86, 0.80, 0.70], [0.78, 0.80, 0.82], [0.84, 0.68, 0.58]];
-      const groups: number[][] = [[], [], []];
-      map.osm.buildings.forEach((b, i) => extrude(b, nth(groups, i % 3)));
-      groups.forEach((g, gi) => {
-        if (!g.length || g.length * 4 > M._toybox_up_size()) return;
-        M.HEAPF32.set(new Float32Array(g), up() >> 2);
-        const mesh = 8 + gi;
-        M._toybox_mesh_upload(mesh, g.length);
-        const id = add(5, mesh, -1, 0, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], nth(palette, gi), [0, 0, 0], 0);
-        v.rootIds.set('__osm' + gi, id);
-      });
-    }
-    // The tiles load from the network. The promise lets the export wait for the map before the
-    // first frame. The authoring page does not wait: the map appears when it arrives.
-    if (map.origin && v.oneMap(scene)) v.tilesReady = loadTiles(map, map.origin, generation).catch(() => {});
-    return v.tilesReady;
-  }
-  function oneMap(scene: Scene): boolean { return !!(scene.map && scene.map.origin && scene.backdrop?.ground === 'map'); }
-  const mercator = (lat: number, lon: number, z: number): Vec2 => {
-    const n = 2 ** z, x = (lon + 180) / 360 * n, s = Math.sin(lat * Math.PI / 180);
-    return [x, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n];
-  };
-  async function loadTiles(map: SceneMap, o: { lat: number; lon: number }, generation: number): Promise<void> {
-    const om = map.onemap || {}, z = om.zoom || 18, style = om.style || 'Default';
-    const [fx, fy] = mercator(o.lat, o.lon, z), cx = Math.floor(fx), cy = Math.floor(fy), R = 1;
-    const mPerTile = 156543.03392 * Math.cos(o.lat * Math.PI / 180) / 2 ** z * 256;
-    const cv = document.createElement('canvas'); cv.width = cv.height = 256 * (2 * R + 1);
-    const g = context2d(cv);
-    let any = false;
-    await Promise.all([...Array(2 * R + 1).keys()].flatMap(i => [...Array(2 * R + 1).keys()].map(j => new Promise<void>(done => {
-      const im = new Image(); im.crossOrigin = 'anonymous';
-      im.onload = () => { g.drawImage(im, i * 256, j * 256); any = true; done(); };
-      im.onerror = () => done();
-      im.src = `https://www.onemap.gov.sg/maps/tiles/${style}/${z}/${cx - R + i}/${cy - R + j}.png`;
-    }))));
-    if (!any || generation !== mapGeneration) return;
-    let d: ImageData;
-    try {
-      d = g.getImageData(0, 0, cv.width, cv.height);
-    } catch { return; }   // a tainted canvas: the tiles stay off
-    if (generation !== mapGeneration) return;
-    M.HEAPU8.set(d.data, up());
-    M._toybox_ground_upload(cv.width, cv.height);
-    // metres from the origin: x east, z south
-    const x0 = ((cx - R) - fx) * mPerTile, x1 = ((cx + R + 1) - fx) * mPerTile;
-    const z0 = ((cy - R) - fy) * mPerTile, z1 = ((cy + R + 1) - fy) * mPerTile;
-    M._ground_map(1, x0, z0, x1, z1);
-    v.mapImage = true;
-    if (v.scene) v.draw(v.t);   // the tiles arrive after the first frame
-  }
-  function loadLogo(): Promise<void> {
-    return new Promise(done => {
-      const im = new Image(); im.crossOrigin = 'anonymous';
-      im.onload = () => { v.logo = im; done(); }; im.onerror = () => done(); im.src = ONEMAP_LOGO;
-    });
-  }
-
-  // ---- drawing
-  function project(x: number, y: number, z: number): Vec2 | null { return M._project(x, y, z) ? [M._proj_x(), M._proj_y()] : null; }
-  function draw(t: number): void {
-    v.t = t;
-    if (v.userCam) { const o = v.orbit; M._cam_user(1, o.yaw, o.pitch, o.dist, o.tx, o.ty, o.tz); } else M._cam_user(0, 0, 0, 0, 0, 0, 0);
-    for (const q of v.posed) {   // the eyes turn at most about 50 degrees to a side and up
-      const { dx = 0, z = 0, up: pup = 0, tilt = 0, s = 0, sx = 0, sz = 0, ex = 0, ez = 0, spin = 0, eye = 0 } = poseAt(q.motions, t, q.seed);
-      const lim = (x: number, m: number): number => Math.max(-m, Math.min(m, x));
-      M._obj_pose(q.id, dx * q.unit, (z + pup) * q.unit, tilt, s * sx, s * sz, lim(1.9 * ex, 0.85) + spin, lim(2.5 * ez, 0.9), eye, q.pivot);
-    }
-    M._render_frame(t);
-    if (octx) { octx.clearRect(0, 0, W, H); if (v.showOverlay) drawOverlay(octx, W, H, t); }
-    if (v.onframe) v.onframe(t);
-  }
-
-  // Text with small raised and lowered parts (engine/vid.goose). s is the font size, weight the font weight.
-  function textW(ctx: CanvasRenderingContext2D, text: string, s: number, weight: number): number {
-    let w = 0;
-    for (const p of marks(text)) { ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`; w += ctx.measureText(p.text).width; }
-    ctx.font = `${weight} ${s}px ${FONT}`;
-    return w;
-  }
-  function fillText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, s: number, weight: number): void {
-    const align = ctx.textAlign, w = textW(ctx, text, s, weight);
-    let px = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
-    ctx.textAlign = 'left';
-    for (const p of marks(text)) {
-      ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`;
-      ctx.fillText(p.text, px, y + (p.shift > 0 ? -0.4 * s : p.shift < 0 ? 0.2 * s : 0));
-      px += ctx.measureText(p.text).width;
-    }
-    ctx.font = `${weight} ${s}px ${FONT}`; ctx.textAlign = align;
-  }
-  function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, s: number, weight: number): string[] {
-    const words = text.split(/\s+(?![^{]*\})/), lines: string[] = []; let line = '';
-    for (const w of words) {
-      const test = line ? line + ' ' + w : w;
-      if (textW(ctx, test, s, weight) > maxW && line) { lines.push(line); line = w; } else line = test;
-    }
-    if (line) lines.push(line);
-    return lines;
-  }
-  function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string): void {
-    ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
-  }
-  // The "approximate" tag on an estimated chapter, callout or sign. x, y is its top left corner.
-  function approx(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): number {
-    ctx.font = `600 ${s}px ${FONT}`;
-    const tw = ctx.measureText('approximate').width;
-    pill(ctx, x, y, tw + s, s * 1.5, s * 0.3, '#f2c14e');
-    ctx.fillStyle = '#1c1b18'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText('approximate', x + s * 0.5, y + s * 0.75);
-    return tw + s;
-  }
-  const FONT = '"DM Sans", system-ui, sans-serif';
-  // The text at least 4 percent of the frame height; white on a dark box (contrast above 4.5 to 1).
-  function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
-    const sc = v.scene; if (!sc) return;
-    const fs = Math.round(h * 0.045);
-    for (const o of sc.objects) {
-      const m = models.get(o.model);
-      if (!m || m.kind !== 'sign' || !o.label || !signLabelShown(sc, o.id, t)) continue;
-      const id = v.rootIds.get(o.id); if (id === undefined) continue;
-      const p = v.project(M._obj_wx(id), M._obj_wy(id) + m.size[1] * 0.6, M._obj_wz(id));
-      if (!p) continue;
-      const dist = Math.hypot(M._obj_wx(id) - M._cam_x(), M._obj_wy(id) - M._cam_y(), M._obj_wz(id) - M._cam_z());
-      const s = Math.max(h * 0.02, Math.min(h * 0.032, h * 1.4 / dist));
-      const tw = textW(ctx, o.label, s, 600);
-      pill(ctx, p[0] - tw / 2 - s * 0.4, p[1] - s * 0.8, tw + s * 0.8, s * 1.4, s * 0.3, 'rgba(255,255,255,0.92)');
-      ctx.fillStyle = '#1c1b18'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-      fillText(ctx, o.label, p[0], p[1] - s * 0.1, s, 600);
-      if (o.estimated) { ctx.font = `600 ${s * 0.75}px ${FONT}`; approx(ctx, p[0] - (ctx.measureText('approximate').width + s * 0.75) / 2, p[1] + s * 0.7, s * 0.75); }
-    }
-    // callouts
-    for (const c of sc.callouts || []) {
-      if (t < c.start || t >= c.end) continue;
-      let pos = vec3Of(Reflect.get(c, 'at'));
-      if (c.object) { const id = v.rootIds.get(c.object); if (id === undefined) continue; const co = sc.objects.find(o => o.id === c.object); pos = [M._obj_wx(id), M._obj_wy(id) + ((co ? sizeOf(co)[1] : 1) || 1.7), M._obj_wz(id)]; }
-      if (!pos) continue;
-      const p = v.project(pos[0], pos[1], pos[2]); if (!p) continue;
-      const s = Math.round(h * 0.04);
-      const lines = wrap(ctx, c.text, w * 0.28, s, 500), lh = s * 1.25;
-      const bw = Math.max(...lines.map(l => textW(ctx, l, s, 500))) + s, bh = lines.length * lh + s * 0.6;
-      const x = Math.min(w - bw - 8, Math.max(8, p[0] - bw / 2)), y = Math.max(8, p[1] - bh - s * 1.2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(2, h / 540);
-      ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], y + bh); ctx.stroke();
-      pill(ctx, x, y, bw, bh, s * 0.35, 'rgba(20,20,20,0.82)');
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      lines.forEach((l, i) => fillText(ctx, l, x + s * 0.5, y + s * 0.3 + i * lh, s, 500));
-      if (flag(c, 'estimated') || sc.objects.find(o => o.id === c.object)?.estimated) approx(ctx, x, Math.max(2, y - s * 0.8), s * 0.55);
-    }
-    // chapter title and clock
-    const ch = (sc.chapters || []).find(c => t >= c.start && t < c.end);
-    if (ch && (ch.clock || ch.title)) {
-      const s = Math.round(h * 0.042);
-      const txt = [ch.clock, ch.title].filter(Boolean).join('  ·  ');
-      const tw = textW(ctx, txt, s, 600);
-      pill(ctx, h * 0.02, h * 0.02, tw + s, s * 1.6, s * 0.4, 'rgba(20,20,20,0.82)');
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      fillText(ctx, txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8, s, 600);
-      if (flag(ch, 'estimated')) approx(ctx, h * 0.02 + tw + s * 1.3, h * 0.02 + s * 0.2, s * 0.8);
-    }
-    // captions
-    const caps = (sc.captions || []).filter(c => t >= c.start && t < c.end);
-    if (caps.length) {
-      const lines = wrap(ctx, caps.map(c => c.text).join(' '), w * 0.82, fs, 500), lh = fs * 1.25;
-      const bw = Math.max(...lines.map(l => textW(ctx, l, fs, 500))) + fs, bh = lines.length * lh + fs * 0.5;
-      const nCred = (sc.credits || []).length + (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length ? 1 : 0) + (v.mapImage ? 1 : 0);
-      const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
-      pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      lines.forEach((l, i) => fillText(ctx, l, w / 2, y + fs * 0.25 + i * lh, fs, 500));
-    }
-    // credits
-    const credits = [...(sc.credits || [])];
-    if (sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length) credits.push(OSM_CREDIT);
-    if (v.mapImage) credits.push(ONEMAP_CREDIT);
-    if (credits.length) {
-      const s = Math.round(h * 0.022);
-      ctx.font = `400 ${s}px ${FONT}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-      let y = h - h * 0.01;
-      for (const c of credits.reverse()) {
-        const tw = ctx.measureText(c).width;
-        pill(ctx, w - tw - s * 1.2, y - s * 1.3, tw + s, s * 1.25, s * 0.25, 'rgba(20,20,20,0.6)');
-        ctx.fillStyle = '#fff'; ctx.fillText(c, w - s * 0.7, y - s * 0.15); y -= s * 1.4;
-      }
-      if (v.logo && v.mapImage) ctx.drawImage(v.logo, w - s * 5.5, y - s * 1.8, s * 5, s * 1.8);
-    }
-    // selection box
-    if (v.selected && !v.exporting) {
-      const b = screenBox(v.selected);
-      if (b) { ctx.strokeStyle = '#e0805c'; ctx.lineWidth = Math.max(2, h / 360); ctx.setLineDash([8, 6]); ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0); ctx.setLineDash([]); }
-    }
-  }
-
-  // ---- camera control
-  function camState(): { eye: Vec3 } { return { eye: [M._cam_x(), M._cam_y(), M._cam_z()] }; }
-  function storyCam(t: number): { target: Vec3; fov: number } {   // the story camera target and fov at time t, as the engine samples them
-    const ks = cur().camera || [];
-    if (!ks.length) return { target: [0, 1, 0], fov: 50 };
-    let a = 0;
-    ks.forEach((k, i) => { if (k.t <= t) a = i; });
-    const b = Math.min(a + 1, ks.length - 1), A = nth(ks, a), B = nth(ks, b);
-    let u = b === a ? 0 : Math.max(0, Math.min(1, (t - A.t) / (B.t - A.t)));
-    u = A.ease === 'step' ? 0 : A.ease === 'linear' ? u : u * u * (3 - 2 * u);
-    const lerp = (i: 0 | 1 | 2): number => A.target[i] + (B.target[i] - A.target[i]) * u;
-    return { target: [lerp(0), lerp(1), lerp(2)], fov: (A.fov || 50) + ((B.fov || 50) - (A.fov || 50)) * u };
-  }
-  function ensureUserCam(): void {
-    if (v.userCam) return;
-    // start from the story camera: look from the current eye at its target
-    const e: Vec3 = [M._cam_x(), M._cam_y(), M._cam_z()];
-    const tg = storyCam(v.t).target;
-    const dx = e[0] - tg[0], dy = e[1] - tg[1], dz = e[2] - tg[2];
-    const d = Math.hypot(dx, dy, dz) || 10;
-    v.orbit = { yaw: Math.atan2(dx, dz), pitch: Math.asin(Math.max(-1, Math.min(1, dy / d))), dist: d, tx: tg[0], ty: tg[1], tz: tg[2] };
-    v.userCam = true;
-  }
-  function orbitBy(dyaw: number, dpitch: number): void { ensureUserCam(); const o = v.orbit; o.yaw -= dyaw; o.pitch = Math.max(-0.2, Math.min(1.5, o.pitch + dpitch)); v.draw(v.t); }
-  function zoomBy(f: number): void { ensureUserCam(); const o = v.orbit; o.dist = Math.max(1.5, Math.min(300, o.dist * f)); v.draw(v.t); }
-  function panBy(dx: number, dy: number): void {
-    ensureUserCam(); const o = v.orbit, k = o.dist * 0.0012;
-    o.tx -= (Math.cos(o.yaw) * dx + Math.sin(o.yaw) * dy * Math.sin(o.pitch)) * k;
-    o.tz -= (-Math.sin(o.yaw) * dx + Math.cos(o.yaw) * dy * Math.sin(o.pitch)) * k;
-    v.draw(v.t);
-  }
-  function storyCamera(): void { v.userCam = false; v.draw(v.t); }
-
-  // ---- picking and edits
-  function scaleOf(o: SceneObject): Vec3 { return o.scale ? (Array.isArray(o.scale) ? o.scale : [o.scale, o.scale, o.scale]) : [1, 1, 1]; }
-  function atOf(o: SceneObject): Vec3 { return o.at || [0, 0, 0]; }
-  function bbox(o: SceneObject): Vec3[] | null {
-    const id = v.rootIds.get(o.id); if (id === undefined) return null;
-    const s = sizeOf(o), sc = scaleOf(o);
-    const hw = s[0] * sc[0] / 2, hd = s[2] * sc[2] / 2, hh = s[1] * sc[1];
-    const yaw = (o.yaw || 0) * Math.PI / 180, c = Math.cos(yaw), sn = Math.sin(yaw);
-    const cx = M._obj_wx(id), cy = M._obj_wy(id), cz = M._obj_wz(id);
-    const pts: Vec3[] = [];
-    for (const x of [-hw, hw]) for (const z of [-hd, hd]) for (const y of [0, hh]) pts.push([cx + x * c + z * sn, cy + y, cz - x * sn + z * c]);
-    return pts;
-  }
-  function screenBox(id: string): { x0: number; y0: number; x1: number; y1: number } | null {
-    const o = cur().objects.find(x => x.id === id); if (!o) return null;
-    const pts = bbox(o); if (!pts) return null;
-    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
-    for (const p of pts) { const q = v.project(p[0], p[1], p[2]); if (!q) continue; n++; x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); }
-    return n ? { x0, y0, x1, y1 } : null;
-  }
-  function pick(px: number, py: number): string | null {   // px, py in canvas pixels
-    let best: string | null = null, area = 1e18;
-    for (const o of cur().objects) {
-      if (o.parent || (o.tags || []).includes('floor') || (o.tags || []).includes('ceiling')) continue;
-      const b = screenBox(o.id); if (!b) continue;
-      if (px >= b.x0 && px <= b.x1 && py >= b.y0 && py <= b.y1) { const a = (b.x1 - b.x0) * (b.y1 - b.y0); if (a < area) { area = a; best = o.id; } }
-    }
-    return best;
-  }
-  function select(id: string | null): void { v.selected = id; v.draw(v.t); if (v.onchange) v.onchange('select'); }
-  function groundPoint(px: number, py: number): Vec3 | null {   // ray through the pixel, hit on the plane y = 0
-    const e: Vec3 = [M._cam_x(), M._cam_y(), M._cam_z()];
-    const cam = storyCam(v.t), t: Vec3 = v.userCam ? [v.orbit.tx, v.orbit.ty, v.orbit.tz] : cam.target;
-    const f0: Vec3 = [t[0] - e[0], t[1] - e[1], t[2] - e[2]]; const fl = Math.hypot(...f0);
-    const f: Vec3 = [f0[0] / fl, f0[1] / fl, f0[2] / fl];
-    const s0: Vec3 = [-f[2], 0, f[0]]; const sl = Math.hypot(...s0) || 1;
-    const s: Vec3 = [s0[0] / sl, s0[1] / sl, s0[2] / sl];
-    const u: Vec3 = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]];
-    const tn = Math.tan(cam.fov * Math.PI / 360), nx = (px / W * 2 - 1) * tn * W / H, ny = (1 - py / H * 2) * tn;
-    const d: Vec3 = [f[0] + s[0] * nx + u[0] * ny, f[1] + s[1] * nx + u[1] * ny, f[2] + s[2] * nx + u[2] * ny];
-    if (Math.abs(d[1]) < 1e-4) return null;
-    const k = -e[1] / d[1]; if (k < 0) return null;
-    return [e[0] + d[0] * k, 0, e[2] + d[2] * k];
-  }
-  const snapshot = (): void => { v.undo.push(JSON.stringify(v.scene)); if (v.undo.length > 20) v.undo.shift(); };
-  function undoEdit(): void {
-    const s = v.undo.pop();
-    if (s) {
-      const prev: unknown = JSON.parse(s);
-      if (!isScene(prev)) throw new Error('viewer: the undo step is not a scene');
-      v.load(prev); if (v.onedit) v.onedit();
-    }
-  }
-  const objOf = (id: string | null): SceneObject | undefined => cur().objects.find(o => o.id === id);
-  const moveObj = (o: SceneObject, dx: number, dz: number): void => {
-    const [ax, ay, az] = atOf(o);
-    o.at = [ax + dx, ay, az + dz];
-    for (const tr of cur().tracks || []) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) { const w = vec3Of(k.v); if (w) k.v = [w[0] + dx, w[1], w[2] + dz]; }
-  };
-  function edit(op: 'move', arg: Vec2): void;
-  function edit(op: 'scale' | 'rotate', arg: number): void;
-  function edit(op: 'flip' | 'duplicate' | 'delete'): void;
-  function edit(op: 'move' | 'scale' | 'rotate' | 'flip' | 'duplicate' | 'delete', arg?: Vec2 | number): void {
-    const o = objOf(v.selected); if (!o) return;
-    const scn = cur();
-    snapshot();
-    const sc = scaleOf(o);
-    if (op === 'move' && Array.isArray(arg)) moveObj(o, arg[0], arg[1]);
-    if (op === 'scale' && typeof arg === 'number') { const f = (x: number): number => +(x * arg).toFixed(4); o.scale = [f(sc[0]), f(sc[1]), f(sc[2])]; }
-    if (op === 'rotate' && typeof arg === 'number') o.yaw = (((o.yaw || 0) + arg) % 360 + 360) % 360;
-    if (op === 'flip') o.flip = !o.flip;
-    if (op === 'duplicate') {
-      const c = structuredClone(o); let n = 2; while (objOf(`${o.id}-${n}`)) n++;
-      const [ax, ay, az] = atOf(o);
-      c.id = `${o.id}-${n}`; c.at = [ax + 1, ay, az + 1];
-      scn.objects.push(c); v.selected = c.id;
-    }
-    if (op === 'delete') {
-      scn.objects = scn.objects.filter(x => x.id !== o.id && x.parent !== o.id);
-      scn.tracks = (scn.tracks || []).filter(tr => tr.object !== o.id);
-      v.selected = null;
-    }
-    v.load(scn);
-    if (v.onedit) v.onedit();
-  }
-  // A drag: one undo step at the start, one engine rebuild for each frame, one save at the end.
-  let dragFrame = 0;
-  function beginDrag(): void { if (objOf(v.selected)) snapshot(); }
-  function moveSelectedTo(gx: number, gz: number): void {
-    const o = objOf(v.selected); if (!o) return;
-    const at = atOf(o);
-    moveObj(o, gx - at[0], gz - at[2]);
-    if (!dragFrame) dragFrame = requestAnimationFrame(() => { dragFrame = 0; v.load(cur()); });
-  }
-  function endDrag(): void {
-    cancelAnimationFrame(dragFrame); dragFrame = 0;
-    v.load(cur());
-    if (v.onedit) v.onedit();
-  }
-
-  // ---- playback
-  let last = 0;
-  const tick = (now: number): void => {
-    if (!v.playing) return;
-    const dt = (now - last) / 1000; last = now;
-    const dur = v.scene && v.scene.duration ? v.scene.duration : 60;
-    let t = v.t + dt;
-    // While a sentence plays, the clock moves to the time of its sound by at most 2 ms in each frame.
-    // So the picture and the voice stay together, and the picture never jumps.
-    for (const c of v.clips) {
-      const on = t >= c.start && t < c.end;
-      if (on && !c.on) { c.audio.currentTime = t - c.start; c.audio.play().catch(() => {}); }
-      if (!on && c.on) c.audio.pause();
-      if (on && c.on && !c.audio.paused) t += Math.max(-0.002, Math.min(0.002, c.start + c.audio.currentTime - t));
-      c.on = on;
-    }
-    if (t >= dur) { t = dur; v.playing = false; hush(); if (v.onchange) v.onchange('end'); }
-    v.draw(t);
-    if (v.playing) requestAnimationFrame(tick);
-  };
-  function play(): void { if (v.playing) return; if (v.scene && v.t >= (v.scene.duration || 60)) v.t = 0; v.playing = true; last = performance.now(); if (v.onchange) v.onchange('play'); requestAnimationFrame(tick); }
-  function pause(): void { v.playing = false; hush(); if (v.onchange) v.onchange('pause'); }
-  function seek(t: number): void { hush(); v.draw(Math.max(0, Math.min(t, cur().duration || 60))); }
-  function download(): void {
-    const blob = new Blob([JSON.stringify(v.scene, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (cur().title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() + '.toybox.json'; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
-  function readPixels(): Uint8Array { const p = M._toybox_read_pixels(); return M.HEAPU8.subarray(p, p + W * H * 4); }
-  return v;
 }
+const cur = (c: Ctx): Scene => { if (!c.v.scene) throw new Error('viewer: no scene is loaded'); return c.v.scene; };
+
+function resize(c: Ctx, w: number, h: number): void {
+  c.w = w; c.h = h; c.M._scene_resize(w, h);
+  if (c.overlay) { c.overlay.width = w; c.overlay.height = h; }
+}
+
+// ---- build the engine scene from the scene file
+const flagsOf = (o: SceneObject): number => (o.hidden ? FLAG.hidden : 0) | ((o.tags || []).includes('ceiling') ? FLAG.ceiling : 0) | ((o.tags || []).includes('wall') ? FLAG.wall : 0);
+function add(c: Ctx, prim: number, mesh: number, parent: number, flags: number, variant: number, pose: number, flip: boolean | undefined,
+  at: Vec3, yaw: number, rot: Vec3, sc: Vec3, c1: Vec3, c2: Vec3, shadow: number): number {
+  return c.M._obj_add(prim, mesh, parent, flags, variant, pose, flip ? 1 : 0, at[0], at[1], at[2], yaw, rot[0], rot[1], rot[2],
+    sc[0], sc[1], sc[2], c1[0], c1[1], c1[2], c2[0], c2[1], c2[2], shadow);
+}
+function sizeOf(c: Ctx, o: { model: string }): Vec3 { return o.model === 'person' ? PERSON_SIZE : c.models.get(o.model)?.size || [1, 1, 1]; }
+
+function loadScene(c: Ctx, scene: Scene, keepTime: boolean): void {
+  const { M, v } = c;
+  v.scene = scene;
+  if (!keepTime) v.t = 0;
+  M._scene_reset();
+  v.rootIds.clear();
+  const bd: Partial<Scene['backdrop']> = scene.backdrop || {};
+  const bc = hexRGB(bd.color || '#9fb88c');
+  M._set_backdrop(GROUND[bd.ground || 'grass'] ?? 0, (bd.size || [80, 80])[0], (bd.size || [80, 80])[1], bc[0], bc[1], bc[2]);
+  M._set_cutaway(scene.cutaway && scene.cutaway.ceilings ? 1 : 0, scene.cutaway && scene.cutaway.nearWalls ? 1 : 0);
+  addObjects(c, scene);
+  buildPosed(c, scene);
+  hush(c);
+  buildClips(c, scene);
+  loadTracks(c, scene);
+  for (const k of scene.camera || []) M._cam_add(k.t, k.eye[0], k.eye[1], k.eye[2], k.target[0], k.target[1], k.target[2], k.fov || 50, EASE[k.ease ?? ''] ?? 1);
+  const looks = scene.lighting && scene.lighting.length ? scene.lighting : [{ t: 0, look: bd.ground === 'floor' ? 'indoor' : 'day' }];
+  for (const l of looks) M._light_add(l.t, LOOKS[l.look] ?? 0);
+  buildMap(c, scene);
+  v.draw(v.t);
+  if (v.onchange) v.onchange('load');
+}
+
+function addObjects(c: Ctx, scene: Scene): void {
+  const done = new Set();
+  for (const first of scene.objects) {
+    const chain: SceneObject[] = [];
+    for (let o: SceneObject | undefined = first; o && !done.has(o.id); o = o.parent ? scene.objects.find(x => x.id === o?.parent) : undefined) {
+      done.add(o.id);
+      chain.push(o);
+    }
+    for (const o of chain.reverse()) addOne(c, scene, o); // parents first
+  }
+}
+function addOne(c: Ctx, scene: Scene, o: SceneObject): void {
+  const po = o.parent ? scene.objects.find(x => x.id === o.parent) : undefined;
+  const parent = po ? c.v.rootIds.get(po.id) ?? -1 : -1;
+  if (o.model === 'person') { addPerson(c, o, parent); return; }
+  const m = c.models.get(o.model);
+  if (!m) return;
+  const at = atOf(o), sc = scaleOf(o), flags = flagsOf(o);
+  const structural = (o.tags || []).some(t => t === 'wall' || t === 'floor' || t === 'ceiling');
+  const shadow = structural || ['road', 'building'].includes(m.kind || '') ? 0 : 0.45 * Math.max(m.size[0], m.size[2]);
+  const root = add(c, 6, 0, parent, flags, 0, 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc, [0, 0, 0], [0, 0, 0], shadow);
+  c.v.rootIds.set(o.id, root);
+  if (meshOf(m)) (c.meshIds.get(m.id) || []).forEach((id, k) => {
+    const gr = nth(groupsOf(m), k);
+    add(c, 5, id, root, flags, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], hexRGB((o.colors && gr.slot && o.colors[gr.slot]) || gr.color), [0, 0, 0], 0);
+  });
+  else for (const p of m.parts) {
+    const col = hexRGB((o.colors && p.slot && o.colors[p.slot]) || p.color);
+    const prim = PRIMS[p.prim] ?? 0;
+    add(c, prim, 0, root, flags | (p.eye ? FLAG.eye : 0), 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, col, [0, 0, 0], 0);
+  }
+}
+function addPerson(c: Ctx, o: SceneObject, parent: number): void {
+  const flags = flagsOf(o), n = o.variant || 0;
+  const fit = o.outfit ? c.outfits.get(o.outfit) : undefined;
+  const col = { ...(fit && fit.colors), ...o.colors };
+  const id = add(c, 4, 0, parent, flags, n, POSES[o.pose || 'stand'] ?? 0, o.flip, atOf(o), o.yaw || 0, [0, 0, 0], scaleOf(o),
+    hexRGB(col.shirt || SHIRTS[n % SHIRTS.length]), hexRGB(col.pants || PANTS[n % PANTS.length]), 0.32);
+  c.v.rootIds.set(o.id, id);
+  for (const p of fit ? fit.parts : []) {
+    const prim = PRIMS[p.prim] ?? 0;
+    c.M._obj_bone(add(c, prim, 0, id, flags, 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, hexRGB(p.color), [0, 0, 0], 0), BONES.get(p.bone || '') ?? -1);
+  }
+}
+function buildPosed(c: Ctx, scene: Scene): void {
+  c.v.posed = [];
+  for (const o of scene.objects) {
+    const motions = (scene.motions || []).filter(m => m.object === o.id), id = c.v.rootIds.get(o.id);
+    const character = (c.models.get(o.model)?.tags || []).includes('character');
+    if (id === undefined || (!motions.length && !character)) continue;
+    const size = sizeOf(c, o), sy = o.scale ? (Array.isArray(o.scale) ? o.scale[1] : o.scale) : 1;
+    c.v.posed.push({ id, motions, seed: character ? seedOf(o.id) : null, unit: size[1] * sy / 2, pivot: size[1] / 2 });
+  }
+}
+function buildClips(c: Ctx, scene: Scene): void {
+  const voiceUrl = c.v.voiceUrl;
+  c.v.clips = [];
+  if (voiceUrl) for (const n of scene.narration || []) {
+    if (!n.voice || n.start === undefined || n.end === undefined) continue;
+    const url = voiceUrl(n.voice);
+    let audio = c.audios.get(url);
+    if (!audio) { audio = Object.assign(new Audio(url), { preload: 'auto' }); c.audios.set(url, audio); }
+    c.v.clips.push({ start: n.start, end: n.end, audio, on: false });
+  }
+}
+function loadTracks(c: Ctx, scene: Scene): void {
+  const M = c.M;
+  for (const tr of scene.tracks || []) {
+    const id = c.v.rootIds.get(tr.object);
+    if (id === undefined || !tr.keys.length) continue;
+    const ch = CHANNELS[tr.channel];
+    if (ch === undefined) continue;
+    M._trk_begin(id, ch);
+    const ease = (e: string | undefined): number => EASE[e ?? ''] ?? 0;
+    for (const k of tr.keys) {
+      if (tr.channel === 'at') { const [a, b, d] = vec3Of(k.v) || [0, 0, 0]; M._key_add(k.t, a, b, d, ease(k.ease)); }
+      else if (tr.channel === 'yaw') M._key_add(k.t, numberOf(k.v), 0, 0, ease(k.ease));
+      else if (tr.channel === 'scale') { const [a, b, d] = vec3Of(k.v) || [numberOf(k.v), numberOf(k.v), numberOf(k.v)]; M._key_add(k.t, a, b, d, ease(k.ease)); }
+      else M._key_add(k.t, typeof k.v === 'string' ? POSES[k.v] ?? 0 : 0, 0, 0, 2);
+    }
+  }
+}
+
+function hush(c: Ctx): void { for (const k of c.v.clips) if (k.on) { k.audio.pause(); k.on = false; } }
+
+// ---- map: OSM footprints extruded, OneMap tiles live
+function polyArea(poly: Vec2[]): number {
+  let area = 0;
+  for (let i = 0; i < poly.length; i++) { const [x1, z1] = nth(poly, i), [x2, z2] = nth(poly, (i + 1) % poly.length); area += x1 * z2 - x2 * z1; }
+  return area;
+}
+function ear(poly: Vec2[]): Vec3[] {  // simple ear clipping, poly = [[x,z],...], returns triangles of indices
+  const n = poly.length, idx = [...Array(n).keys()], tris: Vec3[] = [];
+  if (polyArea(poly) < 0) idx.reverse();
+  const cross = (a: number, b: number, c: number): number => {
+    const pa = nth(poly, a), pb = nth(poly, b), pc = nth(poly, c);
+    return (pb[0] - pa[0]) * (pc[1] - pa[1]) - (pb[1] - pa[1]) * (pc[0] - pa[0]);
+  };
+  const inside = (p: number, a: number, b: number, c: number): boolean => cross(a, b, p) >= 0 && cross(b, c, p) >= 0 && cross(c, a, p) >= 0;
+  let guard = 0;
+  while (idx.length > 3 && guard++ < 5000) {
+    let cut = false;
+    for (let i = 0; i < idx.length; i++) {
+      const a = nth(idx, (i + idx.length - 1) % idx.length), b = nth(idx, i), c = nth(idx, (i + 1) % idx.length);
+      if (cross(a, b, c) <= 0) continue;
+      if (idx.some(p => p !== a && p !== b && p !== c && inside(p, a, b, c))) continue;
+      tris.push([a, b, c]); idx.splice(i, 1); cut = true; break;
+    }
+    if (!cut) break;
+  }
+  if (idx.length === 3) tris.push([nth(idx, 0), nth(idx, 1), nth(idx, 2)]);
+  return tris;
+}
+function extrude(b: OsmBuilding, out: number[]): void {
+  const p = b.poly.slice();
+  if (p.length > 1) { const first = nth(p, 0), end = nth(p, p.length - 1); if (first[0] === end[0] && first[1] === end[1]) p.pop(); }
+  if (p.length < 3) return;
+  const h = b.height || 9;
+  const q = polyArea(p) < 0 ? p.slice().reverse() : p;     // counter-clockwise seen from +y with z south
+  for (let i = 0; i < q.length; i++) {
+    const [x1, z1] = nth(q, i), [x2, z2] = nth(q, (i + 1) % q.length);
+    const dx = x2 - x1, dz = z2 - z1, l = Math.hypot(dx, dz) || 1, nx = dz / l, nz = -dx / l;
+    const v4: Vec3[] = [[x1, 0, z1], [x2, 0, z2], [x2, h, z2], [x1, h, z1]];
+    for (const k of [0, 2, 1, 0, 3, 2]) out.push(...nth(v4, k), nx, 0, nz);
+  }
+  for (const [a, c, d] of ear(q)) for (const k of [a, d, c]) out.push(nth(q, k)[0], h, nth(q, k)[1], 0, 1, 0);
+}
+function buildMap(c: Ctx, scene: Scene): Promise<void> {
+  const { M, v } = c;
+  const generation = ++c.mapGeneration;
+  const map = scene.map;
+  M._ground_map(0, 0, 0, 0, 0);
+  v.mapImage = false;
+  v.tilesReady = Promise.resolve();
+  if (!map) return v.tilesReady;
+  if (map.osm && map.osm.buildings && map.osm.buildings.length) uploadBuildings(c, map.osm.buildings);
+  // The tiles load from the network. The promise lets the export wait for the map before the
+  // first frame. The authoring page does not wait: the map appears when it arrives.
+  if (map.origin && v.oneMap(scene)) v.tilesReady = loadTiles(c, map, map.origin, generation).catch(() => {});
+  return v.tilesReady;
+}
+function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
+  const palette: Vec3[] = [[0.86, 0.80, 0.70], [0.78, 0.80, 0.82], [0.84, 0.68, 0.58]];
+  const groups: number[][] = [[], [], []];
+  buildings.forEach((b, i) => extrude(b, nth(groups, i % 3)));
+  groups.forEach((g, gi) => {
+    if (!g.length || g.length * 4 > c.M._toybox_up_size()) return;
+    c.M.HEAPF32.set(new Float32Array(g), up(c) >> 2);
+    const mesh = 8 + gi;
+    c.M._toybox_mesh_upload(mesh, g.length);
+    const id = add(c, 5, mesh, -1, 0, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], nth(palette, gi), [0, 0, 0], 0);
+    c.v.rootIds.set('__osm' + gi, id);
+  });
+}
+function oneMap(scene: Scene): boolean { return !!(scene.map && scene.map.origin && scene.backdrop?.ground === 'map'); }
+const mercator = (lat: number, lon: number, z: number): Vec2 => {
+  const n = 2 ** z, x = (lon + 180) / 360 * n, s = Math.sin(lat * Math.PI / 180);
+  return [x, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n];
+};
+// Draws the 3 by 3 tiles around (cx, cy) on g. Resolves true when at least one tile loaded.
+async function fetchTiles(g: CanvasRenderingContext2D, style: string, z: number, cx: number, cy: number, R: number): Promise<boolean> {
+  let any = false;
+  await Promise.all([...Array(2 * R + 1).keys()].flatMap(i => [...Array(2 * R + 1).keys()].map(j => new Promise<void>(done => {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => { g.drawImage(im, i * 256, j * 256); any = true; done(); };
+    im.onerror = () => done();
+    im.src = `https://www.onemap.gov.sg/maps/tiles/${style}/${z}/${cx - R + i}/${cy - R + j}.png`;
+  }))));
+  return any;
+}
+async function loadTiles(c: Ctx, map: SceneMap, o: { lat: number; lon: number }, generation: number): Promise<void> {
+  const om = map.onemap || {}, z = om.zoom || 18, style = om.style || 'Default';
+  const [fx, fy] = mercator(o.lat, o.lon, z), cx = Math.floor(fx), cy = Math.floor(fy), R = 1;
+  const mPerTile = 156543.03392 * Math.cos(o.lat * Math.PI / 180) / 2 ** z * 256;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256 * (2 * R + 1);
+  const g = context2d(cv);
+  const any = await fetchTiles(g, style, z, cx, cy, R);
+  if (!any || generation !== c.mapGeneration) return;
+  let d: ImageData;
+  try {
+    d = g.getImageData(0, 0, cv.width, cv.height);
+  } catch { return; }   // a tainted canvas: the tiles stay off
+  if (generation !== c.mapGeneration) return;
+  c.M.HEAPU8.set(d.data, up(c));
+  c.M._toybox_ground_upload(cv.width, cv.height);
+  // metres from the origin: x east, z south
+  const x0 = ((cx - R) - fx) * mPerTile, x1 = ((cx + R + 1) - fx) * mPerTile;
+  const z0 = ((cy - R) - fy) * mPerTile, z1 = ((cy + R + 1) - fy) * mPerTile;
+  c.M._ground_map(1, x0, z0, x1, z1);
+  c.v.mapImage = true;
+  if (c.v.scene) c.v.draw(c.v.t);   // the tiles arrive after the first frame
+}
+function loadLogo(c: Ctx): Promise<void> {
+  return new Promise(done => {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => { c.v.logo = im; done(); }; im.onerror = () => done(); im.src = ONEMAP_LOGO;
+  });
+}
+
+// ---- drawing
+function project(c: Ctx, x: number, y: number, z: number): Vec2 | null { return c.M._project(x, y, z) ? [c.M._proj_x(), c.M._proj_y()] : null; }
+function draw(c: Ctx, t: number): void {
+  const { M, v } = c;
+  v.t = t;
+  if (v.userCam) { const o = v.orbit; M._cam_user(1, o.yaw, o.pitch, o.dist, o.tx, o.ty, o.tz); } else M._cam_user(0, 0, 0, 0, 0, 0, 0);
+  for (const q of v.posed) {   // the eyes turn at most about 50 degrees to a side and up
+    const { dx = 0, z = 0, up: pup = 0, tilt = 0, s = 0, sx = 0, sz = 0, ex = 0, ez = 0, spin = 0, eye = 0 } = poseAt(q.motions, t, q.seed);
+    const lim = (x: number, m: number): number => Math.max(-m, Math.min(m, x));
+    M._obj_pose(q.id, dx * q.unit, (z + pup) * q.unit, tilt, s * sx, s * sz, lim(1.9 * ex, 0.85) + spin, lim(2.5 * ez, 0.9), eye, q.pivot);
+  }
+  M._render_frame(t);
+  if (c.octx) { c.octx.clearRect(0, 0, c.w, c.h); if (v.showOverlay) drawOverlay(c, c.octx, c.w, c.h, t); }
+  if (v.onframe) v.onframe(t);
+}
+
+// Text with small raised and lowered parts (engine/vid.goose). s is the font size, weight the font weight.
+function textW(ctx: CanvasRenderingContext2D, text: string, s: number, weight: number): number {
+  let w = 0;
+  for (const p of marks(text)) { ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`; w += ctx.measureText(p.text).width; }
+  ctx.font = `${weight} ${s}px ${FONT}`;
+  return w;
+}
+function fillText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, s: number, weight: number): void {
+  const align = ctx.textAlign, w = textW(ctx, text, s, weight);
+  let px = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  ctx.textAlign = 'left';
+  for (const p of marks(text)) {
+    ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`;
+    ctx.fillText(p.text, px, y + (p.shift > 0 ? -0.4 * s : p.shift < 0 ? 0.2 * s : 0));
+    px += ctx.measureText(p.text).width;
+  }
+  ctx.font = `${weight} ${s}px ${FONT}`; ctx.textAlign = align;
+}
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, s: number, weight: number): string[] {
+  const words = text.split(/\s+(?![^{]*\})/), lines: string[] = []; let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (textW(ctx, test, s, weight) > maxW && line) { lines.push(line); line = w; } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string): void {
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+}
+// The "approximate" tag on an estimated chapter, callout or sign. x, y is its top left corner.
+function approx(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): number {
+  ctx.font = `600 ${s}px ${FONT}`;
+  const tw = ctx.measureText('approximate').width;
+  pill(ctx, x, y, tw + s, s * 1.5, s * 0.3, '#f2c14e');
+  ctx.fillStyle = '#1c1b18'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('approximate', x + s * 0.5, y + s * 0.75);
+  return tw + s;
+}
+// The text at least 4 percent of the frame height; white on a dark box (contrast above 4.5 to 1).
+function drawOverlay(c: Ctx, ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
+  const sc = c.v.scene; if (!sc) return;
+  drawSigns(c, ctx, sc, h, t);
+  drawCallouts(c, ctx, sc, w, h, t);
+  drawChapter(ctx, sc, h, t);
+  drawCaptions(c, ctx, sc, w, h, t);
+  drawCredits(c, ctx, sc, w, h);
+  // selection box
+  if (c.v.selected && !c.v.exporting) {
+    const b = screenBox(c, c.v.selected);
+    if (b) { ctx.strokeStyle = '#e0805c'; ctx.lineWidth = Math.max(2, h / 360); ctx.setLineDash([8, 6]); ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0); ctx.setLineDash([]); }
+  }
+}
+function drawSigns(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: number): void {
+  const { M, v } = c;
+  for (const o of sc.objects) {
+    const m = c.models.get(o.model);
+    if (!m || m.kind !== 'sign' || !o.label || !signLabelShown(sc, o.id, t)) continue;
+    const id = v.rootIds.get(o.id); if (id === undefined) continue;
+    const p = v.project(M._obj_wx(id), M._obj_wy(id) + m.size[1] * 0.6, M._obj_wz(id));
+    if (!p) continue;
+    const dist = Math.hypot(M._obj_wx(id) - M._cam_x(), M._obj_wy(id) - M._cam_y(), M._obj_wz(id) - M._cam_z());
+    const s = Math.max(h * 0.02, Math.min(h * 0.032, h * 1.4 / dist));
+    const tw = textW(ctx, o.label, s, 600);
+    pill(ctx, p[0] - tw / 2 - s * 0.4, p[1] - s * 0.8, tw + s * 0.8, s * 1.4, s * 0.3, 'rgba(255,255,255,0.92)');
+    ctx.fillStyle = '#1c1b18'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    fillText(ctx, o.label, p[0], p[1] - s * 0.1, s, 600);
+    if (o.estimated) { ctx.font = `600 ${s * 0.75}px ${FONT}`; approx(ctx, p[0] - (ctx.measureText('approximate').width + s * 0.75) / 2, p[1] + s * 0.7, s * 0.75); }
+  }
+}
+function drawCallouts(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number, t: number): void {
+  const { M, v } = c;
+  for (const k of sc.callouts || []) {
+    if (t < k.start || t >= k.end) continue;
+    let pos = vec3Of(isRecord(k) ? k['at'] : undefined);
+    if (k.object) { const id = v.rootIds.get(k.object); if (id === undefined) continue; const co = sc.objects.find(o => o.id === k.object); pos = [M._obj_wx(id), M._obj_wy(id) + ((co ? sizeOf(c, co)[1] : 1) || 1.7), M._obj_wz(id)]; }
+    if (!pos) continue;
+    const p = v.project(pos[0], pos[1], pos[2]); if (!p) continue;
+    const s = Math.round(h * 0.04);
+    const lines = wrap(ctx, k.text, w * 0.28, s, 500), lh = s * 1.25;
+    const bw = Math.max(...lines.map(l => textW(ctx, l, s, 500))) + s, bh = lines.length * lh + s * 0.6;
+    const x = Math.min(w - bw - 8, Math.max(8, p[0] - bw / 2)), y = Math.max(8, p[1] - bh - s * 1.2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(2, h / 540);
+    ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], y + bh); ctx.stroke();
+    pill(ctx, x, y, bw, bh, s * 0.35, 'rgba(20,20,20,0.82)');
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    lines.forEach((l, i) => fillText(ctx, l, x + s * 0.5, y + s * 0.3 + i * lh, s, 500));
+    if (flag(k, 'estimated') || sc.objects.find(o => o.id === k.object)?.estimated) approx(ctx, x, Math.max(2, y - s * 0.8), s * 0.55);
+  }
+}
+// The chapter title and clock.
+function drawChapter(ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: number): void {
+  const ch = (sc.chapters || []).find(c => t >= c.start && t < c.end);
+  if (!ch || !(ch.clock || ch.title)) return;
+  const s = Math.round(h * 0.042);
+  const txt = [ch.clock, ch.title].filter(Boolean).join('  ·  ');
+  const tw = textW(ctx, txt, s, 600);
+  pill(ctx, h * 0.02, h * 0.02, tw + s, s * 1.6, s * 0.4, 'rgba(20,20,20,0.82)');
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  fillText(ctx, txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8, s, 600);
+  if (flag(ch, 'estimated')) approx(ctx, h * 0.02 + tw + s * 1.3, h * 0.02 + s * 0.2, s * 0.8);
+}
+const hasOsm = (sc: Scene): boolean => !!(sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length);
+function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number, t: number): void {
+  const caps = (sc.captions || []).filter(k => t >= k.start && t < k.end);
+  if (!caps.length) return;
+  const fs = Math.round(h * 0.045);
+  const lines = wrap(ctx, caps.map(k => k.text).join(' '), w * 0.82, fs, 500), lh = fs * 1.25;
+  const bw = Math.max(...lines.map(l => textW(ctx, l, fs, 500))) + fs, bh = lines.length * lh + fs * 0.5;
+  const nCred = (sc.credits || []).length + (hasOsm(sc) ? 1 : 0) + (c.v.mapImage ? 1 : 0);
+  const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
+  pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  lines.forEach((l, i) => fillText(ctx, l, w / 2, y + fs * 0.25 + i * lh, fs, 500));
+}
+function drawCredits(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number): void {
+  const credits = [...(sc.credits || [])];
+  if (hasOsm(sc)) credits.push(OSM_CREDIT);
+  if (c.v.mapImage) credits.push(ONEMAP_CREDIT);
+  if (!credits.length) return;
+  const s = Math.round(h * 0.022);
+  ctx.font = `400 ${s}px ${FONT}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  let y = h - h * 0.01;
+  for (const k of credits.reverse()) {
+    const tw = ctx.measureText(k).width;
+    pill(ctx, w - tw - s * 1.2, y - s * 1.3, tw + s, s * 1.25, s * 0.25, 'rgba(20,20,20,0.6)');
+    ctx.fillStyle = '#fff'; ctx.fillText(k, w - s * 0.7, y - s * 0.15); y -= s * 1.4;
+  }
+  if (c.v.logo && c.v.mapImage) ctx.drawImage(c.v.logo, w - s * 5.5, y - s * 1.8, s * 5, s * 1.8);
+}
+
+// ---- camera control
+function storyCam(c: Ctx, t: number): { target: Vec3; fov: number } {   // the story camera target and fov at time t, as the engine samples them
+  const ks = cur(c).camera || [];
+  if (!ks.length) return { target: [0, 1, 0], fov: 50 };
+  let a = 0;
+  ks.forEach((k, i) => { if (k.t <= t) a = i; });
+  const b = Math.min(a + 1, ks.length - 1), A = nth(ks, a), B = nth(ks, b);
+  let u = b === a ? 0 : Math.max(0, Math.min(1, (t - A.t) / (B.t - A.t)));
+  u = A.ease === 'step' ? 0 : A.ease === 'linear' ? u : u * u * (3 - 2 * u);
+  const lerp = (i: 0 | 1 | 2): number => A.target[i] + (B.target[i] - A.target[i]) * u;
+  return { target: [lerp(0), lerp(1), lerp(2)], fov: (A.fov || 50) + ((B.fov || 50) - (A.fov || 50)) * u };
+}
+function ensureUserCam(c: Ctx): void {
+  const { M, v } = c;
+  if (v.userCam) return;
+  // start from the story camera: look from the current eye at its target
+  const e: Vec3 = [M._cam_x(), M._cam_y(), M._cam_z()];
+  const tg = storyCam(c, v.t).target;
+  const dx = e[0] - tg[0], dy = e[1] - tg[1], dz = e[2] - tg[2];
+  const d = Math.hypot(dx, dy, dz) || 10;
+  v.orbit = { yaw: Math.atan2(dx, dz), pitch: Math.asin(Math.max(-1, Math.min(1, dy / d))), dist: d, tx: tg[0], ty: tg[1], tz: tg[2] };
+  v.userCam = true;
+}
+function orbitBy(c: Ctx, dyaw: number, dpitch: number): void { ensureUserCam(c); const o = c.v.orbit; o.yaw -= dyaw; o.pitch = Math.max(-0.2, Math.min(1.5, o.pitch + dpitch)); c.v.draw(c.v.t); }
+function zoomBy(c: Ctx, f: number): void { ensureUserCam(c); const o = c.v.orbit; o.dist = Math.max(1.5, Math.min(300, o.dist * f)); c.v.draw(c.v.t); }
+function panBy(c: Ctx, dx: number, dy: number): void {
+  ensureUserCam(c); const o = c.v.orbit, k = o.dist * 0.0012;
+  o.tx -= (Math.cos(o.yaw) * dx + Math.sin(o.yaw) * dy * Math.sin(o.pitch)) * k;
+  o.tz -= (-Math.sin(o.yaw) * dx + Math.cos(o.yaw) * dy * Math.sin(o.pitch)) * k;
+  c.v.draw(c.v.t);
+}
+function storyCamera(c: Ctx): void { c.v.userCam = false; c.v.draw(c.v.t); }
+
+// ---- picking and edits
+function scaleOf(o: SceneObject): Vec3 { return o.scale ? (Array.isArray(o.scale) ? o.scale : [o.scale, o.scale, o.scale]) : [1, 1, 1]; }
+function atOf(o: SceneObject): Vec3 { return o.at || [0, 0, 0]; }
+function bbox(c: Ctx, o: SceneObject): Vec3[] | null {
+  const { M } = c;
+  const id = c.v.rootIds.get(o.id); if (id === undefined) return null;
+  const s = sizeOf(c, o), sc = scaleOf(o);
+  const hw = s[0] * sc[0] / 2, hd = s[2] * sc[2] / 2, hh = s[1] * sc[1];
+  const yaw = (o.yaw || 0) * Math.PI / 180, cs = Math.cos(yaw), sn = Math.sin(yaw);
+  const cx = M._obj_wx(id), cy = M._obj_wy(id), cz = M._obj_wz(id);
+  const pts: Vec3[] = [];
+  for (const x of [-hw, hw]) for (const z of [-hd, hd]) for (const y of [0, hh]) pts.push([cx + x * cs + z * sn, cy + y, cz - x * sn + z * cs]);
+  return pts;
+}
+function screenBox(c: Ctx, id: string): { x0: number; y0: number; x1: number; y1: number } | null {
+  const o = cur(c).objects.find(x => x.id === id); if (!o) return null;
+  const pts = bbox(c, o); if (!pts) return null;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+  for (const p of pts) { const q = c.v.project(p[0], p[1], p[2]); if (!q) continue; n++; x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); }
+  return n ? { x0, y0, x1, y1 } : null;
+}
+function pick(c: Ctx, px: number, py: number): string | null {   // px, py in canvas pixels
+  let best: string | null = null, area = 1e18;
+  for (const o of cur(c).objects) {
+    if (o.parent || (o.tags || []).includes('floor') || (o.tags || []).includes('ceiling')) continue;
+    const b = screenBox(c, o.id); if (!b) continue;
+    if (px >= b.x0 && px <= b.x1 && py >= b.y0 && py <= b.y1) { const a = (b.x1 - b.x0) * (b.y1 - b.y0); if (a < area) { area = a; best = o.id; } }
+  }
+  return best;
+}
+function select(c: Ctx, id: string | null): void { c.v.selected = id; c.v.draw(c.v.t); if (c.v.onchange) c.v.onchange('select'); }
+function groundPoint(c: Ctx, px: number, py: number): Vec3 | null {   // ray through the pixel, hit on the plane y = 0
+  const { M, v } = c;
+  const e: Vec3 = [M._cam_x(), M._cam_y(), M._cam_z()];
+  const cam = storyCam(c, v.t), t: Vec3 = v.userCam ? [v.orbit.tx, v.orbit.ty, v.orbit.tz] : cam.target;
+  const f0: Vec3 = [t[0] - e[0], t[1] - e[1], t[2] - e[2]]; const fl = Math.hypot(...f0);
+  const f: Vec3 = [f0[0] / fl, f0[1] / fl, f0[2] / fl];
+  const s0: Vec3 = [-f[2], 0, f[0]]; const sl = Math.hypot(...s0) || 1;
+  const s: Vec3 = [s0[0] / sl, s0[1] / sl, s0[2] / sl];
+  const u: Vec3 = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]];
+  const tn = Math.tan(cam.fov * Math.PI / 360), nx = (px / c.w * 2 - 1) * tn * c.w / c.h, ny = (1 - py / c.h * 2) * tn;
+  const d: Vec3 = [f[0] + s[0] * nx + u[0] * ny, f[1] + s[1] * nx + u[1] * ny, f[2] + s[2] * nx + u[2] * ny];
+  if (Math.abs(d[1]) < 1e-4) return null;
+  const k = -e[1] / d[1]; if (k < 0) return null;
+  return [e[0] + d[0] * k, 0, e[2] + d[2] * k];
+}
+const snapshot = (c: Ctx): void => { c.v.undo.push(JSON.stringify(c.v.scene)); if (c.v.undo.length > 20) c.v.undo.shift(); };
+function undoEdit(c: Ctx): void {
+  const s = c.v.undo.pop();
+  if (s) {
+    const prev: unknown = JSON.parse(s);
+    if (!isScene(prev)) throw new Error('viewer: the undo step is not a scene');
+    c.v.load(prev); if (c.v.onedit) c.v.onedit();
+  }
+}
+const objOf = (c: Ctx, id: string | null): SceneObject | undefined => cur(c).objects.find(o => o.id === id);
+const moveObj = (c: Ctx, o: SceneObject, dx: number, dz: number): void => {
+  const [ax, ay, az] = atOf(o);
+  o.at = [ax + dx, ay, az + dz];
+  for (const tr of cur(c).tracks || []) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) { const w = vec3Of(k.v); if (w) k.v = [w[0] + dx, w[1], w[2] + dz]; }
+};
+function edit(c: Ctx, op: EditOp, arg?: Vec2 | number): void {
+  const o = objOf(c, c.v.selected); if (!o) return;
+  const scn = cur(c);
+  snapshot(c);
+  const sc = scaleOf(o);
+  if (op === 'move' && Array.isArray(arg)) moveObj(c, o, arg[0], arg[1]);
+  if (op === 'scale' && typeof arg === 'number') { const f = (x: number): number => +(x * arg).toFixed(4); o.scale = [f(sc[0]), f(sc[1]), f(sc[2])]; }
+  if (op === 'rotate' && typeof arg === 'number') o.yaw = (((o.yaw || 0) + arg) % 360 + 360) % 360;
+  if (op === 'flip') o.flip = !o.flip;
+  if (op === 'duplicate') duplicate(c, scn, o);
+  if (op === 'delete') {
+    scn.objects = scn.objects.filter(x => x.id !== o.id && x.parent !== o.id);
+    scn.tracks = (scn.tracks || []).filter(tr => tr.object !== o.id);
+    c.v.selected = null;
+  }
+  c.v.load(scn);
+  if (c.v.onedit) c.v.onedit();
+}
+function duplicate(c: Ctx, scn: Scene, o: SceneObject): void {
+  const copy = structuredClone(o); let n = 2; while (objOf(c, `${o.id}-${n}`)) n++;
+  const [ax, ay, az] = atOf(o);
+  copy.id = `${o.id}-${n}`; copy.at = [ax + 1, ay, az + 1];
+  scn.objects.push(copy); c.v.selected = copy.id;
+}
+// A drag: one undo step at the start, one engine rebuild for each frame, one save at the end.
+function beginDrag(c: Ctx): void { if (objOf(c, c.v.selected)) snapshot(c); }
+function moveSelectedTo(c: Ctx, gx: number, gz: number): void {
+  const o = objOf(c, c.v.selected); if (!o) return;
+  const at = atOf(o);
+  moveObj(c, o, gx - at[0], gz - at[2]);
+  if (!c.dragFrame) c.dragFrame = requestAnimationFrame(() => { c.dragFrame = 0; c.v.load(cur(c)); });
+}
+function endDrag(c: Ctx): void {
+  cancelAnimationFrame(c.dragFrame); c.dragFrame = 0;
+  c.v.load(cur(c));
+  if (c.v.onedit) c.v.onedit();
+}
+
+// ---- playback
+const tick = (c: Ctx, now: number): void => {
+  const v = c.v;
+  if (!v.playing) return;
+  const dt = (now - c.last) / 1000; c.last = now;
+  const dur = v.scene && v.scene.duration ? v.scene.duration : 60;
+  let t = v.t + dt;
+  // While a sentence plays, the clock moves to the time of its sound by at most 2 ms in each frame.
+  // So the picture and the voice stay together, and the picture never jumps.
+  for (const k of v.clips) {
+    const on = t >= k.start && t < k.end;
+    if (on && !k.on) { k.audio.currentTime = t - k.start; k.audio.play().catch(() => {}); }
+    if (!on && k.on) k.audio.pause();
+    if (on && k.on && !k.audio.paused) t += Math.max(-0.002, Math.min(0.002, k.start + k.audio.currentTime - t));
+    k.on = on;
+  }
+  if (t >= dur) { t = dur; v.playing = false; hush(c); if (v.onchange) v.onchange('end'); }
+  v.draw(t);
+  if (v.playing) requestAnimationFrame(n => tick(c, n));
+};
+function play(c: Ctx): void {
+  const v = c.v;
+  if (v.playing) return;
+  if (v.scene && v.t >= (v.scene.duration || 60)) v.t = 0;
+  v.playing = true; c.last = performance.now(); if (v.onchange) v.onchange('play');
+  requestAnimationFrame(n => tick(c, n));
+}
+function pause(c: Ctx): void { c.v.playing = false; hush(c); if (c.v.onchange) c.v.onchange('pause'); }
+function seek(c: Ctx, t: number): void { hush(c); c.v.draw(Math.max(0, Math.min(t, cur(c).duration || 60))); }
+function download(c: Ctx): void {
+  const blob = new Blob([JSON.stringify(c.v.scene, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (cur(c).title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() + '.toybox.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function readPixels(c: Ctx): Uint8Array { const p = c.M._toybox_read_pixels(); return c.M.HEAPU8.subarray(p, p + c.w * c.h * 4); }

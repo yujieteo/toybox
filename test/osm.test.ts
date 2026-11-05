@@ -14,6 +14,7 @@ interface Back { header: { license: string; credit: string }; osm: { buildings: 
 const sample = view<OverpassResult>(JSON.parse(readFileSync(new URL('./fixtures/overpass-sample.json', import.meta.url), 'utf8')));
 const origin = { lat: 1.3068, lon: 103.8512 };
 
+function tests1(): void {
 test('projection: x east, z south, in metres', () => {
   const [x = NaN, z = NaN] = project(1.3068 + 0.001, 103.8512 + 0.001, origin);
   assert.ok(Math.abs(x - 111.2) < 1 && Math.abs(z + 111.2) < 1, `${x} ${z}`);
@@ -35,7 +36,7 @@ test('parse recorded sample and build the map block', () => {
   assert.equal(b2.height, 9);
   const blk = toMapBlock(b, origin);
   assert.equal(blk.attribution, '© OpenStreetMap contributors');
-  assert.ok(blk.buildings.every((x) => !Reflect.get(x, 'll') && x.poly.every((p) => p.length === 2)));
+  assert.ok(blk.buildings.every((x) => !('ll' in x) && x.poly.every((p) => p.length === 2)));
   const s = newScene({}); s.map = { origin, osm: blk }; assert.deepEqual(validate(s), []);
 });
 
@@ -56,7 +57,10 @@ test('writeOdbl keeps the licence and the credit with the data', () => {
   assert.equal(back.header.license, 'ODbL 1.0'); assert.equal(back.header.credit, '© OpenStreetMap contributors');
   assert.equal(back.osm.buildings.length, 3); assert.equal(f.header.license, 'ODbL 1.0');
 });
+}
+tests1();
 
+function tests2(): void {
 test('OneMap tile addresses', () => {
   const t = tileXY(1.3068, 103.8512, 18);
   assert.ok(t.x > 200000 && t.x < 270000 && t.y > 100000 && t.y < 140000);
@@ -78,3 +82,5 @@ test('recorded real Overpass answer (OpenStreetMap data, ODbL 1.0)', () => {
   for (const x of b) { assert.ok(x.height > 0); assert.ok(x.poly.length >= 3); assert.ok(x.poly.every(([px, pz]) => Math.hypot(px, pz) < 300)); }
   const s = newScene({}); s.map = { origin, osm: toMapBlock(b, origin) }; assert.deepEqual(validate(s), []);
 });
+}
+tests2();

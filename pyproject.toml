@@ -1,0 +1,21 @@
+# Strictest settings for the Python in this project (Power of 10 rule 10).
+# ruff runs with every rule. Only these are off, each for a written reason.
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D203",   # contradicts D211 (blank line before a class docstring): D211 stays
+  "D213",   # contradicts D212 (docstring summary on the second line): D212 stays
+  "COM812", # contradicts the ruff formatter (trailing commas)
+  "ISC001", # contradicts the ruff formatter (implicit string concatenation)
+  "CPY001", # no per-file copyright notices in this project
+  "S101",   # contradicts Power of 10 rule 5: the rule asks for assert statements
+]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+include = ["tools"]

@@ -24,6 +24,7 @@ for (const [name, build, chapters] of evals) {
   });
 }
 
+function tests1(): void {
 test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on figures', () => {
   const s = loadScene(fileURLToPath(new URL('../evals/out/riot.toybox.json', import.meta.url)));
   assert.ok(s.duration >= 150 && s.duration <= 180, String(s.duration));
@@ -68,7 +69,10 @@ test('narrated scene: the voice sets the beats, and the motion words follow the 
   assert.ok(motions.length >= 8 && motions.every((m) => m.cue));
   assert.ok(s.callouts.some((c) => c.text.includes('^{st}')));
 });
+}
+tests1();
 
+function tests2(): void {
 test('mrt scene: a narrated Singapore platform boarding story', () => {
   const s = loadScene(fileURLToPath(new URL('../web/scenes/mrt/mrt.toybox.json', import.meta.url)));
   const narration = must(s.narration), facts = must(s.facts);
@@ -93,3 +97,5 @@ test('mrt scene: a narrated Singapore platform boarding story', () => {
   const leaf = must(s.tracks.find((t) => t.object === 'psd-3-leaf-l' && t.channel === 'at'));
   assert.ok(leaf.keys.some((k) => k.cue), 'the door leaf follows a cue');
 });
+}
+tests2();

@@ -20,6 +20,6 @@ if (!scene) scene = process.env.TOYBOX_SCENE;
 if (!scene) { console.error('Give --scene PATH (or set TOYBOX_SCENE).'); process.exit(2); }
 const res = await callTool(scene, tool, args);
 if (!res.ok) { console.error(JSON.stringify({ errors: res.errors }, null, 1)); process.exit(1); }
-const result = res.result, field = (k: string): unknown => (typeof result === 'object' && result !== null && k in result ? Reflect.get(result, k) : undefined);
+const result = res.result, field = (k: string): unknown => (typeof result === 'object' && result !== null && k in result ? Object.getOwnPropertyDescriptor(result, k)?.value : undefined);
 if (tool === 'guide') console.log(field('text')); else console.log(JSON.stringify(result, null, 1));
 if (tool === 'validate' && !field('valid')) process.exit(1);

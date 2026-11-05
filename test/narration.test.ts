@@ -25,6 +25,7 @@ function narrated(sentences: Sentence[] = ['One two three.', ['Four five.', 1]])
   return s;
 }
 
+function tests1(): void {
 test('timeline: 1 sentence = 1 beat, with lead, gap, pause and tail', () => {
   const n: NarrationBeat[] = [{ text: 'a', seconds: 2 }, { text: 'b', seconds: 1, pause: 0.5 }];
   const length = timeline(n);
@@ -64,7 +65,10 @@ test('a cue follows the narration when the narration changes', () => {
   assert.equal(firstError(run(s, 'narrate', { sentences: ['Only this.'] })).code, 'bad_cue');
   assert.equal(JSON.stringify(s), before);
 });
+}
+tests1();
 
+function tests2(): void {
 test('move_along, animate, set_lighting and a framed camera follow their cue words when the narration changes', () => {
   const s = narrated(['One two three.', 'Four five six seven.']);
   assert.ok(isOk(run(s, 'place', { model: 'person', at: [4, 0], id: 'p' })));
@@ -113,7 +117,10 @@ test('validate: stale beats and bad cues', () => {
   t.motions = [{ object: 'n', move: 'hop', t: 1, cue: [5] }];
   assert.ok(codes(t).includes('bad_cue'));
 });
+}
+tests2();
 
+function tests3(): void {
 test('facts: every fact needs a source, and a sentence names only facts that exist', () => {
   const s = newScene({});
   assert.equal(firstError(run(s, 'narrate', { sentences: [{ text: 'A fact.', facts: ['f1'] }] })).code, 'unknown_fact');
@@ -155,7 +162,10 @@ test('motion words: each gives finite numbers at every time; pop starts from not
   assert.ok(at1('blink', 1.16, 'eye') < 0.2);
   assert.deepEqual(poseAt([{ move: 'wave', t: 1 }], 1.3), poseAt([{ move: 'wave', t: 1 }], 1.3));
 });
+}
+tests3();
 
+function tests4(): void {
 test('raised and lowered text in labels', () => {
   assert.deepEqual(marks('31^{st} May'), [{ text: '31', shift: 0 }, { text: 'st', shift: 1 }, { text: ' May', shift: 0 }]);
   assert.deepEqual(marks('CO_{2}'), [{ text: 'CO', shift: 0 }, { text: '2', shift: -1 }]);
@@ -189,3 +199,5 @@ test('an old scene file without narration, facts or motions stays valid', () => 
   assert.deepEqual(codes(s), []);
   assert.equal(s.narration, undefined);
 });
+}
+tests4();

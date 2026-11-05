@@ -21,8 +21,20 @@ const pick = (a: string[]): string => { const v = a[Math.floor(R() * a.length)];
 const SHIRTS = ['#c8553d', '#3f6e9a', '#d9b44a', '#6f9a6a', '#a99bb8', '#e8dcc0', '#5f9ea0', '#b8765f', '#8c8c86'];
 const PANTS = ['#3a3f47', '#4a5568', '#6b5b4b', '#2f4a6b', '#55595f'];
 
-export function build(): FinishedReport {
-  const b = new Builder({ title: 'Little India, 8 December 2013', author: 'Toybox eval', ground: 'street', look: 'dusk', size: [160, 160], color: '#8f9a8a' });
+
+interface Kit {
+  b: Builder;
+  place: (model: string, at: number[], extra?: Args) => unknown;
+  person: (id: string, variant: number, at: number[], extra?: Args) => unknown;
+  dist: (p: number[], q: number[]) => number;
+  leg: (id: string, pts: number[][], t0: number, speed: number, extra?: Args) => number[];
+  timed: (id: string, pts: number[][], times: number[], extra?: Args) => number;
+  swap: (id: string, t: number, to: boolean) => unknown;
+  appear: (id: string, t: number) => unknown;
+}
+
+// The helpers that every chapter uses to place people and vehicles and to move them.
+function makeKit(b: Builder): Kit {
   const place = (model: string, at: number[], extra: Args = {}) => b.cmd('place', { model, at, ...L, ...extra });
   const person = (id: string, variant: number, at: number[], extra: Args = {}) => place('person', at, { id, variant, colors: { shirt: pick(SHIRTS), pants: pick(PANTS) }, ...extra });
   const dist = (p: number[], q: number[]) => Math.hypot(c(q, 0) - c(p, 0), (q[1] ?? 0) - (p[1] ?? 0), c(q, 2) - c(p, 2));
@@ -41,6 +53,12 @@ export function build(): FinishedReport {
   };
   const timed = (id: string, pts: number[][], times: number[], extra: Args = {}): number => { b.cmd('move_along', { id, path: pts.map(v3), times, ...extra }); return lastOf(times); };
   const swap = (id: string, t: number, to: boolean) => b.cmd('animate', { id, channel: 'scale', keys: to ? [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] : [{ t: 0, v: [1, 1, 1], ease: 'step' }, { t, v: [0.001, 0.001, 0.001], ease: 'step' }] });
+  const appear = (id: string, t: number) => b.cmd('animate', { id, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] });
+  return { b, place, person, dist, leg, timed, swap, appear };
+}
+
+// The backdrop, the real footprints and the street (all layout is estimated).
+function street0({ b, place }: Kit): void {
 
   b.cmd('set_backdrop', { ground: 'street', size: [160, 160], origin: { lat: 1.30888, lon: 103.85116 }, source: 'estimated: junction of Race Course Road and Hampshire Road, read from OpenStreetMap road data', estimated: true });
   // Real footprints (OpenStreetMap, recorded once). Race Course Road has a compass bearing of about 35 degrees.
@@ -72,7 +90,10 @@ export function build(): FinishedReport {
   b.cmd('place_sign', { text: 'Race Course Road', at: [5.9, 0, 5.5], yaw: 270, ...L, id: 'sign-rcr' });
   b.cmd('place_sign', { text: 'Hampshire Road', at: [10, 0, -5.6], yaw: 0, ...L, id: 'sign-hamp' });
   // A person who rides in a vehicle does not show. It appears beside the door when the vehicle stops.
-  const appear = (id: string, t: number) => b.cmd('animate', { id, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] });
+}
+
+// Chapters 1 to 4: a quiet evening, a worker leaves a bus, the accident and the first call.
+function chapters1to4({ b, place, person, leg, timed, appear }: Kit): void {
 
   // ---------- chapter 1: quiet evening. Pavement walkers keep apart: opposite directions use lines 0.6 m apart.
   const walkers: [string, number, P2, P2, number][] = [['w1', 0, [8.8, -30], [8.8, -12], 1.2], ['w2', 1, [-6.4, -12], [-6.4, -33], 1.3], ['w3', 3, [9.4, -9], [9.4, -33], 1.1], ['w4', 4, [-7.0, -30], [-7.0, -16], 1.2], ['w5', 6, [8.8, 30], [8.8, 10], 1.3], ['w6', 7, [-6.6, 12], [-6.6, 30], 1.2]];
@@ -105,7 +126,10 @@ export function build(): FinishedReport {
   b.cmd('set_pose', { id: 'bystander', t: 38.5, pose: 'point' });
   b.cmd('set_pose', { id: 'bystander2', t: 40, pose: 'wave' });
   b.cmd('set_pose', { id: 'bystander', t: 44, pose: 'stand' });
+}
 
+// Chapters 5 to 7 (the crowd gathers). Returns the ids of the crowd.
+function gather({ person, leg }: Kit): string[] {
   // ---------- chapters 5 to 7: the crowd gathers (figures are representative only).
   // Each person has its own place, 0.6 m or more from the next. Nobody stands on the paths of the
   // paramedics. Everybody walks in from the west along the line of its own place, and the person with the
@@ -128,6 +152,11 @@ export function build(): FinishedReport {
     crowd.push(id);
   });
 
+  return crowd;
+}
+
+// Chapters 6 and 7: SCDF arrives and the crowd reacts.
+function scdf({ b, place, person, timed, appear }: Kit, crowd: string[]): void {
   // ---------- chapter 6: SCDF arrives (21:39). The paramedics step out on the free side of the ambulance.
   place('ambulance-scdf', [-2, 0, 78], { id: 'amb', yaw: 180 });
   timed('amb', [[-2, 78], [-2, 3]], [55, 62]);
@@ -138,7 +167,10 @@ export function build(): FinishedReport {
 
   // ---------- chapter 7: tension. Some of the crowd reacts.
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 74 + (i % 7) * 0.6, pose: ['point', 'cheer', 'wave', 'stand'][i % 4] }));
+}
 
+// Chapter 8: police arrive. Returns the ids of the officers.
+function police({ place, leg, timed, appear }: Kit): string[] {
   // ---------- chapter 8: police arrive. Both cars come up the west lane, one behind the other, and stop behind the ambulance.
   place('car-police', [-2.4, 0, 95], { id: 'pc1', yaw: 180 }); place('car-police', [-2.2, 0, 101], { id: 'pc2', yaw: 180 });
   timed('pc1', [[-2.4, 95], [-2.4, 9]], [82, 88]); timed('pc2', [[-2.2, 101], [-2.2, 16]], [82.4, 88.4]);
@@ -157,7 +189,11 @@ export function build(): FinishedReport {
   cop(2, [-1.15, 10.4], 88.6, [[0.4, 10.4], [0.4, -1.5], [-4, -1]], 1.6);
   const officers: P2[] = [[14.6, -2], [16.0, 0], [17.4, 2]];
   officers.forEach(([z, x], k) => cop(3 + k, [-0.95, z], 89.0, [[0.4, z], [0.4, -1.5], [x, -1]], 1.6));
+  return cops;
+}
 
+// Chapters 9 and 10: the bus crew leaves, the vehicles are overturned and burnt.
+function chapters9and10({ b, place, person, leg, swap, appear }: Kit, crowd: string[]): void {
   // ---------- chapter 9: the bus driver and timekeeper leave under police shield (22:08). They walk in a file on the east pavement.
   person('driver', 17, [3.8, 0, -18.4], { colors: { shirt: '#e8dcc0', pants: '#3a3f47' } }); person('timekeeper', 8, [3.8, 0, -19.2]);
   for (const id of ['driver', 'timekeeper']) appear(id, 103);
@@ -174,7 +210,10 @@ export function build(): FinishedReport {
   vehicles.slice(1).forEach(([, , p, t], i) => { place('flame', [p[0] + 0.3, 0.4, p[1]], { id: `fl-${i + 1}`, scale: [0.001, 0.001, 0.001] }); b.cmd('animate', { id: `fl-${i + 1}`, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t: t + 0.5, v: [2, 2, 2], ease: 'step' }, { t: 144, v: [0.001, 0.001, 0.001], ease: 'step' }] }); });
   place('car-police-overturned', [-6, 0, 12], { id: 'pc3-after', yaw: 60, scale: [0.001, 0.001, 0.001] }); swap('pc3-after', 111, true);
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 112 + (i % 6) * 0.5, pose: ['cheer', 'point', 'wave'][i % 3] }));
+}
 
+// Chapter 11: SOC arrives. Returns the ids of the riot officers.
+function socArrives({ b, place, leg, appear, dist }: Kit, crowd: string[]): string[] {
   // ---------- chapter 11: SOC arrives (22:50). Riot officers walk in from the south and form a shield line south of the burnt vehicles.
   // A long shield needs a walk, not a run. The real troops were larger; the number, the route and the line are estimated.
   const soc: string[] = [];
@@ -187,7 +226,11 @@ export function build(): FinishedReport {
     soc.push(id);
   }
   crowd.slice(0, 60).forEach((id, i) => b.cmd('set_pose', { id, t: 124 + (i % 8) * 0.4, pose: 'stand' }));
+  return soc;
+}
 
+// Chapters 12 to 14: the crowd disperses, the next morning and the Committee of Inquiry.
+function epilogue({ b, place, person, leg }: Kit, crowd: string[]): void {
   // ---------- chapter 12: the crowd disperses (23:30). Everybody runs west at the same time and speed, so nobody meets.
   crowd.forEach((id) => {
     const track: Track | undefined = b.scene.tracks.find((t) => t.object === id && t.channel === 'at');
@@ -221,7 +264,10 @@ export function build(): FinishedReport {
   person('coi-witness', 16, [ROOM[0], 0, ROOM[2] + 1.8], { yaw: 180, pose: 'sit' });
   b.cmd('set_cutaway', { ceilings: true, nearWalls: true });
   b.cmd('set_lighting', { t: 156, look: 'indoor' });
+}
 
+// The camera shots and the chapters.
+function camerasAndChapters({ b }: Kit, crowd: string[], cops: string[], soc: string[]): void {
   // ---------- camera and chapters
   const VIEW0: Record<string, number | undefined> = { wide: 20, medium: 20, close: 15, top: 0, orbit: 0 };
   const cam = (_start: number, end: number, segs: Seg[]) => segs.forEach((s, i) => {
@@ -265,6 +311,20 @@ export function build(): FinishedReport {
     [{ t: 144, shot: 'wide', frame: ['pc1-after', 'pc2-after', 'amb-after', 'clean-1', 'clean-2', 'clean-3'], view: 350 }]);
   chapter('c14', 156, 168, 'Committee of Inquiry', '', 'A Committee of Inquiry was appointed on 13 December 2013. It reported on 27 June 2014. It ruled out racial and labour issues as causes. The hearing room here is approximate.', ['coi-sign'], 'medium', WIKI, false,
     [{ t: 156, shot: 'medium', frame: ['coi-sign', 'coi-1', 'coi-2', 'coi-3'], opts: { cut: true } }]);
+}
+
+export function build(): FinishedReport {
+  const b = new Builder({ title: 'Little India, 8 December 2013', author: 'Toybox eval', ground: 'street', look: 'dusk', size: [160, 160], color: '#8f9a8a' });
+  const k = makeKit(b);
+  street0(k);
+  chapters1to4(k);
+  const crowd = gather(k);
+  scdf(k, crowd);
+  const cops = police(k);
+  chapters9and10(k, crowd);
+  const soc = socArrives(k, crowd);
+  epilogue(k, crowd);
+  camerasAndChapters(k, crowd, cops, soc);
   return finish(b, 'riot');
 }
 

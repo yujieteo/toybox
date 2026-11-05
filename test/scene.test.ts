@@ -12,6 +12,7 @@ const obj = (o: object): SceneObject => view<SceneObject>({ id: 'a', model: 'car
 const codes = (s: Scene): string[] => validate(s).map((e) => e.code);
 const base = (): Scene => { const s = newScene({ duration: 100 }); return s; };
 
+function tests1(): void {
 test('new scene is valid; save and load round trip', () => {
   const s = newScene({ title: 'x' });
   assert.deepEqual(validate(s), []);
@@ -57,7 +58,10 @@ test('caption length and reading time', () => {
   const t = base(); t.captions.push({ start: 0, end: 5, text: 'a'.repeat(100) }); assert.ok(codes(t).includes('caption_too_short_on_screen'));
   const u = base(); u.captions.push({ start: 0, end: 6, text: 'a'.repeat(100) }); assert.ok(!codes(u).includes('caption_too_short_on_screen'));
 });
+}
+tests1();
 
+function tests2(): void {
 test('chapter_no_caption, sources and estimates', () => {
   const s = base(); s.chapters.push({ id: 'c', start: 0, end: 5, title: 't' }); assert.ok(codes(s).includes('chapter_no_caption'));
   s.captions.push({ start: 0, end: 5, text: 'hello' }); assert.ok(!codes(s).includes('chapter_no_caption'));
@@ -101,3 +105,5 @@ test('contrast_ok, srt, objectBounds', () => {
   assert.ok(Math.abs(must(b.max[0]) - must(b.min[0]) - 4.63) < 0.01, 'yaw 90 swaps the footprint');
   assert.equal(b.min[1], 1);
 });
+}
+tests2();

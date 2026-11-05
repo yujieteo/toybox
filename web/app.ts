@@ -77,6 +77,8 @@ const log = $('log');
 const msg = byId('msg', HTMLInputElement), form = byId('form', HTMLFormElement);
 const add = (cls: string, text: string): HTMLParagraphElement => { const p = document.createElement('p'); p.className = cls; p.textContent = text; log.appendChild(p); log.scrollTop = log.scrollHeight; return p; };
 let ctl: AbortController | null = null;
+// A chat reply of more chunks than this is cut off.
+const MAX_CHUNKS = 1_000_000;
 form.addEventListener('submit', async e => {
   e.preventDefault();
   const text = msg.value.trim(); if (!text || ctl) return;
@@ -86,7 +88,7 @@ form.addEventListener('submit', async e => {
     const r = await api('/api/chat', { method: 'POST', body: JSON.stringify({ text }), signal: ctl.signal });
     if (!r.body) throw new Error('The chat reply has no body.');
     const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
-    for (;;) {
+    for (let chunk = 0; chunk < MAX_CHUNKS; chunk++) {
       const { value, done } = await rd.read(); if (done) break;
       buf += dec.decode(value, { stream: true }); let i;
       while ((i = buf.indexOf('\n\n')) >= 0) {

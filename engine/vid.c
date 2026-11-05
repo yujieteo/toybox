@@ -32,6 +32,16 @@
      GS_RUNTIME_VERSION names gs_rt_start after the runtime's text, so a
      program linked with another compiler's runtime fails to link. */
 
+/* SRW locks, condition variables, and GetTickCount64 require Windows Vista.
+   Set the target before any system header can supply an older default. */
+#ifdef _WIN32
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#elif _WIN32_WINNT < 0x0600
+#error "Goose requires Windows Vista or later (_WIN32_WINNT >= 0x0600)"
+#endif
+#endif
+
 /* The OS layer (runtime_os.h) opens files on Windows with _wfopen, which the
    Microsoft CRT deprecates in favour of its own _s variant. */
 #ifndef _CRT_SECURE_NO_WARNINGS
@@ -64,6 +74,16 @@
 #pragma GCC optimize("fp-contract=off")
 #elif defined(_MSC_VER)
 #pragma fp_contract(off)
+#endif
+
+/* The function a dynamic extern is called through (§7.10). Its pointer has
+   the Goose declaration's C types, which match the library's in layout but
+   not in name (struct Point_g for the library's Point), so clang's
+   -fsanitize=function would report a call that the ABI makes sound. */
+#if defined(__clang__)
+#define GS_DL_CALL __attribute__((no_sanitize("function")))
+#else
+#define GS_DL_CALL
 #endif
 
 #ifndef GS_NEED_THREADS
@@ -218,13 +238,13 @@ GS_API GS_NORETURN void gs_asfail_f(const char *why, double d, int f32, const ch
    instruction-set level, the baseline under the function's name, and the
    baseline calls the highest version the CPU supports. GS_SIMD is the
    highest level built: 0 just the baseline, 1 adds an AVX2 version (with
-   BMI1, BMI2, LZCNT and POPCNT, which the check below asks for one by one),
-   2 an AVX-512 one as well (F, BW, CD, DQ and VL: x86-64-v4). The versions
-   are built by clang on x86-64, through its target attribute and inline
-   assembly for cpuid; the contraction pragma above keeps their float
-   results the baseline's, though AVX-512 implies FMA to clang. Elsewhere
-   the versions are left out, and so is the choice. -DGS_SIMD=0 or 1 lowers
-   the level; nothing raises it. */
+   FMA, BMI1, BMI2, LZCNT and POPCNT, which the check below asks for one by
+   one), 2 an AVX-512 one as well (F, BW, CD, DQ and VL: x86-64-v4). The
+   versions are built by clang on x86-64, through its target attribute and
+   inline assembly for cpuid; the contraction pragma above keeps their float
+   results the baseline's, though both have FMA: only math's mul_add uses
+   it (GS_MUL_ADD_MODE, below). Elsewhere the versions are left out, and so
+   is the choice. -DGS_SIMD=0 or 1 lowers the level; nothing raises it. */
 #if defined(__clang__) && (defined(__x86_64__) || defined(_M_X64)) && !defined(__TINYC__)
 #ifndef GS_SIMD
 #define GS_SIMD 2
@@ -234,9 +254,9 @@ GS_API GS_NORETURN void gs_asfail_f(const char *why, double d, int f32, const ch
 #define GS_SIMD 0
 #endif
 #if GS_SIMD >= 1
-#define GS_SIMD_TARGET1 __attribute__((target("avx2,bmi,bmi2,lzcnt,popcnt")))
+#define GS_SIMD_TARGET1 __attribute__((target("avx2,fma,bmi,bmi2,lzcnt,popcnt")))
 #define GS_SIMD_TARGET2 \
-    __attribute__((target("avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx2,bmi,bmi2,lzcnt,popcnt")))
+    __attribute__((target("avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx2,fma,bmi,bmi2,lzcnt,popcnt")))
 
 static inline void gs_cpuid(uint32_t leaf, uint32_t r[4]) {
     __asm__ volatile("cpuid" : "=a"(r[0]), "=b"(r[1]), "=c"(r[2]), "=d"(r[3]) : "a"(leaf), "c"(0));
@@ -249,8 +269,10 @@ static inline int gs_simd_detect(void) {
     gs_cpuid(0, r);
     if (r[0] < 7) return 0;
     gs_cpuid(1, r);
-    /* OSXSAVE, AVX, POPCNT. */
-    if ((r[2] & (1u << 27 | 1u << 28 | 1u << 23)) != (1u << 27 | 1u << 28 | 1u << 23)) return 0;
+    /* OSXSAVE, AVX, POPCNT, FMA. */
+    if ((r[2] & (1u << 27 | 1u << 28 | 1u << 23 | 1u << 12)) !=
+        (1u << 27 | 1u << 28 | 1u << 23 | 1u << 12))
+        return 0;
     __asm__ volatile("xgetbv" : "=a"(xcr0), "=d"(xhi) : "c"(0));
     (void)xhi;
     if ((xcr0 & 0x6) != 0x6) return 0;                  /* XMM and YMM state. */
@@ -282,6 +304,22 @@ static inline int gs_simd_level(void) {
     return l;
 }
 #endif
+
+/* math's mul_add (runtime_ext.h): x * y + z, rounded once where the code
+   is built for FMA and twice where it is not, so its results are the
+   implementation's (§7.12). GS_MUL_ADD_BASE says which for code built for
+   the target as a whole: fused on arm64 and on x86-64 built for AVX2 or
+   past it (-march=x86-64-v3, /arch:AVX2), separate everywhere else and
+   under TinyCC. A simd function's AVX2 and AVX-512 versions have FMA
+   whatever the target, so the compiler sets GS_MUL_ADD_MODE to fused around
+   them, and back to the base after (EmitSimdVersions). */
+#if !defined(__TINYC__) && (defined(__FMA__) || defined(__aarch64__) || defined(_M_ARM64) || \
+                            (defined(_MSC_VER) && defined(__AVX2__)))
+#define GS_MUL_ADD_BASE fused
+#else
+#define GS_MUL_ADD_BASE separate
+#endif
+#define GS_MUL_ADD_MODE GS_MUL_ADD_BASE
 
 /* The generated code's memcpy and memset of zeros. Most move or clear the
    1 to 32 bytes of a field, an element or a reference, a constant size the
@@ -821,13 +859,37 @@ typedef struct {
 GS_API void gs_rt_start(int argc, char **argv, uint64_t reserve, uint64_t gap,
                         uint64_t budget, int64_t mainregions, int64_t workerregions);
 /* A fresh region, registered to the calling thread program. */
-GS_API uint8_t *gs_reserve_region(void);
+GS_API uint8_t *gs_reserve_region(gs_stack *stack);
 /* The calling thread program's stack use, on stderr (GS_STACK_STATS):
    `stacks` is how many of its indexed data stacks exist. */
 GS_API void gs_stack_stats(int64_t stacks);
 /* Releases every region of the calling thread program, and what else the
    runtime keeps for its thread. */
 GS_API void gs_release_regions(void);
+
+/* ---------------------------------------------------------------------------
+   Dynamic externs (§7.10): the shared libraries the program's extern blocks
+   name, and the functions it calls through them, bound by name as the
+   program starts (docs/design/dynamic_externs.md). */
+
+/* A library: the name its block gives and, where the sidecar spells it for
+   a platform, that spelling; NULL where the platform derives its own
+   (name.dll, libname.dylib, libname.so). */
+typedef struct gs_dllib {
+    const char *name, *onwindows, *onmacos, *onlinux;
+} gs_dllib;
+/* One function: its library's index in the table, the symbol the library
+   is asked for, and the pointer the generated code calls through. */
+typedef struct gs_dlbind {
+    int32_t lib;
+    const char *sym;
+    void **slot;
+} gs_dlbind;
+/* Opens each library once and fills every slot, on the main thread before
+   the globals are initialized. A library that does not load, or a symbol it
+   does not have, is a runtime error naming both. */
+GS_API void gs_dl_bind(const gs_dllib *libs, int64_t nlibs, const gs_dlbind *binds,
+                       int64_t nbinds);
 
 /* ---------------------------------------------------------------------------
    Threads and typed queues (§11.2), runtime_threads.h. */
@@ -887,7 +949,7 @@ static GS_TLS void *gs_gl;
 #define GS(i) (&gs_stks[i])
 
 static void gs_stack_init(gs_stack *s) {
-    s->top = gs_reserve_region();
+    s->top = gs_reserve_region(s);
 }
 
 /* The calling thread program's block of n stacks, each with its region:
@@ -914,15 +976,6 @@ static void gs_rt_stats(void) {
 #if GS_STACK_STATS
     gs_stack_stats(gs_nstks);
 #endif
-}
-
-/* Every region the calling thread program owns, with its stack block. No
-   Goose reference to these mappings may outlive it. */
-static void gs_free_thread_stacks(void) {
-    gs_release_regions();
-    free(gs_stks);
-    gs_stks = NULL;
-    gs_nstks = 0;
 }
 
 #if GS_NEED_THREADS
@@ -1105,12 +1158,7 @@ GS_API int64_t gs_fmt_bool(uint8_t *dst, int64_t v);
 /* A u8 array inside an aggregate: quoted, with the escapes Goose reads. */
 GS_API int64_t gs_fmt_quoted(uint8_t *dst, const uint8_t *s, int64_t n);
 
-/* print(...) (§3.7): each argument's text, then a newline. */
-GS_API void gs_out_int(int64_t v);
-GS_API void gs_out_uint(uint64_t v);
-GS_API void gs_out_flt(double v);
-GS_API void gs_out_f32(float v);
-GS_API void gs_out_bool(int64_t v);
+/* print(...) (§3.7): the whole line, rendered first, in one write. */
 GS_API void gs_out_bytes(const uint8_t *p, int64_t len);
 
 /* Byte search behind std's find_any and find_pair (runtime_impl.h): the
@@ -1300,8 +1348,9 @@ static char **gs_argv;
 
 /* What a new region reserves: the usable part, which halves whenever the
    platform refuses one (gs_reserve_region), and the guard gap behind it;
-   and the usable part as configured, for the reports. */
-static size_t gs_region_usable, gs_region_gap, gs_region_reserve;
+   the usable part as configured, for the reports; and the page size, a
+   whole number of which the usable part always is (gs_rt_start). */
+static size_t gs_region_usable, gs_region_gap, gs_region_reserve, gs_region_page;
 /* The worker running on this thread, main's being -1 (runtime_threads.h). */
 static GS_TLS int64_t gs_current_thread_id = -1;
 /* The program's address space budget for regions and the most regions its
@@ -1317,6 +1366,16 @@ static int64_t gs_thread_cap = INT64_MAX;
 typedef struct {
     uint8_t *base;
     size_t usable, size;    /* size: with the guard gap */
+    gs_stack *stack;       /* Stable descriptor of the owning data stack. */
+    /* Windows and macOS: one past the highest page the fault handler has
+       committed, so gs_trim_memory releases only what was ever committed
+       rather than walking the whole reservation. Unused on Linux, which
+       commits on touch with no fault to note it. */
+    uint8_t *committed;
+    /* macOS: pages gs_trim_memory marked reusable that growth has not
+       committed again yet, or both NULL. The fault handler declares them
+       reused (MADV_FREE_REUSE) as it reopens them. */
+    uint8_t *reuse_lo, *reuse_hi;
 } gs_region;
 static GS_TLS gs_region *gs_regions;
 static GS_TLS volatile long gs_nregions;
@@ -1432,17 +1491,26 @@ static LONG WINAPI gs_fault_filter(EXCEPTION_POINTERS *ep) {
         return EXCEPTION_CONTINUE_SEARCH;
     uint8_t *hit = (uint8_t *)ep->ExceptionRecord->ExceptionInformation[1];
     for (long i = 0; i < gs_nregions; i++) {
-        const gs_region *r = &gs_regions[i];
+        gs_region *r = &gs_regions[i];
         if ((uintptr_t)hit - (uintptr_t)r->base < r->size) {
             /* Within the usable part: commit another chunk (clamped to the
-               region) and resume. Within the gap: a data stack overran. */
+               region) and resume, or where the system has no more memory to
+               commit, say so. Within the gap: a data stack overran. */
             if (hit < r->base + r->usable) {
                 uint8_t *page = (uint8_t *)((size_t)hit & ~(gs_page_size - 1));
                 size_t n = GS_COMMIT_CHUNK;
                 if (page + n > r->base + r->usable)
                     n = (size_t)(r->base + r->usable - page);
-                if (VirtualAlloc(page, n, MEM_COMMIT, PAGE_READWRITE))
+                if (VirtualAlloc(page, n, MEM_COMMIT, PAGE_READWRITE)) {
+                    if (page + n > r->committed) r->committed = page + n;
                     return EXCEPTION_CONTINUE_EXECUTION;
+                }
+                static const char nomem[] =
+                    "goose runtime error: out of memory committing a data stack\n";
+                DWORD written;
+                WriteFile(GetStdHandle(STD_ERROR_HANDLE), nomem, sizeof(nomem) - 1, &written,
+                          NULL);
+                ExitProcess(1);
             }
             char msg[GS_OVERFLOW_TEXT];
             DWORD written;
@@ -1454,11 +1522,16 @@ static LONG WINAPI gs_fault_filter(EXCEPTION_POINTERS *ep) {
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
-/* Installed once by main, before any worker can start. */
-static void gs_regions_init(void) {
+/* The unit memory is committed and protected in. */
+static size_t gs_os_page_size(void) {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
-    gs_page_size = si.dwPageSize;
+    return si.dwPageSize;
+}
+
+/* Installed once by main, before any worker can start. */
+static void gs_regions_init(void) {
+    gs_page_size = gs_os_page_size();
     if (!AddVectoredExceptionHandler(1, gs_fault_filter))
         gs_panic("cannot install data stack fault handler");
 }
@@ -1519,12 +1592,54 @@ static GS_TLS void *gs_sigstack;
 /* What the fault handler replaced, for the faults that are not its own. */
 static struct sigaction gs_prev_segv, gs_prev_bus;
 
+/* For gs_trim_memory, which discards whole pages only, and the commit. */
+static size_t gs_page_size = 0;
+
+/* macOS commits as Windows does: a region's usable part starts PROT_NONE
+   (gs_os_reserve) and the fault handler opens it a chunk at a time. XNU's
+   madvise visits every page of its range, populated or not, so without a
+   commit mark a trim would cost time in proportion to the reservation; and
+   pages trimmed as reusable have to be declared reused when growth takes
+   them back, or the footprint goes on leaving them out. Opening them
+   through the handler is what gives growth that point. Runtime C only ever
+   writes a stack from user mode (memcpy, gs_bld_append), as Windows
+   already requires, so a system call never meets an unopened page. */
+#if defined(__APPLE__) && defined(MADV_FREE_REUSABLE) && defined(MADV_FREE_REUSE)
+#define GS_POSIX_COMMIT_ON_FAULT 1
+#define GS_COMMIT_CHUNK (1u << 20)
+
+/* Opens the chunk at hit (clamped to the region), declaring any of it
+   gs_trim_memory left reusable reused; whether it could. */
+static int gs_commit_chunk(gs_region *r, uint8_t *hit) {
+    uint8_t *page = (uint8_t *)((uintptr_t)hit & ~(uintptr_t)(gs_page_size - 1));
+    size_t n = GS_COMMIT_CHUNK;
+    if (page + n > r->base + r->usable) n = (size_t)(r->base + r->usable - page);
+    /* Writable first: XNU refuses reuse advice on a page that is not. */
+    if (mprotect(page, n, PROT_READ | PROT_WRITE)) return 0;
+    if (page < r->reuse_hi && page + n > r->reuse_lo) {
+        uint8_t *lo = page > r->reuse_lo ? page : r->reuse_lo;
+        uint8_t *hi = page + n < r->reuse_hi ? page + n : r->reuse_hi;
+        /* Only the accounting depends on it: the pages are usable either way. */
+        madvise(lo, (size_t)(hi - lo), MADV_FREE_REUSE);
+        if (lo == r->reuse_lo) r->reuse_lo = hi;
+        if (r->reuse_lo >= r->reuse_hi) r->reuse_lo = r->reuse_hi = NULL;
+    }
+    if (page + n > r->committed) r->committed = page + n;
+    return 1;
+}
+#endif
+
 static void gs_fault_handler(int sig, siginfo_t *info, void *ctx) {
     (void)ctx;
     uint8_t *hit = (uint8_t *)info->si_addr;
     for (long i = 0; i < gs_nregions; i++) {
-        const gs_region *r = &gs_regions[i];
+        gs_region *r = &gs_regions[i];
         if ((uintptr_t)hit - (uintptr_t)r->base < r->size) {
+            /* Within the usable part: open another chunk and resume. Within
+               the gap, or where it cannot be opened: a data stack overran. */
+#ifdef GS_POSIX_COMMIT_ON_FAULT
+            if (hit < r->base + r->usable && gs_commit_chunk(r, hit)) return;
+#endif
             char msg[GS_OVERFLOW_TEXT];
             ssize_t w = write(2, msg, gs_overflow_text(msg, r));
             (void)w;
@@ -1542,7 +1657,14 @@ static void gs_fault_handler(int sig, siginfo_t *info, void *ctx) {
     sigaction(sig, sig == SIGSEGV ? &gs_prev_segv : &gs_prev_bus, NULL);
 }
 
+/* The unit memory is mapped and protected in. */
+static size_t gs_os_page_size(void) {
+    long n = sysconf(_SC_PAGESIZE);
+    return n > 0 ? (size_t)n : 4096;
+}
+
 static void gs_regions_init(void) {
+    gs_page_size = gs_os_page_size();
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_sigaction = gs_fault_handler;
@@ -1616,8 +1738,15 @@ static void gs_native_stack_free(void) {
 /* Address space for one region, or NULL where the platform has none left
    to give: its address space or an address-space limit exhausted, or
    strict overcommit accounting, which counts even a MAP_NORESERVE mapping.
-   Commit-on-touch via overcommit; the gap at the end stays PROT_NONE. */
+   Commit-on-touch via overcommit; the gap at the end stays PROT_NONE. On
+   macOS all of it starts PROT_NONE, and the fault handler opens the usable
+   part as the stack grows (GS_POSIX_COMMIT_ON_FAULT). */
 static uint8_t *gs_os_reserve(size_t usable, size_t size) {
+#ifdef GS_POSIX_COMMIT_ON_FAULT
+    void *p = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED) return NULL;
+    (void)usable;
+#else
     void *p = mmap(NULL, size, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS
                    #ifdef MAP_NORESERVE
@@ -1629,6 +1758,7 @@ static uint8_t *gs_os_reserve(size_t usable, size_t size) {
         munmap(p, size);
         gs_panic("cannot protect data stack guard gap");
     }
+#endif
     /* Most stacks hold a few bytes, which a transparent huge page at the
        start would commit 2 MB for. */
     #ifdef MADV_NOHUGEPAGE
@@ -1669,13 +1799,14 @@ static GS_NORETURN void gs_end(int code) {
 #define GS_REGION_MIN (1u << 20)
 
 /* A region of the size new ones currently get. Where the platform refuses
-   one, every region from then on is half as large, down to GS_REGION_MIN:
-   a smaller region is always safe, since the checks the compiler leaves
-   out assume no more than GS_STACK_RESERVE bytes in a stack, and the guard
-   gap behind a smaller one aborts growth that much sooner. Workers racing
-   through a refusal may each halve the size once more than needed, or
-   restore a larger one for a moment; it only ever settles downward. */
-GS_API uint8_t *gs_reserve_region(void) {
+   one, every region from then on is half as large, in whole pages, down to
+   GS_REGION_MIN: a smaller region is always safe, since the checks the
+   compiler leaves out assume no more than GS_STACK_RESERVE bytes in a
+   stack, and the guard gap behind a smaller one aborts growth that much
+   sooner. Workers racing through a refusal may each halve the size once
+   more than needed, or restore a larger one for a moment; it only ever
+   settles downward. */
+GS_API uint8_t *gs_reserve_region(gs_stack *stack) {
     if (gs_nregions >= gs_regions_cap)
         gs_panic("too many data stack regions");
     size_t usable = gs_region_usable;
@@ -1685,14 +1816,95 @@ GS_API uint8_t *gs_reserve_region(void) {
         if (p) break;
         if (usable <= GS_REGION_MIN) gs_panic("cannot reserve data stack address space");
         usable /= 2;
+        usable -= usable % gs_region_page;
         gs_region_usable = usable;
     }
     long i = gs_nregions;
     gs_regions[i].base = p;
     gs_regions[i].usable = usable;
     gs_regions[i].size = usable + gs_region_gap;
+    gs_regions[i].stack = stack;
+    gs_regions[i].committed = p;
+    gs_regions[i].reuse_lo = gs_regions[i].reuse_hi = NULL;
     gs_nregions = i + 1;  /* Publish only the initialized entry. */
     return p;
+}
+
+/* Explicit rather than on every rewind: short-lived scratch can reuse its
+   pages cheaply, while a long-running application can give them back after
+   replacing a large document. Keep the virtual reservation and the partly
+   used final page; limited-array capacity and live borrowed values are below
+   the synchronized top and remain intact. Each worker has its own registry.
+
+   Eager on purpose: Windows decommits, which returns the commit charge as
+   well as the physical pages (DiscardVirtualMemory and MEM_RESET keep the
+   charge), and Linux's MADV_DONTNEED drops the pages from RSS at once,
+   where MADV_FREE leaves them counted until the kernel is short of memory.
+   On macOS MADV_DONTNEED reclaims nothing reliably; MADV_FREE_REUSABLE is
+   what makes the footprint drop there, paired with MADV_FREE_REUSE when
+   the fault handler reopens the pages (gs_commit_chunk).
+
+   Only generated code may call this, through os.trim_memory, whose callers
+   publish their cached tops first (SFunction::readsalltops). C reached
+   from Goose through another extern must not: tops cached by the Goose
+   frames above it would still be stale, and live pages above them lost. */
+GS_API uint8_t gs_trim_memory(void) {
+    uintptr_t page = (uintptr_t)gs_page_size;
+    int ok = 1;
+    for (long i = 0; i < gs_nregions; i++) {
+        gs_region *r = &gs_regions[i];
+        uintptr_t base = (uintptr_t)r->base, top = (uintptr_t)r->stack->top;
+        /* A top outside its own region is a compiler or runtime bug, not
+           something the OS refused: carrying on could discard live data. */
+        if (top < base || top - base > r->usable)
+            gs_panic("data stack top outside its region in trim_memory");
+        uintptr_t start = (top + page - 1) / page * page;
+        uintptr_t end = (base + r->usable) / page * page;
+#if defined(_WIN32) || defined(GS_POSIX_COMMIT_ON_FAULT)
+        /* Nothing above the commit mark was ever committed (base is
+           allocation-aligned and the mark page-aligned). */
+        if ((uintptr_t)r->committed < end) end = (uintptr_t)r->committed;
+#endif
+        if (start >= end) continue;
+        size_t len = (size_t)(end - start);
+#ifdef _WIN32
+        /* The access-fault handler commits the pages again on growth. */
+        if (VirtualFree((void *)start, len, MEM_DECOMMIT))
+            r->committed = (uint8_t *)start;
+        else
+            ok = 0;
+#elif defined(GS_POSIX_COMMIT_ON_FAULT)
+        /* Reusable while writable, which XNU requires; then closed, so that
+           growth faults and gs_commit_chunk declares them reused. A growth
+           that skipped pages can leave a closed stretch below the mark, so
+           the range is opened first (which commits nothing). */
+        if (mprotect((void *)start, len, PROT_READ | PROT_WRITE) ||
+            madvise((void *)start, len, MADV_FREE_REUSABLE)) {
+            ok = 0;
+            continue;
+        }
+        if (mprotect((void *)start, len, PROT_NONE)) {
+            /* Still open, so nothing would declare them reused: undo. */
+            madvise((void *)start, len, MADV_FREE_REUSE);
+            ok = 0;
+            continue;
+        }
+        r->committed = (uint8_t *)start;
+        if (!r->reuse_hi) {
+            r->reuse_lo = (uint8_t *)start;
+            r->reuse_hi = (uint8_t *)end;
+        } else {
+            /* A cover of both: declaring a page reused twice is harmless. */
+            if ((uint8_t *)start < r->reuse_lo) r->reuse_lo = (uint8_t *)start;
+            if ((uint8_t *)end > r->reuse_hi) r->reuse_hi = (uint8_t *)end;
+        }
+#else
+        /* Linux walks only the page tables that were ever populated, so the
+           untouched rest of the reservation costs it little. */
+        if (madvise((void *)start, len, MADV_DONTNEED)) ok = 0;
+#endif
+    }
+    return (uint8_t)ok;
 }
 
 /* ---------------------------------------------------------------------------
@@ -2456,6 +2668,13 @@ GS_API void gs_rt_start(int argc, char **argv, uint64_t reserve, uint64_t gap,
                         uint64_t budget, int64_t mainregions, int64_t workerregions) {
     gs_argc = argc;
     gs_argv = argv;
+    /* A region's usable part is whole pages: the guard gap behind it has to
+       start on a page to be protected, and on Windows a stack would run on
+       unseen through the rest of a part page committed at its end, past the
+       GS_STACK_RESERVE bytes the compiler's checks go by. */
+    gs_region_page = gs_os_page_size();
+    reserve -= reserve % gs_region_page;
+    if (!reserve) gs_panic("the data stack reservation (GS_STACK_RESERVE) is less than a page");
     gs_region_usable = gs_region_reserve = (size_t)reserve;
     gs_region_gap = (size_t)gap;
     gs_stack_budget = budget;
@@ -2479,7 +2698,10 @@ GS_API void gs_rt_start(int argc, char **argv, uint64_t reserve, uint64_t gap,
     #ifdef _WIN32
         // The bytes a program writes are the bytes that come out, '\n' one
         // byte as on every other platform, rather than a "\r\n" the CRT's
-        // text mode makes of it byte by byte.
+        // text mode makes of it byte by byte; and the bytes it reads are
+        // the bytes that came in, where text mode would make "\r\n" '\n'
+        // and stop at the first Ctrl-Z.
+        _setmode(_fileno(stdin), _O_BINARY);
         _setmode(_fileno(stdout), _O_BINARY);
         _setmode(_fileno(stderr), _O_BINARY);
     #endif
@@ -2773,26 +2995,7 @@ GS_API int64_t gs_fmt_quoted(uint8_t *dst, const uint8_t *s, int64_t n) {
     return (int64_t)(d - dst);
 }
 
-/* stdout is unbuffered (gs_rt_start), so every piece is its own write;
-   revisit if print throughput ever matters. */
-
-GS_API void gs_out_int(int64_t v) {
-    uint8_t buf[GS_FMT_MAX];
-    fwrite(buf, 1, (size_t)gs_fmt_i64(buf, v), stdout);
-}
-GS_API void gs_out_uint(uint64_t v) {
-    uint8_t buf[GS_FMT_MAX];
-    fwrite(buf, 1, (size_t)gs_fmt_u64(buf, v), stdout);
-}
-GS_API void gs_out_flt(double v) {
-    uint8_t buf[GS_FMT_MAX];
-    fwrite(buf, 1, (size_t)gs_fmt_f64(buf, v), stdout);
-}
-GS_API void gs_out_f32(float v) {
-    uint8_t buf[GS_FMT_MAX];
-    fwrite(buf, 1, (size_t)gs_fmt_f32(buf, v), stdout);
-}
-GS_API void gs_out_bool(int64_t v) { fputs(v ? "true" : "false", stdout); }
+/* stdout is unbuffered (gs_rt_start): each print is this one write. */
 GS_API void gs_out_bytes(const uint8_t *p, int64_t len) { fwrite(p, 1, (size_t)len, stdout); }
 
 /* ==== runtime_threads.h ==== */
@@ -2912,8 +3115,8 @@ typedef pthread_cond_t gs_cond;
    a compiler-generated entry thunk. Only active workers have records. IDs
    increase monotonically, so an issued ID absent from the active list has
    completed; neither repeated waits nor unjoined workers retain resources,
-   but for the id of each contained worker that aborted, and its message
-   until a wait takes it. Workers still
+   but for a bit for the id of each contained worker that aborted, and its
+   message until a wait takes it. Workers still
    running at process exit are killed by teardown (§11.2). */
 
 typedef struct gs_thread {
@@ -2931,9 +3134,12 @@ static int64_t gs_numthreads;
 static gs_mutex gs_threads_mutex = GS_MUTEX_INIT;
 static gs_cond gs_threads_done = GS_COND_INIT;
 
-/* The contained workers that aborted, from which thread_wait answers: each
-   one's id and the message of its abort (gs_fail), which the first wait that
-   asks for it takes, NULL after. Under gs_threads_mutex. */
+/* The contained workers that aborted, from which thread_wait answers: a bit
+   for each one's id, and the messages of their aborts (gs_fail) that no
+   wait has taken yet, the first wait that asks for one taking it. Under
+   gs_threads_mutex. */
+static uint8_t *gs_abortbits;
+static int64_t gs_abortbytes;
 typedef struct {
     int64_t id;
     uint8_t *msg;
@@ -2943,6 +3149,17 @@ static gs_abort_rec *gs_aborted;
 static int64_t gs_naborted, gs_abortedcap;
 
 static void gs_aborted_add(int64_t id, uint8_t *msg, int64_t len) {
+    if (id / 8 >= gs_abortbytes) {
+        int64_t n = gs_abortbytes ? gs_abortbytes : 16;
+        while (n <= id / 8) n *= 2;
+        uint8_t *bits = (uint8_t *)realloc(gs_abortbits, (size_t)n);
+        if (!bits) gs_panic("out of memory recording an aborted thread");
+        memset(bits + gs_abortbytes, 0, (size_t)(n - gs_abortbytes));
+        gs_abortbits = bits;
+        gs_abortbytes = n;
+    }
+    gs_abortbits[id / 8] |= (uint8_t)(1u << (id % 8));
+    if (!msg) return;
     if (gs_naborted == gs_abortedcap) {
         int64_t cap = gs_abortedcap ? gs_abortedcap * 2 : 16;
         gs_abort_rec *p = (gs_abort_rec *)realloc(gs_aborted, (size_t)cap * sizeof(gs_abort_rec));
@@ -3076,16 +3293,16 @@ GS_API uint8_t gs_thread_wait(int64_t id, uint8_t **msg, int64_t *len,
         *msg = NULL;
         *len = 0;
     }
-    for (int64_t i = 0; i < gs_naborted; i++)
-        if (gs_aborted[i].id == id) {
-            returned = 0;
-            if (msg && gs_aborted[i].msg) {
+    if (id / 8 < gs_abortbytes && (gs_abortbits[id / 8] >> (id % 8) & 1)) {
+        returned = 0;
+        for (int64_t i = 0; msg && i < gs_naborted; i++)
+            if (gs_aborted[i].id == id) {
                 *msg = gs_aborted[i].msg;
                 *len = gs_aborted[i].len;
-                gs_aborted[i].msg = NULL;
-                gs_aborted[i].len = 0;
+                gs_aborted[i] = gs_aborted[--gs_naborted];
+                break;
             }
-        }
+    }
     gs_mutex_unlock(&gs_threads_mutex);
     return returned;
 }
@@ -3322,6 +3539,22 @@ static void gs_bld_append(gs_rref b, const void *p, int64_t n) {
     b.hdr->len += n;
 }
 
+/* ffi's cstr and bytes (stdlib/ffi.goose): the bytes at a pointer a C
+   library handed back as a u64, copied into a builder, so nothing foreign
+   is a Goose value without a copy. The pointer is trusted as every extern
+   call trusts C; a null one appends nothing and is the false result. */
+static uint8_t gs_ffi_cstr(uint64_t p, gs_rref out) {
+    const char *s = (const char *)(uintptr_t)p;
+    if (!s) return 0;
+    gs_bld_append(out, s, (int64_t)strlen(s));
+    return 1;
+}
+static uint8_t gs_ffi_bytes(uint64_t p, int64_t n, gs_rref out) {
+    if (!p) return 0;
+    gs_bld_append(out, (const void *)(uintptr_t)p, n);
+    return 1;
+}
+
 /* math's sqrt (stdlib/math.goose). Goose has no errno, and C's sqrt has to
    set it for a negative argument: clang and gcc then guard the square root
    instruction with a test and a library call at every use, and will not
@@ -3340,6 +3573,39 @@ static float gs_sqrtf(float x) { return __builtin_elementwise_sqrt(x); }
 static double gs_sqrt(double x) { return sqrt(x); }
 static float gs_sqrtf(float x) { return sqrtf(x); }
 #endif
+
+/* math's mul_add (stdlib/math.goose): x * y + z, fused into one rounding
+   where the code is built for FMA, as two roundings elsewhere
+   (GS_MUL_ADD_MODE, runtime.h). A call names the macro, which picks the
+   mode where the call is written: a simd function's AVX2 and AVX-512
+   versions fuse whatever the target. A function value is resolved at
+   compile time, so its calls name the macro too. The function of the same
+   name, in the target's mode, is only for C that names it without the
+   macro. The fused form is inlined into its caller, so that it is built
+   with the caller's FMA. */
+static inline double gs_mul_add_separate(double x, double y, double z) { return x * y + z; }
+static inline float gs_mul_addf_separate(float x, float y, float z) { return x * y + z; }
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__TINYC__)
+static inline __attribute__((always_inline)) double gs_mul_add_fused(double x, double y, double z) {
+    return __builtin_fma(x, y, z);
+}
+static inline __attribute__((always_inline)) float gs_mul_addf_fused(float x, float y, float z) {
+    return __builtin_fmaf(x, y, z);
+}
+#else
+static inline double gs_mul_add_fused(double x, double y, double z) { return fma(x, y, z); }
+static inline float gs_mul_addf_fused(float x, float y, float z) { return fmaf(x, y, z); }
+#endif
+#define GS_MUL_ADD_CAT2(a, b) a##b
+#define GS_MUL_ADD_CAT(a, b) GS_MUL_ADD_CAT2(a, b)
+static double gs_mul_add(double x, double y, double z) {
+    return GS_MUL_ADD_CAT(gs_mul_add_, GS_MUL_ADD_BASE)(x, y, z);
+}
+static float gs_mul_addf(float x, float y, float z) {
+    return GS_MUL_ADD_CAT(gs_mul_addf_, GS_MUL_ADD_BASE)(x, y, z);
+}
+#define gs_mul_add(x, y, z) GS_MUL_ADD_CAT(gs_mul_add_, GS_MUL_ADD_MODE)(x, y, z)
+#define gs_mul_addf(x, y, z) GS_MUL_ADD_CAT(gs_mul_addf_, GS_MUL_ADD_MODE)(x, y, z)
 
 /* math's other libm functions (stdlib/math.goose). C has them set errno on a
    domain or range error, so a C compiler takes each call for a write to
@@ -3468,6 +3734,13 @@ GS_API int64_t gs_os_time_ns(void);
 GS_API int64_t gs_os_clock_ns(void);
 GS_API void gs_os_sleep_ms(int64_t ms);
 GS_API uint64_t gs_os_random_u64(void);
+/* os.trim_memory: discards unused complete pages of this thread program's
+   data stacks. Defined with the region registry it walks (runtime_impl.h),
+   but declared here like the other os primitives, so that no prototype is
+   emitted for it. For generated code only, whose callers write back their
+   cached tops first; C called from Goose must not call it. 0 means an OS
+   request failed; a top outside its region panics. */
+GS_API uint8_t gs_trim_memory(void);
 
 /* ==== runtime_os.h ==== */
 /* Goose runtime: the OS primitives behind stdlib/os.goose (spec §7.10), as
@@ -3478,6 +3751,7 @@ GS_API uint64_t gs_os_random_u64(void);
 #include <errno.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <dlfcn.h>
 #include <sys/stat.h>
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -3596,11 +3870,14 @@ static int gs_os_kind(const gs_os_char *p) {
 #endif
 }
 
+/* Appends the whole file; on a failure, nothing. */
 GS_API uint8_t gs_os_read_file(sl_u8 path, gs_rref out) {
     gs_os_char p[GS_OS_PATH_MAX];
     if (gs_os_native(path, p) < 0) return 0;
     FILE *f = gs_os_fopen(p, "rb");
     if (!f) return 0;
+    int64_t len = out.hdr->len;
+    uint8_t *top = out.stk->top;
     uint8_t buf[65536];
     for (;;) {
         size_t n = fread(buf, 1, sizeof buf, f);
@@ -3609,7 +3886,12 @@ GS_API uint8_t gs_os_read_file(sl_u8 path, gs_rref out) {
     }
     int bad = ferror(f);
     fclose(f);
-    return bad ? 0 : 1;
+    if (bad) {
+        out.hdr->len = len;
+        out.stk->top = top;
+        return 0;
+    }
+    return 1;
 }
 
 /* write_file and append_file. */
@@ -3704,6 +3986,10 @@ GS_API uint8_t gs_os_write_file_atomic(sl_u8 path, sl_u8 data) {
             if (errno == EEXIST) continue;
             return 0;
         }
+        /* The permissions of the file it replaces, which write_file leaves
+           as they are, rather than the umask's. */
+        struct stat st;
+        if (stat(p, &st) == 0) ok = fchmod(fd, st.st_mode & 0777) == 0;
         while (ok && left > 0) {
             ssize_t w = write(fd, d, left > (1 << 30) ? (size_t)1 << 30 : (size_t)left);
             if (w < 0 && errno == EINTR) continue;
@@ -3869,16 +4155,18 @@ GS_API void gs_os_write_stderr(sl_u8 s) {
 
 GS_API void gs_os_flush_stdout(void) { fflush(stdout); }
 
-/* One line of stdin, without its newline; false at end of input. */
+/* One line of stdin, without its newline or a carriage return before it;
+   false at end of input. */
 GS_API uint8_t gs_os_read_line(gs_rref out) {
     int c = fgetc(stdin);
     if (c == EOF) return 0;
+    int64_t start = out.hdr->len;
     while (c != EOF && c != '\n') {
         uint8_t b = (uint8_t)c;
         gs_bld_append(out, &b, 1);
         c = fgetc(stdin);
     }
-    if (out.hdr->len > 0 && out.hdr->base[out.hdr->len - 1] == '\r') {
+    if (out.hdr->len > start && out.hdr->base[out.hdr->len - 1] == '\r') {
         out.hdr->len--;
         out.stk->top--;
     }
@@ -3897,36 +4185,37 @@ GS_API void gs_os_read_stdin(gs_rref out) {
 
 GS_API int64_t gs_os_arg_count(void) { return gs_argc; }
 
-/* Application resources, independent of cwd and argv[0]. JIT supplies its
-   entry source directory; AOT discovers the running executable at runtime.
-   Append only on success, including a final path separator. */
-GS_API uint8_t gs_os_resource_dir(gs_rref out) {
+/* The application's resource directory (resource_dir(), below) in native
+   form with its final separator, NUL-terminated in buf (GS_OS_PATH_MAX
+   characters): its length, or 0 where it is not known. JIT supplies its
+   entry source directory; AOT discovers the running executable. */
+static int gs_os_resource_native(gs_os_char *buf) {
 #ifdef GS_JIT_RESOURCE_DIR
-    const char *dir = GS_JIT_RESOURCE_DIR;
-    gs_bld_append(out, dir, (int64_t)strlen(dir));
-    return 1;
+    sl_u8 dir = { (uint8_t *)GS_JIT_RESOURCE_DIR, (int64_t)strlen(GS_JIT_RESOURCE_DIR) };
+    int n = gs_os_native(dir, buf);
+    return n < 0 ? 0 : n;
 #elif defined(_WIN32)
-    wchar_t path[GS_OS_PATH_MAX];
-    DWORD n = GetModuleFileNameW(NULL, path, GS_OS_PATH_MAX);
+    DWORD n = GetModuleFileNameW(NULL, buf, GS_OS_PATH_MAX);
     if (!n || n >= GS_OS_PATH_MAX) return 0;
-    while (n && path[n - 1] != L'\\' && path[n - 1] != L'/') --n;
-    return n && gs_os_append_wide(out, path, (int)n);
+    while (n && buf[n - 1] != L'\\' && buf[n - 1] != L'/') --n;
+    buf[n] = 0;
+    return (int)n;
 #else
-    char path[GS_OS_PATH_MAX];
+    char *path = buf;
     size_t n;
     #ifdef __APPLE__
-        uint32_t capacity = sizeof path;
+        uint32_t capacity = GS_OS_PATH_MAX;
         if (_NSGetExecutablePath(path, &capacity) != 0) return 0;
         /* Resolve the loader's possible relative path and symlinks. */
         char *resolved = realpath(path, NULL);
         if (!resolved) return 0;
         n = strlen(resolved);
-        if (n >= sizeof path) { free(resolved); return 0; }
+        if (n >= (size_t)GS_OS_PATH_MAX) { free(resolved); return 0; }
         memcpy(path, resolved, n + 1);
         free(resolved);
     #elif defined(__linux__)
-        ssize_t count = readlink("/proc/self/exe", path, sizeof path);
-        if (count <= 0 || (size_t)count >= sizeof path) return 0;
+        ssize_t count = readlink("/proc/self/exe", path, (size_t)GS_OS_PATH_MAX);
+        if (count <= 0 || (size_t)count >= (size_t)GS_OS_PATH_MAX) return 0;
         n = (size_t)count;
     #else
         return 0;
@@ -3938,14 +4227,136 @@ GS_API uint8_t gs_os_resource_dir(gs_rref out) {
         size_t suffixlen = sizeof suffix - 1;
         if (n >= suffixlen && !memcmp(path + n - suffixlen, suffix, suffixlen)) {
             n -= sizeof "MacOS/" - 1;
-            if (n + sizeof "Resources/" - 1 >= sizeof path) return 0;
+            if (n + sizeof "Resources/" - 1 >= (size_t)GS_OS_PATH_MAX) return 0;
             memcpy(path + n, "Resources/", sizeof "Resources/" - 1);
             n += sizeof "Resources/" - 1;
         }
     #endif
+    path[n] = 0;
+    return (int)n;
+#endif
+}
+
+/* Application resources, independent of cwd and argv[0]. Append only on
+   success, including a final path separator. */
+GS_API uint8_t gs_os_resource_dir(gs_rref out) {
+    gs_os_char path[GS_OS_PATH_MAX];
+    int n = gs_os_resource_native(path);
+    if (!n) return 0;
+#ifdef _WIN32
+    return gs_os_append_wide(out, path, n);
+#else
     gs_bld_append(out, path, (int64_t)n);
     return 1;
 #endif
+}
+
+/* ---- Dynamic externs: the libraries the program's extern blocks name ---- */
+
+/* The spelling this platform opens for a library, UTF-8 in buf (GS_OS_PATH_MAX
+   bytes): the sidecar's for the platform, else the block's name. A last
+   component without a dot takes the platform's library form (SDL2 is
+   SDL2.dll, libSDL2.dylib, libSDL2.so); a spelling with a separator, unless
+   absolute, is under the resource directory; a bare one goes to the loader's
+   search as it is. 0 where it does not fit or the resource directory is not
+   known. */
+static int gs_dl_spelling(const gs_dllib *lib, char *buf) {
+#ifdef _WIN32
+    const char *s = lib->onwindows, *prefix = "", *suffix = ".dll";
+#elif defined(__APPLE__)
+    const char *s = lib->onmacos, *prefix = "lib", *suffix = ".dylib";
+#else
+    const char *s = lib->onlinux, *prefix = "lib", *suffix = ".so";
+#endif
+    if (!s) s = lib->name;
+    size_t len = strlen(s), dir = 0;
+    for (size_t i = 0; i < len; i++) {
+        int sep = s[i] == '/';
+#ifdef _WIN32
+        sep = sep || s[i] == '\\';
+#endif
+        if (sep) dir = i + 1;
+    }
+    const char *leaf = s + dir;
+    int bare = !strchr(leaf, '.');
+    int absolute = s[0] == '/';
+#ifdef _WIN32
+    int drive = (s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z');
+    absolute = absolute || s[0] == '\\' || (len >= 2 && drive && s[1] == ':');
+#endif
+    char root[GS_OS_PATH_MAX];
+    root[0] = 0;
+    if (dir && !absolute) {
+        gs_os_char native[GS_OS_PATH_MAX];
+        int n = gs_os_resource_native(native);
+        if (!n) return 0;
+#ifdef _WIN32
+        n = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, native, n, root, GS_OS_PATH_MAX - 1,
+                                NULL, NULL);
+        if (n <= 0) return 0;
+        root[n] = 0;
+#else
+        memcpy(root, native, (size_t)n + 1);
+#endif
+    }
+    int n = snprintf(buf, GS_OS_PATH_MAX, "%s%.*s%s%s%s", root, (int)dir, s, bare ? prefix : "",
+                     leaf, bare ? suffix : "");
+    return n > 0 && n < GS_OS_PATH_MAX ? n : 0;
+}
+
+GS_API void gs_dl_bind(const gs_dllib *libs, int64_t nlibs, const gs_dlbind *binds,
+                       int64_t nbinds) {
+    for (int64_t l = 0; l < nlibs; l++) {
+        char spelling[GS_OS_PATH_MAX], msg[GS_OS_PATH_MAX + 512];
+        if (!gs_dl_spelling(&libs[l], spelling)) {
+            snprintf(msg, sizeof msg, "cannot load %s: its path does not fit or is not known",
+                     libs[l].name);
+            gs_panic(msg);
+        }
+#ifdef _WIN32
+        sl_u8 utf8 = { (uint8_t *)spelling, (int64_t)strlen(spelling) };
+        wchar_t wide[GS_OS_PATH_MAX];
+        HMODULE h = NULL;
+        if (gs_os_native(utf8, wide) >= 0) {
+            /* A path, the resource directory's or an absolute one: the
+               libraries it depends on are looked for beside it first, as
+               a library shipped with its dependencies under lib/ needs.
+               That search wants backslashes. A bare name keeps the
+               loader's own search. */
+            int path = 0;
+            for (wchar_t *c = wide; *c; c++)
+                if (*c == L'/' || *c == L'\\') { *c = L'\\'; path = 1; }
+            h = path ? LoadLibraryExW(wide, NULL, LOAD_WITH_ALTERED_SEARCH_PATH) : LoadLibraryW(wide);
+        }
+        if (!h) {
+            snprintf(msg, sizeof msg, "cannot load %s (%s): Windows error %u", libs[l].name,
+                     spelling, (unsigned)GetLastError());
+            gs_panic(msg);
+        }
+#else
+        void *h = dlopen(spelling, RTLD_NOW | RTLD_LOCAL);
+        if (!h) {
+            const char *why = dlerror();
+            snprintf(msg, sizeof msg, "cannot load %s (%s): %s", libs[l].name, spelling,
+                     why ? why : "unknown error");
+            gs_panic(msg);
+        }
+#endif
+        for (int64_t b = 0; b < nbinds; b++) {
+            if (binds[b].lib != l) continue;
+#ifdef _WIN32
+            void *f = (void *)GetProcAddress(h, binds[b].sym);
+#else
+            void *f = dlsym(h, binds[b].sym);
+#endif
+            if (!f) {
+                snprintf(msg, sizeof msg, "%s (%s) has no symbol %s", libs[l].name, spelling,
+                         binds[b].sym);
+                gs_panic(msg);
+            }
+            *binds[b].slot = f;
+        }
+    }
 }
 
 GS_API void gs_os_arg(int64_t i, gs_rref out) {
@@ -4031,7 +4442,13 @@ GS_API int64_t gs_os_clock_ns(void) {
 GS_API void gs_os_sleep_ms(int64_t ms) {
     if (ms <= 0) return;
 #ifdef _WIN32
-    Sleep((DWORD)ms);
+    /* Sleep takes 32 bits, the largest of them meaning INFINITE: a longer
+       sleep goes in parts. */
+    while (ms > 0) {
+        DWORD part = ms > 0x7fffffff ? 0x7fffffff : (DWORD)ms;
+        Sleep(part);
+        ms -= part;
+    }
 #else
     struct timespec ts;
     ts.tv_sec = (time_t)(ms / 1000);
@@ -4060,14 +4477,22 @@ GS_API uint64_t gs_os_random_u64(void) {
         if (n == sizeof v) return v;
     }
 #endif
+    /* Which call this is, counted atomically: workers calling at once each
+       get a count of their own. */
+#ifdef _WIN32
+    static volatile LONG64 counter;
+    uint64_t count = (uint64_t)InterlockedIncrement64(&counter);
+#else
     static uint64_t counter;
+    uint64_t count = __atomic_add_fetch(&counter, 1, __ATOMIC_SEQ_CST);
+#endif
     uint64_t seed = (uint64_t)gs_os_time_ns();
     seed = gs_os_mix64(seed ^ (uint64_t)gs_os_clock_ns());
 #ifdef _WIN32
     seed = gs_os_mix64(seed ^ (uint64_t)GetCurrentProcessId());
 #endif
     seed = gs_os_mix64(seed ^ (uint64_t)(uintptr_t)&counter);
-    return gs_os_mix64(seed ^ ++counter);
+    return gs_os_mix64(seed ^ count);
 }
 
 
@@ -4077,48 +4502,47 @@ GS_API uint64_t gs_os_random_u64(void) {
 double floor(double);
 
 /* ---- prototypes ---- */
-static void clear_g(int64_t gs_sp);
+static void clear_input_g(int64_t gs_sp);
 static void put_g(double p0, int64_t gs_sp);
 static double out_g(int32_t p0, int64_t gs_sp);
 static int32_t out_len_g(int64_t gs_sp);
 static double jmax_g(double p0, double p1);
-static Pose_g rest_g(void);
-static double clamp01_g(double p0);
-static double ease_g(double p0, double p1, double p2);
-static double bump_g(double p0, double p1, double p2);
-static double hold_g(double p0, double p1, double p2, double p3);
-static double shut_g(double p0, double p1);
-static double settle_g(double p0);
-static GS_NOINLINE Pose_g pop_g(double p0, double p1);
-static double arc_g(double p0, double p1, double p2, double p3);
-static double hop_z_g(double p0, double p1, double p2, double p3);
-static GS_NOINLINE Pose_g hop_g(double p0, double p1, double p2, double p3);
-static GS_NOINLINE Pose_g squash_g(double p0, double p1);
-static GS_NOINLINE Pose_g look_g(double p0, double p1, double p2, double p3, double p4);
+static double clamp01_g(double p0, int64_t gs_sp);
+static double ease_g(double p0, double p1, double p2, int64_t gs_sp);
+static double bump_g(double p0, double p1, double p2, int64_t gs_sp);
+static double hold_g(double p0, double p1, double p2, double p3, int64_t gs_sp);
+static double shut_g(double p0, double p1, int64_t gs_sp);
+static double settle_g(double p0, int64_t gs_sp);
+static GS_NOINLINE Pose_g pop_g(double p0, double p1, int64_t gs_sp);
+static double hop_z_g(double p0, double p1, double p2, double p3, int64_t gs_sp);
+static GS_NOINLINE Pose_g hop_g(double p0, double p1, double p2, double p3, int64_t gs_sp);
+static GS_NOINLINE Pose_g squash_g(double p0, double p1, int64_t gs_sp);
 static double dflt_g(double p0, double p1);
-static Pose_g move_pose_g(int64_t p0, double p1, double p2, double p3, double p4, double p5, double p6, double p7);
-static double hash_g(int32_t p0, int64_t p1);
-static Gz_g gaze_to_g(int32_t p0, double p1);
+static Pose_g move_pose_g(int64_t p0, double p1, double p2, double p3, double p4, double p5, double p6, double p7, int64_t gs_sp);
+static double hash_g(int32_t p0, int64_t p1, int64_t gs_sp);
+static double hi_g(int32_t p0, double p1, int64_t gs_sp);
+static Gz_g gaze_to_g(int32_t p0, double p1, int64_t gs_sp);
 static int32_t moves_g(int64_t gs_sp);
 static int32_t seed_of_g(int64_t gs_sp);
 static void pose_g(double p0, int32_t p1, int32_t p2, int64_t gs_sp);
 static void marks_g(int64_t gs_sp);
-static double small_g(double p0, double p1);
 static void plain_g(int64_t gs_sp);
 static double lead_g(void);
 static double gap_g(void);
 static double tail_g(void);
 static double stand_in_g(void);
-static double r3_g(double p0);
-static double stand_in_seconds_g(int32_t p0);
+static double r3_g(double p0, int64_t gs_sp);
+static double stand_in_seconds_g(int32_t p0, int64_t gs_sp);
 static double timeline_g(int64_t gs_sp);
 static int32_t find_g(int32_t p0, int64_t gs_sp);
-static double cue_time_g(double p0, double p1, int32_t p2, int32_t p3, double p4);
+static double cue_time_g(double p0, double p1, int32_t p2, int32_t p3, double p4, int64_t gs_sp);
 
 /* ---- code ---- */
-static void clear_g(int64_t gs_sp) {
+static void clear_input_g(int64_t gs_sp) {
     uint8_t *t0 = (&GS_GL->gs_gstk_g_in_g)->top;
     int64_t t1 = GS_GL->g_in_g.len;
+    if (!((uint8_t)((int64_t)((int64_t)(((t1)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 13);
+    if (!((uint8_t)((int64_t)((int64_t)(((t1)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 13);
     t0 = (uint8_t *)((GS_GL->g_in_g.base));
     t1 = 0;
     (&GS_GL->gs_gstk_g_in_g)->top = t0;
@@ -4129,6 +4553,8 @@ static void clear_g(int64_t gs_sp) {
 static void put_g(double x_g, int64_t gs_sp) {
     uint8_t *t2 = (&GS_GL->gs_gstk_g_in_g)->top;
     int64_t t3 = GS_GL->g_in_g.len;
+    if (!((uint8_t)((int64_t)((int64_t)(((t3)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 14);
+    if (!((uint8_t)((int64_t)((int64_t)(((t3)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 14);
     double t0 = x_g;
     double *t1 = (double *)t2;
     *(double *)t2 = t0;
@@ -4140,65 +4566,71 @@ static void put_g(double x_g, int64_t gs_sp) {
 }
 
 static double out_g(int32_t i_g, int64_t gs_sp) {
+    if (!((uint8_t)((int32_t)((int32_t)(i_g)) >= (int32_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 15);
+    if (!((uint8_t)((int64_t)((int64_t)(i_g)) < (int64_t)(((GS_GL->g_out_g.len)))))) gs_abort(GS_E_ASSERT, gs_file0, 15);
     double t0;
     int32_t t1 = i_g;
-    t0 = (((double *)((GS_GL->g_out_g.base)))[GS_IDX((int64_t)(t1), (GS_GL->g_out_g.len), gs_file0, 15)]);
+    t0 = (((double *)((GS_GL->g_out_g.base)))[t1]);
     return t0;
 }
 
 static int32_t out_len_g(int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 16);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 16);
     int32_t t0;
     t0 = (int32_t)GS_RANGE((int64_t)(((GS_GL->g_out_g.len))), (-2147483647 - 1), 2147483647, "i32", gs_file0, 16);
     return t0;
 }
 
 static double jmax_g(double a_g, double b_g) {
-    double t0;
     double x_g = a_g;
     {
-        if ((uint8_t)(!((double)((double)(x_g)) == (double)(x_g)))) goto L2;
+        if (!((uint8_t)(!((double)((double)(x_g)) == (double)(x_g))))) goto L0;
     }
     double x_g_2 = b_g;
     {
-        if (!((uint8_t)(!((double)((double)(x_g_2)) == (double)(x_g_2))))) goto L1;
+        if (!((uint8_t)(!((double)((double)(x_g_2)) == (double)(x_g_2))))) goto L0;
     }
-    L2:;
+    double x_g_3 = ((double)((double)(a_g)) + (double)(b_g));
     {
-        t0 = ((double)((double)(a_g)) + (double)(b_g));
+        if ((uint8_t)(!((double)((double)(x_g_3)) == (double)(x_g_3)))) goto L0;
     }
-    goto L5;
-    L1:;
+    gs_abort(GS_E_ASSERT, gs_file0, 24);
+    L0:;
+    if ((uint8_t)((double)((double)(a_g)) == (double)(a_g))) goto L4;
+    if ((uint8_t)((double)((double)(b_g)) == (double)(b_g))) goto L4;
+    if ((uint8_t)(!((double)((double)(a_g)) == (double)(b_g)))) goto L4;
+    gs_abort(GS_E_ASSERT, gs_file0, 24);
+    L4:;
+    double t5;
+    double x_g_4 = a_g;
+    {
+        if ((uint8_t)(!((double)((double)(x_g_4)) == (double)(x_g_4)))) goto L7;
+    }
+    double x_g_5 = b_g;
+    {
+        if (!((uint8_t)(!((double)((double)(x_g_5)) == (double)(x_g_5))))) goto L6;
+    }
+    L7:;
+    {
+        t5 = ((double)((double)(a_g)) + (double)(b_g));
+    }
+    goto L10;
+    L6:;
     {
         if ((uint8_t)((double)((double)(a_g)) > (double)(b_g))) {
-            t0 = a_g;
+            t5 = a_g;
         } else {
-            t0 = b_g;
+            t5 = b_g;
         }
     }
-    L5:;
-    return t0;
+    L10:;
+    return t5;
 }
 
-static Pose_g rest_g(void) {
-    Pose_g t0;
-    Pose_g t1;
-    t1.s_g = 1.0;
-    t1.sx_g = 1.0;
-    t1.sz_g = 1.0;
-    t1.dx_g = 0.0;
-    t1.z_g = 0.0;
-    t1.up_g = 0.0;
-    t1.tilt_g = 0.0;
-    t1.eye_g = 1.0;
-    t1.gaze_g = 1.0;
-    t1.ex_g = 0.0;
-    t1.ez_g = 0.0;
-    t1.spin_g = 0.0;
-    t0 = t1;
-    return t0;
-}
-
-static double clamp01_g(double u_g) {
+static double clamp01_g(double u_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 48);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 48);
     double t0;
     if ((uint8_t)((double)((double)(u_g)) < (double)(0.0))) {
         t0 = 0.0;
@@ -4212,16 +4644,20 @@ static double clamp01_g(double u_g) {
     return t0;
 }
 
-static double ease_g(double t_g, double t0_g, double t1_g) {
+static double ease_g(double t_g, double t0_g, double t1_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 49);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 49);
     double u_g;
-    double t0 = clamp01_g(((double)((double)(((double)((double)(t_g)) - (double)(t0_g)))) / (double)(((double)((double)(t1_g)) - (double)(t0_g)))));
+    double t0 = clamp01_g(((double)((double)(((double)((double)(t_g)) - (double)(t0_g)))) / (double)(((double)((double)(t1_g)) - (double)(t0_g)))), gs_sp + 0);
     u_g = t0;
     double t1;
     t1 = ((double)((double)(((double)((double)(u_g)) * (double)(u_g)))) * (double)(((double)((double)(3.0)) - (double)(((double)((double)(2.0)) * (double)(u_g))))));
     return t1;
 }
 
-static double bump_g(double t_g, double t0_g, double t1_g) {
+static double bump_g(double t_g, double t0_g, double t1_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 53);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 53);
     double t0;
     if ((uint8_t)((double)((double)(t_g)) <= (double)(t0_g))) goto L2;
     if (!((uint8_t)((double)((double)(t_g)) >= (double)(t1_g)))) goto L1;
@@ -4243,25 +4679,31 @@ static double bump_g(double t_g, double t0_g, double t1_g) {
     return t0;
 }
 
-static double hold_g(double t_g, double t0_g, double t1_g, double r_g) {
+static double hold_g(double t_g, double t0_g, double t1_g, double r_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 56);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 56);
     double t0;
-    double t1 = ease_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(r_g)));
+    double t1 = ease_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(r_g)), gs_sp + 0);
     double t2 = t1;
-    double t3 = ease_g(t_g, ((double)((double)(t1_g)) - (double)(r_g)), t1_g);
+    double t3 = ease_g(t_g, ((double)((double)(t1_g)) - (double)(r_g)), t1_g, gs_sp + 0);
     t0 = ((double)(t2) - (double)(t3));
     return t0;
 }
 
-static double shut_g(double t_g, double t0_g) {
+static double shut_g(double t_g, double t0_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 60);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 60);
     double t0;
-    double t1 = ease_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(0.13)));
+    double t1 = ease_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(0.13)), gs_sp + 0);
     double t2 = t1;
-    double t3 = ease_g(t_g, ((double)((double)(t0_g)) + (double)(0.19)), ((double)((double)(t0_g)) + (double)(0.4)));
+    double t3 = ease_g(t_g, ((double)((double)(t0_g)) + (double)(0.19)), ((double)((double)(t0_g)) + (double)(0.4)), gs_sp + 0);
     t0 = ((double)(t2) - (double)(t3));
     return t0;
 }
 
-static double settle_g(double u_g) {
+static double settle_g(double u_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 61);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 61);
     double t0;
     if ((uint8_t)((double)((double)(u_g)) <= (double)(0.0))) {
         t0 = 0.0;
@@ -4281,12 +4723,25 @@ static double settle_g(double u_g) {
     return t0;
 }
 
-static GS_NOINLINE Pose_g pop_g(double t_g, double t0_g) {
-    Pose_g p_g;
+static GS_NOINLINE Pose_g pop_g(double t_g, double t0_g, int64_t gs_sp) {
     Pose_g t0;
+    Pose_g p_g;
     Pose_g t1;
     Pose_g t22;
-    t0 = rest_g();
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 66);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 66);
+    t0.s_g = 1.0;
+    t0.sx_g = 1.0;
+    t0.sz_g = 1.0;
+    t0.dx_g = 0.0;
+    t0.z_g = 0.0;
+    t0.up_g = 0.0;
+    t0.tilt_g = 0.0;
+    t0.eye_g = 1.0;
+    t0.gaze_g = 1.0;
+    t0.ex_g = 0.0;
+    t0.ez_g = 0.0;
+    t0.spin_g = 0.0;
     p_g = t0;
     double u_g = ((double)((double)(t_g)) - (double)(t0_g));
     if ((uint8_t)((double)((double)(u_g)) <= (double)(0.0))) {
@@ -4309,7 +4764,7 @@ static GS_NOINLINE Pose_g pop_g(double t_g, double t0_g) {
     double t8 = -0.25;
     double t9 = jmax_g(0.0, ((double)((double)(1.0)) - (double)(s_g)));
     p_g.z_g = ((double)(t8) * (double)(t9));
-    double t10 = ease_g(t_g, ((double)((double)(t0_g)) + (double)(0.12)), ((double)((double)(t0_g)) + (double)(0.3)));
+    double t10 = ease_g(t_g, ((double)((double)(t0_g)) + (double)(0.12)), ((double)((double)(t0_g)) + (double)(0.3)), gs_sp + 0);
     p_g.eye_g = t10;
     Pose_g * p_g_2 = &p_g;
     double t11 = 1.0;
@@ -4321,6 +4776,8 @@ static GS_NOINLINE Pose_g pop_g(double t_g, double t0_g) {
     double t17 = gs_sin(t16);
     double sz_g = ((double)(t11) + (double)(((double)(t15) * (double)(t17))));
     {
+        if (!((uint8_t)((double)((double)(sz_g)) > (double)(0.0)))) gs_abort(GS_E_ASSERT, gs_file0, 64);
+        if (!((uint8_t)((double)((double)((*p_g_2).s_g)) == (double)((*p_g_2).s_g)))) gs_abort(GS_E_ASSERT, gs_file0, 64);
         (*p_g_2).sz_g = sz_g;
         double t19 = 1.0;
         double t20 = sz_g;
@@ -4331,71 +4788,110 @@ static GS_NOINLINE Pose_g pop_g(double t_g, double t0_g) {
     return t22;
 }
 
-static double arc_g(double k_g, double k0_g, double k1_g, double hh_g) {
-    double t0;
-    if (!((uint8_t)((double)((double)(k_g)) > (double)(k0_g)))) goto L1;
-    if (!((uint8_t)((double)((double)(k_g)) < (double)(k1_g)))) goto L1;
-    {
-        double t2 = ((double)((double)(((double)((double)(((double)((double)(4.0)) * (double)(hh_g)))) * (double)(((double)((double)(k_g)) - (double)(k0_g)))))) * (double)(((double)((double)(k1_g)) - (double)(k_g))));
-        double t3 = ((double)((double)(k1_g)) - (double)(k0_g));
-        double t4 = 2.0;
-        double t5 = gs_pow(t3, t4);
-        t0 = ((double)(t2) / (double)(t5));
-    }
-    goto L6;
-    L1:;
-    {
-        t0 = 0.0;
-    }
-    L6:;
-    return t0;
-}
-
-static double hop_z_g(double tt_g, double t0_g, double h_g, double d_g) {
+static double hop_z_g(double tt_g, double t0_g, double h_g, double d_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 85);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 85);
     double k_g = ((double)((double)(((double)((double)(tt_g)) - (double)(t0_g)))) / (double)(d_g));
     double t0;
-    double t1 = arc_g(k_g, 0.0, 1.0, h_g);
-    double t2 = t1;
-    double t3 = arc_g(k_g, 1.2, 1.6, ((double)((double)(0.15)) * (double)(h_g)));
-    t0 = ((double)(t2) + (double)(t3));
+    double t1;
+    double k_g_2 = k_g;
+    double hh_g = h_g;
+    {
+        if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 82);
+        if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 82);
+        if (!((uint8_t)((double)((double)(k_g_2)) > (double)(0.0)))) goto L3;
+        if (!((uint8_t)((double)((double)(k_g_2)) < (double)(1.0)))) goto L3;
+        {
+            double t4 = ((double)((double)(((double)((double)(((double)((double)(4.0)) * (double)(hh_g)))) * (double)(((double)((double)(k_g_2)) - (double)(0.0)))))) * (double)(((double)((double)(1.0)) - (double)(k_g_2))));
+            double t5 = 1.0;
+            double t6 = 2.0;
+            double t7 = gs_pow(t5, t6);
+            t1 = ((double)(t4) / (double)(t7));
+        }
+        goto L8;
+        L3:;
+        {
+            t1 = 0.0;
+        }
+        L8:;
+    }
+    double t9 = t1;
+    double t10;
+    double k_g_3 = k_g;
+    double hh_g_2 = ((double)((double)(0.15)) * (double)(h_g));
+    {
+        if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 82);
+        if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 82);
+        if (!((uint8_t)((double)((double)(k_g_3)) > (double)(1.2)))) goto L12;
+        if (!((uint8_t)((double)((double)(k_g_3)) < (double)(1.6)))) goto L12;
+        {
+            double t13 = ((double)((double)(((double)((double)(((double)((double)(4.0)) * (double)(hh_g_2)))) * (double)(((double)((double)(k_g_3)) - (double)(1.2)))))) * (double)(((double)((double)(1.6)) - (double)(k_g_3))));
+            double t14 = 0.40000000000000013;
+            double t15 = 2.0;
+            double t16 = gs_pow(t14, t15);
+            t10 = ((double)(t13) / (double)(t16));
+        }
+        goto L17;
+        L12:;
+        {
+            t10 = 0.0;
+        }
+        L17:;
+    }
+    t0 = ((double)(t9) + (double)(t10));
     return t0;
 }
 
-static GS_NOINLINE Pose_g hop_g(double t_g, double t0_g, double h_g, double d_g) {
-    Pose_g p_g;
+static GS_NOINLINE Pose_g hop_g(double t_g, double t0_g, double h_g, double d_g, int64_t gs_sp) {
     Pose_g t0;
+    Pose_g p_g;
     Pose_g t28;
-    t0 = rest_g();
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 89);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 89);
+    t0.s_g = 1.0;
+    t0.sx_g = 1.0;
+    t0.sz_g = 1.0;
+    t0.dx_g = 0.0;
+    t0.z_g = 0.0;
+    t0.up_g = 0.0;
+    t0.tilt_g = 0.0;
+    t0.eye_g = 1.0;
+    t0.gaze_g = 1.0;
+    t0.ex_g = 0.0;
+    t0.ez_g = 0.0;
+    t0.spin_g = 0.0;
     p_g = t0;
-    double t1 = hop_z_g(t_g, t0_g, h_g, d_g);
+    double t1 = hop_z_g(t_g, t0_g, h_g, d_g, gs_sp + 0);
     p_g.up_g = t1;
     double t2 = 0.4;
-    double t3 = hop_z_g(((double)((double)(t_g)) - (double)(0.06)), t0_g, h_g, d_g);
+    double t3 = hop_z_g(((double)((double)(t_g)) - (double)(0.06)), t0_g, h_g, d_g, gs_sp + 0);
     double t4 = t3;
-    double t5 = hop_z_g(t_g, t0_g, h_g, d_g);
+    double t5 = hop_z_g(t_g, t0_g, h_g, d_g, gs_sp + 0);
     p_g.ez_g = ((double)(t2) * (double)(((double)(t4) - (double)(t5))));
     double t6 = 1.0;
     double t7 = 0.15;
-    double t8 = bump_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(d_g)));
+    double t8 = bump_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(d_g)), gs_sp + 0);
     double t9 = ((double)(t6) + (double)(((double)(t7) * (double)(t8))));
     double t10 = 0.4;
-    double t11 = bump_g(t_g, ((double)((double)(((double)((double)(t0_g)) + (double)(d_g)))) - (double)(0.02)), ((double)((double)(((double)((double)(t0_g)) + (double)(d_g)))) + (double)(0.2)));
+    double t11 = bump_g(t_g, ((double)((double)(((double)((double)(t0_g)) + (double)(d_g)))) - (double)(0.02)), ((double)((double)(((double)((double)(t0_g)) + (double)(d_g)))) + (double)(0.2)), gs_sp + 0);
     p_g.eye_g = ((double)(t9) - (double)(((double)(t10) * (double)(t11))));
     Pose_g * p_g_2 = &p_g;
     double t12 = 1.0;
     double t13 = 0.08;
-    double t14 = bump_g(t_g, ((double)((double)(t0_g)) - (double)(0.16)), ((double)((double)(t0_g)) + (double)(0.04)));
+    double t14 = bump_g(t_g, ((double)((double)(t0_g)) - (double)(0.16)), ((double)((double)(t0_g)) + (double)(0.04)), gs_sp + 0);
     double t15 = ((double)(t12) - (double)(((double)(t13) * (double)(t14))));
     double t16 = 0.07;
-    double t17 = bump_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(((double)((double)(0.5)) * (double)(d_g)))));
+    double t17 = bump_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(((double)((double)(0.5)) * (double)(d_g)))), gs_sp + 0);
     double t18 = ((double)(t15) + (double)(((double)(t16) * (double)(t17))));
     double t19 = 0.12;
-    double t20 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(d_g)), ((double)((double)(t0_g)) + (double)(((double)((double)(1.2)) * (double)(d_g)))));
+    double t20 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(d_g)), ((double)((double)(t0_g)) + (double)(((double)((double)(1.2)) * (double)(d_g)))), gs_sp + 0);
     double t21 = ((double)(t18) - (double)(((double)(t19) * (double)(t20))));
     double t22 = 0.05;
-    double t23 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(((double)((double)(1.6)) * (double)(d_g)))), ((double)((double)(((double)((double)(t0_g)) + (double)(((double)((double)(1.6)) * (double)(d_g)))))) + (double)(0.16)));
+    double t23 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(((double)((double)(1.6)) * (double)(d_g)))), ((double)((double)(((double)((double)(t0_g)) + (double)(((double)((double)(1.6)) * (double)(d_g)))))) + (double)(0.16)), gs_sp + 0);
     double sz_g = ((double)(t21) - (double)(((double)(t22) * (double)(t23))));
     {
+        if (!((uint8_t)((double)((double)(sz_g)) > (double)(0.0)))) gs_abort(GS_E_ASSERT, gs_file0, 64);
+        if (!((uint8_t)((double)((double)((*p_g_2).s_g)) == (double)((*p_g_2).s_g)))) gs_abort(GS_E_ASSERT, gs_file0, 64);
         (*p_g_2).sz_g = sz_g;
         double t25 = 1.0;
         double t26 = sz_g;
@@ -4406,29 +4902,44 @@ static GS_NOINLINE Pose_g hop_g(double t_g, double t0_g, double h_g, double d_g)
     return t28;
 }
 
-static GS_NOINLINE Pose_g squash_g(double t_g, double t0_g) {
-    Pose_g p_g;
+static GS_NOINLINE Pose_g squash_g(double t_g, double t0_g, int64_t gs_sp) {
     Pose_g t0;
+    Pose_g p_g;
     Pose_g t16;
-    t0 = rest_g();
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 98);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 98);
+    t0.s_g = 1.0;
+    t0.sx_g = 1.0;
+    t0.sz_g = 1.0;
+    t0.dx_g = 0.0;
+    t0.z_g = 0.0;
+    t0.up_g = 0.0;
+    t0.tilt_g = 0.0;
+    t0.eye_g = 1.0;
+    t0.gaze_g = 1.0;
+    t0.ex_g = 0.0;
+    t0.ez_g = 0.0;
+    t0.spin_g = 0.0;
     p_g = t0;
     double press_g;
-    double t1 = bump_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(0.26)));
+    double t1 = bump_g(t_g, t0_g, ((double)((double)(t0_g)) + (double)(0.26)), gs_sp + 0);
     press_g = t1;
     p_g.eye_g = ((double)((double)(1.0)) - (double)(((double)((double)(0.7)) * (double)(press_g))));
     Pose_g * p_g_2 = &p_g;
     double t2 = 1.0;
     double t3 = 0.04;
-    double t4 = bump_g(t_g, ((double)((double)(t0_g)) - (double)(0.22)), t0_g);
+    double t4 = bump_g(t_g, ((double)((double)(t0_g)) - (double)(0.22)), t0_g, gs_sp + 0);
     double t5 = ((double)(t2) + (double)(((double)(t3) * (double)(t4))));
     double t6 = ((double)(t5) - (double)(((double)((double)(0.12)) * (double)(press_g))));
     double t7 = 0.05;
-    double t8 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(0.2)), ((double)((double)(t0_g)) + (double)(0.46)));
+    double t8 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(0.2)), ((double)((double)(t0_g)) + (double)(0.46)), gs_sp + 0);
     double t9 = ((double)(t6) + (double)(((double)(t7) * (double)(t8))));
     double t10 = 0.015;
-    double t11 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(0.42)), ((double)((double)(t0_g)) + (double)(0.62)));
+    double t11 = bump_g(t_g, ((double)((double)(t0_g)) + (double)(0.42)), ((double)((double)(t0_g)) + (double)(0.62)), gs_sp + 0);
     double sz_g = ((double)(t9) - (double)(((double)(t10) * (double)(t11))));
     {
+        if (!((uint8_t)((double)((double)(sz_g)) > (double)(0.0)))) gs_abort(GS_E_ASSERT, gs_file0, 64);
+        if (!((uint8_t)((double)((double)((*p_g_2).s_g)) == (double)((*p_g_2).s_g)))) gs_abort(GS_E_ASSERT, gs_file0, 64);
         (*p_g_2).sz_g = sz_g;
         double t13 = 1.0;
         double t14 = sz_g;
@@ -4439,30 +4950,9 @@ static GS_NOINLINE Pose_g squash_g(double t_g, double t0_g) {
     return t16;
 }
 
-static GS_NOINLINE Pose_g look_g(double t_g, double t0_g, double d_g, double ex_g, double ez_g) {
-    Pose_g p_g;
-    Pose_g t0;
-    Pose_g t9;
-    t0 = rest_g();
-    p_g = t0;
-    double t1 = settle_g(((double)((double)(t_g)) - (double)(t0_g)));
-    double t2 = t1;
-    double t3 = settle_g(((double)((double)(((double)((double)(t_g)) - (double)(t0_g)))) - (double)(d_g)));
-    double m_g = ((double)(t2) - (double)(t3));
-    p_g.ex_g = ((double)((double)(((double)((double)(0.22)) * (double)(ex_g)))) * (double)(m_g));
-    p_g.ez_g = ((double)((double)(((double)((double)(0.14)) * (double)(ez_g)))) * (double)(m_g));
-    double t4 = 1.0;
-    double t5 = hold_g(t_g, ((double)((double)(t0_g)) - (double)(0.2)), ((double)((double)(((double)((double)(t0_g)) + (double)(d_g)))) + (double)(0.3)), 0.2);
-    p_g.gaze_g = ((double)(t4) - (double)(t5));
-    double t6 = 1.0;
-    double t7 = 0.92;
-    double t8 = shut_g(t_g, ((double)((double)(t0_g)) - (double)(0.05)));
-    p_g.eye_g = ((double)(t6) - (double)(((double)(t7) * (double)(t8))));
-    t9 = p_g;
-    return t9;
-}
-
 static double dflt_g(double v_g, double dflt_g_2) {
+    if (!((uint8_t)((double)((double)(dflt_g_2)) == (double)(dflt_g_2)))) gs_abort(GS_E_ASSERT, gs_file0, 142);
+    if (!((uint8_t)((double)((double)(dflt_g_2)) > (double)(-1e+300)))) gs_abort(GS_E_ASSERT, gs_file0, 142);
     double t0;
     double x_g = v_g;
     {
@@ -4480,210 +4970,343 @@ static double dflt_g(double v_g, double dflt_g_2) {
     return t0;
 }
 
-static Pose_g move_pose_g(int64_t m_g, double t_g, double t0_g, double d_g, double h_g, double x_g, double y_g, double deg_g) {
-    Pose_g t0;
-    Pose_g t1;
+static Pose_g move_pose_g(int64_t m_g, double t_g, double t0_g, double d_g, double h_g, double x_g, double y_g, double deg_g, int64_t gs_sp) {
     Pose_g t2;
+    Pose_g t3;
+    Pose_g t4;
+    Pose_g t7;
     Pose_g p_g;
-    Pose_g t5;
-    Pose_g t16;
-    Pose_g t22;
-    Pose_g t23;
+    Pose_g t18;
     Pose_g t24;
     Pose_g t25;
-    Pose_g p_g_2;
+    Pose_g t26;
     Pose_g t27;
-    Pose_g t31;
+    Pose_g t29;
+    Pose_g p_g_2;
+    Pose_g t33;
+    Pose_g t36;
     Pose_g p_g_3;
-    Pose_g t34;
-    Pose_g t41;
-    Pose_g t49;
-    Pose_g t50;
+    Pose_g t43;
+    Pose_g t48;
     Pose_g p_g_4;
-    Pose_g t53;
-    Pose_g t64;
+    Pose_g t57;
+    Pose_g t60;
     Pose_g p_g_5;
-    Pose_g t68;
-    Pose_g t76;
+    Pose_g t71;
+    Pose_g t75;
     Pose_g p_g_6;
-    Pose_g t79;
-    Pose_g t84;
-    Pose_g t85;
+    Pose_g t83;
+    Pose_g t86;
+    Pose_g p_g_7;
+    Pose_g t91;
+    Pose_g t92;
+    double x_g_2 = t_g;
+    {
+        if (!((uint8_t)(!((double)((double)(x_g_2)) == (double)(x_g_2))))) goto L0;
+    }
+    gs_abort(GS_E_ASSERT, gs_file0, 145);
+    L0:;
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 145);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 145);
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(0))) {
-        t1 = pop_g(t_g, t0_g);
-        t0 = t1;
-        return t0;
+        t3 = pop_g(t_g, t0_g, gs_sp + 0);
+        t2 = t3;
+        return t2;
     }
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(1))) {
         double t_g_2 = t_g;
         double t0_g_2 = t0_g;
         double d_g_2;
-        double t3 = dflt_g(d_g, 0.3);
-        d_g_2 = t3;
+        double t5 = dflt_g(d_g, 0.3);
+        d_g_2 = t5;
         {
-            t5 = rest_g();
-            p_g = t5;
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 76);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 76);
+            t7.s_g = 1.0;
+            t7.sx_g = 1.0;
+            t7.sz_g = 1.0;
+            t7.dx_g = 0.0;
+            t7.z_g = 0.0;
+            t7.up_g = 0.0;
+            t7.tilt_g = 0.0;
+            t7.eye_g = 1.0;
+            t7.gaze_g = 1.0;
+            t7.ex_g = 0.0;
+            t7.ez_g = 0.0;
+            t7.spin_g = 0.0;
+            p_g = t7;
             double k_g;
-            double t6 = clamp01_g(((double)((double)(((double)((double)(t_g_2)) - (double)(t0_g_2)))) / (double)(d_g_2)));
-            k_g = t6;
+            double t8 = clamp01_g(((double)((double)(((double)((double)(t_g_2)) - (double)(t0_g_2)))) / (double)(d_g_2)), gs_sp + 0);
+            k_g = t8;
             if ((uint8_t)((double)((double)(k_g)) >= (double)(1.0))) {
                 p_g.s_g = 0.0;
             } else {
-                double t7 = 1.0;
-                double t8 = 0.15;
-                double t9 = ((double)((double)(3.141592653589793)) * (double)(k_g));
-                double t10 = gs_sin(t9);
-                double t11 = ((double)(t7) + (double)(((double)(t8) * (double)(t10))));
-                double t12 = 1.0;
-                double t13 = k_g;
-                double t14 = 3.0;
-                double t15 = gs_pow(t13, t14);
-                p_g.s_g = ((double)(t11) * (double)(((double)(t12) - (double)(t15))));
+                double t9 = 1.0;
+                double t10 = 0.15;
+                double t11 = ((double)((double)(3.141592653589793)) * (double)(k_g));
+                double t12 = gs_sin(t11);
+                double t13 = ((double)(t9) + (double)(((double)(t10) * (double)(t12))));
+                double t14 = 1.0;
+                double t15 = k_g;
+                double t16 = 3.0;
+                double t17 = gs_pow(t15, t16);
+                p_g.s_g = ((double)(t13) * (double)(((double)(t14) - (double)(t17))));
             }
-            t2 = p_g;
+            t4 = p_g;
         }
-        return t2;
+        return t4;
     }
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(2))) {
-        double t17 = t_g;
-        double t18 = t0_g;
-        double t19 = dflt_g(h_g, 0.5);
-        double t20 = t19;
-        double t21 = dflt_g(d_g, 0.5);
-        t22 = hop_g(t17, t18, t20, t21);
-        t16 = t22;
-        return t16;
+        double t19 = t_g;
+        double t20 = t0_g;
+        double t21 = dflt_g(h_g, 0.5);
+        double t22 = t21;
+        double t23 = dflt_g(d_g, 0.5);
+        t24 = hop_g(t19, t20, t22, t23, gs_sp + 0);
+        t18 = t24;
+        return t18;
     }
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(3))) {
-        t24 = squash_g(t_g, t0_g);
-        t23 = t24;
-        return t23;
+        t26 = squash_g(t_g, t0_g, gs_sp + 0);
+        t25 = t26;
+        return t25;
     }
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(4))) {
         double t_g_3 = t_g;
         double t0_g_3 = t0_g;
         {
-            t27 = rest_g();
-            p_g_2 = t27;
-            double t28 = 1.0;
-            double t29 = 0.92;
-            double t30 = shut_g(t_g_3, t0_g_3);
-            p_g_2.eye_g = ((double)(t28) - (double)(((double)(t29) * (double)(t30))));
-            t25 = p_g_2;
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 106);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 106);
+            t29.s_g = 1.0;
+            t29.sx_g = 1.0;
+            t29.sz_g = 1.0;
+            t29.dx_g = 0.0;
+            t29.z_g = 0.0;
+            t29.up_g = 0.0;
+            t29.tilt_g = 0.0;
+            t29.eye_g = 1.0;
+            t29.gaze_g = 1.0;
+            t29.ex_g = 0.0;
+            t29.ez_g = 0.0;
+            t29.spin_g = 0.0;
+            p_g_2 = t29;
+            double t30 = 1.0;
+            double t31 = 0.92;
+            double t32 = shut_g(t_g_3, t0_g_3, gs_sp + 0);
+            p_g_2.eye_g = ((double)(t30) - (double)(((double)(t31) * (double)(t32))));
+            t27 = p_g_2;
         }
-        return t25;
+        return t27;
     }
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(5))) {
         double t_g_4 = t_g;
         double t0_g_4 = t0_g;
         double d_g_3;
-        double t32 = dflt_g(d_g, 1.0);
-        d_g_3 = t32;
+        double t34 = dflt_g(d_g, 1.0);
+        d_g_3 = t34;
         {
-            t34 = rest_g();
-            p_g_3 = t34;
-            double t35 = 1.0;
-            double t36 = 0.5;
-            double t37 = hold_g(t_g_4, t0_g_4, ((double)((double)(t0_g_4)) + (double)(d_g_3)), 0.18);
-            p_g_3.eye_g = ((double)(t35) - (double)(((double)(t36) * (double)(t37))));
-            double t38 = 1.0;
-            double t39 = 0.03;
-            double t40 = hold_g(t_g_4, t0_g_4, ((double)((double)(t0_g_4)) + (double)(d_g_3)), 0.18);
-            p_g_3.sz_g = ((double)(t38) - (double)(((double)(t39) * (double)(t40))));
-            t31 = p_g_3;
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 107);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 107);
+            t36.s_g = 1.0;
+            t36.sx_g = 1.0;
+            t36.sz_g = 1.0;
+            t36.dx_g = 0.0;
+            t36.z_g = 0.0;
+            t36.up_g = 0.0;
+            t36.tilt_g = 0.0;
+            t36.eye_g = 1.0;
+            t36.gaze_g = 1.0;
+            t36.ex_g = 0.0;
+            t36.ez_g = 0.0;
+            t36.spin_g = 0.0;
+            p_g_3 = t36;
+            double t37 = 1.0;
+            double t38 = 0.5;
+            double t39 = hold_g(t_g_4, t0_g_4, ((double)((double)(t0_g_4)) + (double)(d_g_3)), 0.18, gs_sp + 0);
+            p_g_3.eye_g = ((double)(t37) - (double)(((double)(t38) * (double)(t39))));
+            double t40 = 1.0;
+            double t41 = 0.03;
+            double t42 = hold_g(t_g_4, t0_g_4, ((double)((double)(t0_g_4)) + (double)(d_g_3)), 0.18, gs_sp + 0);
+            p_g_3.sz_g = ((double)(t40) - (double)(((double)(t41) * (double)(t42))));
+            t33 = p_g_3;
         }
-        return t31;
+        return t33;
     }
     if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(6))) {
-        double t42 = t_g;
-        double t43 = t0_g;
-        double t44 = dflt_g(d_g, 1.0);
-        double t45 = t44;
-        double t46 = dflt_g(x_g, 1.0);
-        double t47 = t46;
-        double t48 = dflt_g(y_g, 0.0);
-        t49 = look_g(t42, t43, t45, t47, t48);
-        t41 = t49;
-        return t41;
-    }
-    if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(7))) {
         double t_g_5 = t_g;
         double t0_g_5 = t0_g;
         double d_g_4;
-        double t51 = dflt_g(d_g, 1.2);
-        d_g_4 = t51;
+        double t44 = dflt_g(d_g, 1.0);
+        d_g_4 = t44;
+        double ex_g;
+        double t45 = dflt_g(x_g, 1.0);
+        ex_g = t45;
+        double ez_g;
+        double t46 = dflt_g(y_g, 0.0);
+        ez_g = t46;
         {
-            t53 = rest_g();
-            p_g_4 = t53;
-            double k_g_2;
-            double t54 = clamp01_g(((double)((double)(((double)((double)(t_g_5)) - (double)(t0_g_5)))) / (double)(d_g_4)));
-            k_g_2 = t54;
-            double t55 = 0.16;
-            double t56 = ((double)((double)(6.283185307179586)) * (double)(k_g_2));
-            double t57 = gs_sin(t56);
-            double t58 = ((double)(t55) * (double)(t57));
-            double t59 = ((double)((double)(3.141592653589793)) * (double)(k_g_2));
-            double t60 = gs_sin(t59);
-            p_g_4.ex_g = ((double)(t58) * (double)(t60));
-            double t61 = 1.0;
-            double t62 = ((double)((double)(3.141592653589793)) * (double)(k_g_2));
-            double t63 = gs_sin(t62);
-            p_g_4.gaze_g = ((double)(t61) - (double)(t63));
-            t50 = p_g_4;
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 114);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 114);
+            t48.s_g = 1.0;
+            t48.sx_g = 1.0;
+            t48.sz_g = 1.0;
+            t48.dx_g = 0.0;
+            t48.z_g = 0.0;
+            t48.up_g = 0.0;
+            t48.tilt_g = 0.0;
+            t48.eye_g = 1.0;
+            t48.gaze_g = 1.0;
+            t48.ex_g = 0.0;
+            t48.ez_g = 0.0;
+            t48.spin_g = 0.0;
+            p_g_4 = t48;
+            double t49 = settle_g(((double)((double)(t_g_5)) - (double)(t0_g_5)), gs_sp + 0);
+            double t50 = t49;
+            double t51 = settle_g(((double)((double)(((double)((double)(t_g_5)) - (double)(t0_g_5)))) - (double)(d_g_4)), gs_sp + 0);
+            double m_g_2 = ((double)(t50) - (double)(t51));
+            p_g_4.ex_g = ((double)((double)(((double)((double)(0.22)) * (double)(ex_g)))) * (double)(m_g_2));
+            p_g_4.ez_g = ((double)((double)(((double)((double)(0.14)) * (double)(ez_g)))) * (double)(m_g_2));
+            double t52 = 1.0;
+            double t53 = hold_g(t_g_5, ((double)((double)(t0_g_5)) - (double)(0.2)), ((double)((double)(((double)((double)(t0_g_5)) + (double)(d_g_4)))) + (double)(0.3)), 0.2, gs_sp + 0);
+            p_g_4.gaze_g = ((double)(t52) - (double)(t53));
+            double t54 = 1.0;
+            double t55 = 0.92;
+            double t56 = shut_g(t_g_5, ((double)((double)(t0_g_5)) - (double)(0.05)), gs_sp + 0);
+            p_g_4.eye_g = ((double)(t54) - (double)(((double)(t55) * (double)(t56))));
+            t43 = p_g_4;
         }
-        return t50;
+        return t43;
     }
-    if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(8))) {
+    if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(7))) {
         double t_g_6 = t_g;
         double t0_g_6 = t0_g;
         double d_g_5;
-        double t65 = dflt_g(d_g, 1.6);
-        d_g_5 = t65;
-        double deg_g_2;
-        double t66 = dflt_g(deg_g, 12.0);
-        deg_g_2 = t66;
+        double t58 = dflt_g(d_g, 1.2);
+        d_g_5 = t58;
         {
-            t68 = rest_g();
-            p_g_5 = t68;
-            double k_g_3;
-            double t69 = clamp01_g(((double)((double)(((double)((double)(t_g_6)) - (double)(t0_g_6)))) / (double)(d_g_5)));
-            k_g_3 = t69;
-            double t70 = deg_g_2;
-            double t71 = ((double)((double)(12.566370614359172)) * (double)(k_g_3));
-            double t72 = gs_sin(t71);
-            double t73 = ((double)(t70) * (double)(t72));
-            double t74 = ((double)((double)(3.141592653589793)) * (double)(k_g_3));
-            double t75 = gs_sin(t74);
-            p_g_5.tilt_g = ((double)(t73) * (double)(t75));
-            t64 = p_g_5;
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 122);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 122);
+            t60.s_g = 1.0;
+            t60.sx_g = 1.0;
+            t60.sz_g = 1.0;
+            t60.dx_g = 0.0;
+            t60.z_g = 0.0;
+            t60.up_g = 0.0;
+            t60.tilt_g = 0.0;
+            t60.eye_g = 1.0;
+            t60.gaze_g = 1.0;
+            t60.ex_g = 0.0;
+            t60.ez_g = 0.0;
+            t60.spin_g = 0.0;
+            p_g_5 = t60;
+            double k_g_2;
+            double t61 = clamp01_g(((double)((double)(((double)((double)(t_g_6)) - (double)(t0_g_6)))) / (double)(d_g_5)), gs_sp + 0);
+            k_g_2 = t61;
+            double t62 = 0.16;
+            double t63 = ((double)((double)(6.283185307179586)) * (double)(k_g_2));
+            double t64 = gs_sin(t63);
+            double t65 = ((double)(t62) * (double)(t64));
+            double t66 = ((double)((double)(3.141592653589793)) * (double)(k_g_2));
+            double t67 = gs_sin(t66);
+            p_g_5.ex_g = ((double)(t65) * (double)(t67));
+            double t68 = 1.0;
+            double t69 = ((double)((double)(3.141592653589793)) * (double)(k_g_2));
+            double t70 = gs_sin(t69);
+            p_g_5.gaze_g = ((double)(t68) - (double)(t70));
+            t57 = p_g_5;
         }
-        return t64;
+        return t57;
     }
-    if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(9))) {
+    if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(8))) {
         double t_g_7 = t_g;
         double t0_g_7 = t0_g;
         double d_g_6;
-        double t77 = dflt_g(d_g, 0.9);
-        d_g_6 = t77;
+        double t72 = dflt_g(d_g, 1.6);
+        d_g_6 = t72;
+        double deg_g_2;
+        double t73 = dflt_g(deg_g, 12.0);
+        deg_g_2 = t73;
         {
-            t79 = rest_g();
-            p_g_6 = t79;
-            double t80 = 6.283185307179586;
-            double t81 = ease_g(t_g_7, t0_g_7, ((double)((double)(t0_g_7)) + (double)(d_g_6)));
-            p_g_6.spin_g = ((double)(t80) * (double)(t81));
-            double t82 = 1.0;
-            double t83 = bump_g(t_g_7, ((double)((double)(t0_g_7)) - (double)(0.2)), ((double)((double)(((double)((double)(t0_g_7)) + (double)(d_g_6)))) + (double)(0.2)));
-            p_g_6.gaze_g = ((double)(t82) - (double)(t83));
-            t76 = p_g_6;
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 129);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 129);
+            t75.s_g = 1.0;
+            t75.sx_g = 1.0;
+            t75.sz_g = 1.0;
+            t75.dx_g = 0.0;
+            t75.z_g = 0.0;
+            t75.up_g = 0.0;
+            t75.tilt_g = 0.0;
+            t75.eye_g = 1.0;
+            t75.gaze_g = 1.0;
+            t75.ex_g = 0.0;
+            t75.ez_g = 0.0;
+            t75.spin_g = 0.0;
+            p_g_6 = t75;
+            double k_g_3;
+            double t76 = clamp01_g(((double)((double)(((double)((double)(t_g_7)) - (double)(t0_g_7)))) / (double)(d_g_6)), gs_sp + 0);
+            k_g_3 = t76;
+            double t77 = deg_g_2;
+            double t78 = ((double)((double)(12.566370614359172)) * (double)(k_g_3));
+            double t79 = gs_sin(t78);
+            double t80 = ((double)(t77) * (double)(t79));
+            double t81 = ((double)((double)(3.141592653589793)) * (double)(k_g_3));
+            double t82 = gs_sin(t81);
+            p_g_6.tilt_g = ((double)(t80) * (double)(t82));
+            t71 = p_g_6;
         }
-        return t76;
+        return t71;
     }
-    t85 = rest_g();
-    t84 = t85;
-    return t84;
+    if ((uint8_t)((int64_t)((int64_t)(m_g)) == (int64_t)(9))) {
+        double t_g_8 = t_g;
+        double t0_g_8 = t0_g;
+        double d_g_7;
+        double t84 = dflt_g(d_g, 0.9);
+        d_g_7 = t84;
+        {
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 135);
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 135);
+            t86.s_g = 1.0;
+            t86.sx_g = 1.0;
+            t86.sz_g = 1.0;
+            t86.dx_g = 0.0;
+            t86.z_g = 0.0;
+            t86.up_g = 0.0;
+            t86.tilt_g = 0.0;
+            t86.eye_g = 1.0;
+            t86.gaze_g = 1.0;
+            t86.ex_g = 0.0;
+            t86.ez_g = 0.0;
+            t86.spin_g = 0.0;
+            p_g_7 = t86;
+            double t87 = 6.283185307179586;
+            double t88 = ease_g(t_g_8, t0_g_8, ((double)((double)(t0_g_8)) + (double)(d_g_7)), gs_sp + 0);
+            p_g_7.spin_g = ((double)(t87) * (double)(t88));
+            double t89 = 1.0;
+            double t90 = bump_g(t_g_8, ((double)((double)(t0_g_8)) - (double)(0.2)), ((double)((double)(((double)((double)(t0_g_8)) + (double)(d_g_7)))) + (double)(0.2)), gs_sp + 0);
+            p_g_7.gaze_g = ((double)(t89) - (double)(t90));
+            t83 = p_g_7;
+        }
+        return t83;
+    }
+    t92.s_g = 1.0;
+    t92.sx_g = 1.0;
+    t92.sz_g = 1.0;
+    t92.dx_g = 0.0;
+    t92.z_g = 0.0;
+    t92.up_g = 0.0;
+    t92.tilt_g = 0.0;
+    t92.eye_g = 1.0;
+    t92.gaze_g = 1.0;
+    t92.ex_g = 0.0;
+    t92.ez_g = 0.0;
+    t92.spin_g = 0.0;
+    t91 = t92;
+    return t91;
 }
 
-static double hash_g(int32_t seed_g, int64_t i_g) {
+static double hash_g(int32_t seed_g, int64_t i_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 159);
+    if (!((uint8_t)((int64_t)((int64_t)(i_g)) > (int64_t)(-9000000000000000000LL)))) gs_abort(GS_E_ASSERT, gs_file0, 159);
     uint32_t h_g = gs_mul_u32((uint32_t)((uint32_t)((uint32_t)((uint32_t)((uint32_t)(seed_g))) ^ (uint32_t)(gs_mul_u32((uint32_t)((uint32_t)(i_g)), 2654435761LL)))), 2246822519LL);
     h_g = (uint32_t)(h_g ^ (gs_shr_u32((uint32_t)(h_g), (int64_t)(13))));
     h_g = gs_mul_u32((uint32_t)(h_g), 3266489917LL);
@@ -4692,50 +5315,50 @@ static double hash_g(int32_t seed_g, int64_t i_g) {
     return t0;
 }
 
-static Gz_g gaze_to_g(int32_t seed_g, double j_g) {
-    Gz_g t0;
+static double hi_g(int32_t seed_g, double i_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 165);
+    if (!((uint8_t)((double)((double)(i_g)) == (double)(i_g)))) gs_abort(GS_E_ASSERT, gs_file0, 165);
+    double t0;
+    double t1 = hash_g(seed_g, (int64_t)gs_f2iwrap(i_g), gs_sp + 0);
+    t0 = t1;
+    return t0;
+}
+
+static Gz_g gaze_to_g(int32_t seed_g, double j_g, int64_t gs_sp) {
+    Gz_g t2;
     Gz_g t4;
     Gz_g t5;
-    double t1;
-    int32_t seed_g_2 = seed_g;
-    double i_g = ((double)((double)(((double)((double)(4.0)) * (double)(j_g)))) + (double)(10.0));
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 168);
+    double x_g = j_g;
     {
-        double t3 = hash_g(seed_g_2, (int64_t)gs_f2iwrap(i_g));
-        t1 = t3;
+        if (!((uint8_t)(!((double)((double)(x_g)) == (double)(x_g))))) goto L0;
     }
-    if ((uint8_t)((double)((double)(t1)) < (double)(0.25))) {
+    gs_abort(GS_E_ASSERT, gs_file0, 168);
+    L0:;
+    double t3 = hi_g(seed_g, ((double)((double)(((double)((double)(4.0)) * (double)(j_g)))) + (double)(10.0)), gs_sp + 0);
+    if ((uint8_t)((double)((double)(t3)) < (double)(0.25))) {
         t4.x_g = 0.0;
         t4.z_g = 0.0;
-        t0 = t4;
+        t2 = t4;
     } else {
         double t6 = 2.0;
-        double t7;
-        int32_t seed_g_3 = seed_g;
-        double i_g_2 = ((double)((double)(((double)((double)(4.0)) * (double)(j_g)))) + (double)(11.0));
-        {
-            double t9 = hash_g(seed_g_3, (int64_t)gs_f2iwrap(i_g_2));
-            t7 = t9;
-        }
-        double t10 = ((double)(t6) * (double)(t7));
-        t5.x_g = ((double)(t10) - (double)(1.0));
-        double t11 = 1.5;
-        double t12;
-        int32_t seed_g_4 = seed_g;
-        double i_g_3 = ((double)((double)(((double)((double)(4.0)) * (double)(j_g)))) + (double)(12.0));
-        {
-            double t14 = hash_g(seed_g_4, (int64_t)gs_f2iwrap(i_g_3));
-            t12 = t14;
-        }
-        double t15 = ((double)(t11) * (double)(t12));
-        t5.z_g = ((double)(t15) - (double)(0.5));
-        t0 = t5;
+        double t7 = hi_g(seed_g, ((double)((double)(((double)((double)(4.0)) * (double)(j_g)))) + (double)(11.0)), gs_sp + 0);
+        double t8 = ((double)(t6) * (double)(t7));
+        t5.x_g = ((double)(t8) - (double)(1.0));
+        double t9 = 1.5;
+        double t10 = hi_g(seed_g, ((double)((double)(((double)((double)(4.0)) * (double)(j_g)))) + (double)(12.0)), gs_sp + 0);
+        double t11 = ((double)(t9) * (double)(t10));
+        t5.z_g = ((double)(t11) - (double)(0.5));
+        t2 = t5;
     }
-    return t0;
+    return t2;
 }
 
 static int32_t moves_g(int64_t gs_sp) {
     uint8_t *t8 = (&GS_GL->gs_gstk_g_out_g)->top;
     int64_t t9 = GS_GL->g_out_g.len;
+    if (!((uint8_t)((int64_t)((int64_t)(((t9)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 193);
+    if (!((uint8_t)((int64_t)((int64_t)((GS_GL->MOVES_g.len))) > (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 193);
     t8 = (uint8_t *)((GS_GL->g_out_g.base));
     t9 = 0;
     int32_t n_g = 1;
@@ -4760,6 +5383,8 @@ static int32_t moves_g(int64_t gs_sp) {
 }
 
 static int32_t seed_of_g(int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 201);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 201);
     uint32_t seed_g = 7;
     int64_t t0 = (GS_GL->g_in_g.len);
     uint8_t *t1 = (uint8_t *)((GS_GL->g_in_g.base));
@@ -4773,34 +5398,60 @@ static int32_t seed_of_g(int64_t gs_sp) {
 }
 
 static void pose_g(double t_g, int32_t seed_g, int32_t life_g, int64_t gs_sp) {
+    Pose_g t3;
     Pose_g p_g;
-    Pose_g t0;
     Pose_g q_g;
-    Pose_g t10;
+    Pose_g t13;
     Gz_g g_g;
     Gz_g a_g;
-    Gz_g t32;
-    Gz_g b_g;
     Gz_g t33;
+    Gz_g b_g;
     Gz_g t34;
-    a12_f64 t72;
-    a12_f64 t71;
-    uint8_t *t78 = (&GS_GL->gs_gstk_g_out_g)->top;
-    int64_t t79 = GS_GL->g_out_g.len;
-    t0 = rest_g();
-    p_g = t0;
+    Gz_g t35;
+    a12_f64 t65;
+    a12_f64 t64;
+    uint8_t *t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+    int64_t t72 = GS_GL->g_out_g.len;
+    double x_g = t_g;
+    {
+        if (!((uint8_t)(!((double)((double)(x_g)) == (double)(x_g))))) goto L0;
+    }
+    gs_abort(GS_E_ASSERT, gs_file0, 209);
+    L0:;
+    if ((uint8_t)((int32_t)((int32_t)(life_g)) == (int32_t)(0))) goto L2;
+    if ((uint8_t)((int32_t)((int32_t)(life_g)) == (int32_t)(1))) goto L2;
+    gs_abort(GS_E_ASSERT, gs_file0, 209);
+    L2:;
+    if (!((uint8_t)((int64_t)((int64_t)((int64_t)((uint64_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len))))) % (uint64_t)((int64_t)(7))))) == (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 209);
+    t3.s_g = 1.0;
+    t3.sx_g = 1.0;
+    t3.sz_g = 1.0;
+    t3.dx_g = 0.0;
+    t3.z_g = 0.0;
+    t3.up_g = 0.0;
+    t3.tilt_g = 0.0;
+    t3.eye_g = 1.0;
+    t3.gaze_g = 1.0;
+    t3.ex_g = 0.0;
+    t3.ez_g = 0.0;
+    t3.spin_g = 0.0;
+    p_g = t3;
     int64_t i_g = 0;
     for (;;) {
-        if (!((uint8_t)((int64_t)((int64_t)(gs_add_i64((int64_t)(i_g), 7, gs_file0, 212))) <= (int64_t)(((GS_GL->g_in_g.len)))))) goto L1;
-        int64_t t3 = i_g;
-        int64_t t4 = gs_add_i64((int64_t)(i_g), 1, gs_file0, 213);
-        int64_t t5 = gs_add_i64((int64_t)(i_g), 2, gs_file0, 213);
-        int64_t t6 = gs_add_i64((int64_t)(i_g), 3, gs_file0, 213);
-        int64_t t7 = gs_add_i64((int64_t)(i_g), 4, gs_file0, 213);
-        int64_t t8 = gs_add_i64((int64_t)(i_g), 5, gs_file0, 213);
-        int64_t t9 = gs_add_i64((int64_t)(i_g), 6, gs_file0, 213);
-        t10 = move_pose_g((int64_t)gs_f2iwrap((((double *)((GS_GL->g_in_g.base)))[t3])), t_g, (((double *)((GS_GL->g_in_g.base)))[t4]), (((double *)((GS_GL->g_in_g.base)))[t5]), (((double *)((GS_GL->g_in_g.base)))[t6]), (((double *)((GS_GL->g_in_g.base)))[t7]), (((double *)((GS_GL->g_in_g.base)))[t8]), (((double *)((GS_GL->g_in_g.base)))[t9]));
-        q_g = t10;
+        if (!((uint8_t)((int64_t)((int64_t)(gs_add_i64((int64_t)(i_g), 7, gs_file0, 212))) <= (int64_t)(((GS_GL->g_in_g.len)))))) goto L4;
+        int64_t t6 = i_g;
+        int64_t t7 = gs_add_i64((int64_t)(i_g), 1, gs_file0, 213);
+        int64_t t8 = gs_add_i64((int64_t)(i_g), 2, gs_file0, 213);
+        int64_t t9 = gs_add_i64((int64_t)(i_g), 3, gs_file0, 213);
+        int64_t t10 = gs_add_i64((int64_t)(i_g), 4, gs_file0, 213);
+        int64_t t11 = gs_add_i64((int64_t)(i_g), 5, gs_file0, 213);
+        int64_t t12 = gs_add_i64((int64_t)(i_g), 6, gs_file0, 213);
+        (&GS_GL->gs_gstk_g_out_g)->top = t71;
+        GS_GL->g_out_g.len = t72;
+        t13 = move_pose_g((int64_t)gs_f2iwrap((((double *)((GS_GL->g_in_g.base)))[t6])), t_g, (((double *)((GS_GL->g_in_g.base)))[t7]), (((double *)((GS_GL->g_in_g.base)))[t8]), (((double *)((GS_GL->g_in_g.base)))[t9]), (((double *)((GS_GL->g_in_g.base)))[t10]), (((double *)((GS_GL->g_in_g.base)))[t11]), (((double *)((GS_GL->g_in_g.base)))[t12]), gs_sp + 0);
+        t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+        t72 = GS_GL->g_out_g.len;
+        q_g = t13;
         p_g.s_g = ((double)((double)(p_g.s_g)) * (double)(q_g.s_g));
         p_g.sx_g = ((double)((double)(p_g.sx_g)) * (double)(q_g.sx_g));
         p_g.sz_g = ((double)((double)(p_g.sz_g)) * (double)(q_g.sz_g));
@@ -4815,163 +5466,203 @@ static void pose_g(double t_g, int32_t seed_g, int32_t life_g, int64_t gs_sp) {
         p_g.spin_g = ((double)((double)(p_g.spin_g)) + (double)(q_g.spin_g));
         i_g = gs_add_i64(i_g, 7, gs_file0, 218);
     }
-    L1:;
+    L4:;
     if ((uint8_t)((int32_t)((int32_t)(life_g)) == (int32_t)(1))) {
         double breath_g;
-        double t11 = 6.283185307179586;
-        double t12 = t_g;
-        double t13 = 2.4;
-        double t14 = hash_g(seed_g, 1);
-        double t15 = ((double)(t12) / (double)(((double)(t13) + (double)(t14))));
-        double t16 = hash_g(seed_g, 2);
-        double t17 = ((double)(t11) * (double)(((double)(t15) + (double)(t16))));
-        double t18 = gs_sin(t17);
-        breath_g = t18;
+        double t14 = 6.283185307179586;
+        double t15 = t_g;
+        double t16 = 2.4;
+        (&GS_GL->gs_gstk_g_out_g)->top = t71;
+        GS_GL->g_out_g.len = t72;
+        double t17 = hash_g(seed_g, 1, gs_sp + 0);
+        t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+        t72 = GS_GL->g_out_g.len;
+        double t18 = ((double)(t15) / (double)(((double)(t16) + (double)(t17))));
+        (&GS_GL->gs_gstk_g_out_g)->top = t71;
+        GS_GL->g_out_g.len = t72;
+        double t19 = hash_g(seed_g, 2, gs_sp + 0);
+        t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+        t72 = GS_GL->g_out_g.len;
+        double t20 = ((double)(t14) * (double)(((double)(t18) + (double)(t19))));
+        double t21 = gs_sin(t20);
+        breath_g = t21;
         double t_g_2 = t_g;
         int32_t seed_g_2 = seed_g;
         {
-            double t20 = 1.0;
-            double t21 = 1.2;
-            double t22 = hash_g(seed_g_2, 3);
-            double len_g = ((double)(t20) + (double)(((double)(t21) * (double)(t22))));
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 172);
+            if (!((uint8_t)((int64_t)((int64_t)(((t72)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 172);
+            double t23 = 1.0;
+            double t24 = 1.2;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t25 = hash_g(seed_g_2, 3, gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double len_g = ((double)(t23) + (double)(((double)(t24) * (double)(t25))));
             double k_g;
-            double t23 = ((double)((double)(t_g_2)) / (double)(len_g));
-            double t24 = floor(t23);
-            k_g = t24;
+            double t26 = ((double)((double)(t_g_2)) / (double)(len_g));
+            double t27 = floor(t26);
+            k_g = t27;
             double m_g;
-            double t25 = ((double)((double)(t_g_2)) - (double)(((double)((double)(k_g)) * (double)(len_g))));
-            double t26 = ((double)((double)(0.45)) * (double)(len_g));
-            double t27;
-            int32_t seed_g_3 = seed_g_2;
-            double i_g_2 = ((double)((double)(((double)((double)(4.0)) * (double)(k_g)))) + (double)(13.0));
-            {
-                double t29 = hash_g(seed_g_3, (int64_t)gs_f2iwrap(i_g_2));
-                t27 = t29;
-            }
-            double t30 = ((double)(t25) - (double)(((double)(t26) * (double)(t27))));
-            double t31 = settle_g(t30);
-            m_g = t31;
-            t32 = gaze_to_g(seed_g_2, ((double)((double)(k_g)) - (double)(1.0)));
-            a_g = t32;
-            t33 = gaze_to_g(seed_g_2, k_g);
-            b_g = t33;
-            t34.x_g = ((double)((double)(a_g.x_g)) + (double)(((double)((double)(((double)((double)(b_g.x_g)) - (double)(a_g.x_g)))) * (double)(m_g))));
-            t34.z_g = ((double)((double)(a_g.z_g)) + (double)(((double)((double)(((double)((double)(b_g.z_g)) - (double)(a_g.z_g)))) * (double)(m_g))));
-            g_g = t34;
+            double t28 = ((double)((double)(t_g_2)) - (double)(((double)((double)(k_g)) * (double)(len_g))));
+            double t29 = ((double)((double)(0.45)) * (double)(len_g));
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t30 = hi_g(seed_g_2, ((double)((double)(((double)((double)(4.0)) * (double)(k_g)))) + (double)(13.0)), gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double t31 = ((double)(t28) - (double)(((double)(t29) * (double)(t30))));
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t32 = settle_g(t31, gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            m_g = t32;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            t33 = gaze_to_g(seed_g_2, ((double)((double)(k_g)) - (double)(1.0)), gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            a_g = t33;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            t34 = gaze_to_g(seed_g_2, k_g, gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            b_g = t34;
+            t35.x_g = ((double)((double)(a_g.x_g)) + (double)(((double)((double)(((double)((double)(b_g.x_g)) - (double)(a_g.x_g)))) * (double)(m_g))));
+            t35.z_g = ((double)((double)(a_g.z_g)) + (double)(((double)((double)(((double)((double)(b_g.z_g)) - (double)(a_g.z_g)))) * (double)(m_g))));
+            g_g = t35;
         }
-        p_g.ex_g = p_g.ex_g + (((double)((double)(((double)((double)(0.22)) * (double)(g_g.x_g)))) * (double)(p_g.gaze_g)));
-        p_g.ez_g = p_g.ez_g + (((double)((double)(((double)((double)(((double)((double)(0.14)) * (double)(g_g.z_g)))) * (double)(p_g.gaze_g)))) + (double)(((double)((double)(0.015)) * (double)(breath_g)))));
-        p_g.sz_g = p_g.sz_g * (((double)((double)(1.0)) + (double)(((double)((double)(0.015)) * (double)(breath_g)))));
-        p_g.sx_g = p_g.sx_g * (((double)((double)(1.0)) - (double)(((double)((double)(0.01)) * (double)(breath_g)))));
-        double t35 = p_g.eye_g;
-        double t36;
+        p_g.ex_g = (p_g.ex_g + (((double)((double)(((double)((double)(0.22)) * (double)(g_g.x_g)))) * (double)(p_g.gaze_g))));
+        p_g.ez_g = (p_g.ez_g + (((double)((double)(((double)((double)(((double)((double)(0.14)) * (double)(g_g.z_g)))) * (double)(p_g.gaze_g)))) + (double)(((double)((double)(0.015)) * (double)(breath_g))))));
+        p_g.sz_g = (p_g.sz_g * (((double)((double)(1.0)) + (double)(((double)((double)(0.015)) * (double)(breath_g))))));
+        p_g.sx_g = (p_g.sx_g * (((double)((double)(1.0)) - (double)(((double)((double)(0.01)) * (double)(breath_g))))));
+        double t36 = p_g.eye_g;
+        double t37;
         double t_g_3 = t_g;
-        int32_t seed_g_4 = seed_g;
+        int32_t seed_g_3 = seed_g;
         {
-            double t38 = 2.8;
-            double t39 = 4.6;
-            double t40 = hash_g(seed_g_4, 5);
-            double len_g_2 = ((double)(t38) + (double)(((double)(t39) * (double)(t40))));
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 180);
+            if (!((uint8_t)((int64_t)((int64_t)(((t72)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 180);
+            double t39 = 2.8;
+            double t40 = 4.6;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t41 = hash_g(seed_g_3, 5, gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double len_g_2 = ((double)(t39) + (double)(((double)(t40) * (double)(t41))));
             double k_g_2;
-            double t41 = ((double)((double)(t_g_3)) / (double)(len_g_2));
-            double t42 = floor(t41);
-            k_g_2 = t42;
-            double t43 = ((double)((double)(k_g_2)) * (double)(len_g_2));
-            double t44 = ((double)((double)(0.5)) * (double)(len_g_2));
-            double t45;
-            int32_t seed_g_5 = seed_g_4;
-            double i_g_3 = ((double)((double)(((double)((double)(3.0)) * (double)(k_g_2)))) + (double)(20.0));
-            {
-                double t47 = hash_g(seed_g_5, (int64_t)gs_f2iwrap(i_g_3));
-                t45 = t47;
-            }
-            double t0_g = ((double)(t43) + (double)(((double)(t44) * (double)(t45))));
+            double t42 = ((double)((double)(t_g_3)) / (double)(len_g_2));
+            double t43 = floor(t42);
+            k_g_2 = t43;
+            double t44 = ((double)((double)(k_g_2)) * (double)(len_g_2));
+            double t45 = ((double)((double)(0.5)) * (double)(len_g_2));
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t46 = hi_g(seed_g_3, ((double)((double)(((double)((double)(3.0)) * (double)(k_g_2)))) + (double)(20.0)), gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double t0_g = ((double)(t44) + (double)(((double)(t45) * (double)(t46))));
             double twice_g;
-            double t48;
-            int32_t seed_g_6 = seed_g_4;
-            double i_g_4 = ((double)((double)(((double)((double)(3.0)) * (double)(k_g_2)))) + (double)(21.0));
-            {
-                double t50 = hash_g(seed_g_6, (int64_t)gs_f2iwrap(i_g_4));
-                t48 = t50;
-            }
-            if ((uint8_t)((double)((double)(t48)) < (double)(0.25))) {
-                double t51 = shut_g(t_g_3, ((double)((double)(t0_g)) + (double)(0.45)));
-                twice_g = t51;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t47 = hi_g(seed_g_3, ((double)((double)(((double)((double)(3.0)) * (double)(k_g_2)))) + (double)(21.0)), gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            if ((uint8_t)((double)((double)(t47)) < (double)(0.25))) {
+                (&GS_GL->gs_gstk_g_out_g)->top = t71;
+                GS_GL->g_out_g.len = t72;
+                double t48 = shut_g(t_g_3, ((double)((double)(t0_g)) + (double)(0.45)), gs_sp + 0);
+                t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+                t72 = GS_GL->g_out_g.len;
+                twice_g = t48;
             } else {
                 twice_g = 0.0;
             }
-            double t52 = 4.5;
-            double t53 = 3.0;
-            double t54 = hash_g(seed_g_4, 6);
-            double sl_g = ((double)(t52) + (double)(((double)(t53) * (double)(t54))));
+            double t49 = 4.5;
+            double t50 = 3.0;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t51 = hash_g(seed_g_3, 6, gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double sl_g = ((double)(t49) + (double)(((double)(t50) * (double)(t51))));
             double j_g;
-            double t55 = ((double)((double)(t_g_3)) / (double)(sl_g));
-            double t56 = floor(t55);
-            j_g = t56;
-            double t57 = ((double)((double)(j_g)) * (double)(sl_g));
-            double t58 = ((double)((double)(0.4)) * (double)(sl_g));
-            double t59;
-            int32_t seed_g_7 = seed_g_4;
-            double i_g_5 = ((double)((double)(((double)((double)(3.0)) * (double)(j_g)))) + (double)(22.0));
-            {
-                double t61 = hash_g(seed_g_7, (int64_t)gs_f2iwrap(i_g_5));
-                t59 = t61;
-            }
-            double s0_g = ((double)(t57) + (double)(((double)(t58) * (double)(t59))));
+            double t52 = ((double)((double)(t_g_3)) / (double)(sl_g));
+            double t53 = floor(t52);
+            j_g = t53;
+            double t54 = ((double)((double)(j_g)) * (double)(sl_g));
+            double t55 = ((double)((double)(0.4)) * (double)(sl_g));
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t56 = hi_g(seed_g_3, ((double)((double)(((double)((double)(3.0)) * (double)(j_g)))) + (double)(22.0)), gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double s0_g = ((double)(t54) + (double)(((double)(t55) * (double)(t56))));
             double narrow_g;
-            double t62;
-            int32_t seed_g_8 = seed_g_4;
-            double i_g_6 = ((double)((double)(((double)((double)(3.0)) * (double)(j_g)))) + (double)(23.0));
-            {
-                double t64 = hash_g(seed_g_8, (int64_t)gs_f2iwrap(i_g_6));
-                t62 = t64;
-            }
-            if ((uint8_t)((double)((double)(t62)) < (double)(0.6))) {
-                double t65 = hold_g(t_g_3, s0_g, ((double)((double)(s0_g)) + (double)(1.1)), 0.18);
-                narrow_g = t65;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t57 = hi_g(seed_g_3, ((double)((double)(((double)((double)(3.0)) * (double)(j_g)))) + (double)(23.0)), gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            if ((uint8_t)((double)((double)(t57)) < (double)(0.6))) {
+                (&GS_GL->gs_gstk_g_out_g)->top = t71;
+                GS_GL->g_out_g.len = t72;
+                double t58 = hold_g(t_g_3, s0_g, ((double)((double)(s0_g)) + (double)(1.1)), 0.18, gs_sp + 0);
+                t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+                t72 = GS_GL->g_out_g.len;
+                narrow_g = t58;
             } else {
                 narrow_g = 0.0;
             }
-            double t66 = 1.0;
-            double t67 = 0.92;
-            double t68 = shut_g(t_g_3, t0_g);
-            double t69 = jmax_g(t68, twice_g);
-            double t70 = ((double)(t66) - (double)(((double)(t67) * (double)(t69))));
-            t36 = ((double)(t70) * (double)(((double)((double)(1.0)) - (double)(((double)((double)(0.45)) * (double)(narrow_g))))));
+            double t59 = 1.0;
+            double t60 = 0.92;
+            (&GS_GL->gs_gstk_g_out_g)->top = t71;
+            GS_GL->g_out_g.len = t72;
+            double t61 = shut_g(t_g_3, t0_g, gs_sp + 0);
+            t71 = (&GS_GL->gs_gstk_g_out_g)->top;
+            t72 = GS_GL->g_out_g.len;
+            double t62 = jmax_g(t61, twice_g);
+            double t63 = ((double)(t59) - (double)(((double)(t60) * (double)(t62))));
+            t37 = ((double)(t63) * (double)(((double)((double)(1.0)) - (double)(((double)((double)(0.45)) * (double)(narrow_g))))));
         }
-        p_g.eye_g = t35 * (t36);
+        p_g.eye_g = (t36 * (t37));
     }
-    t78 = (uint8_t *)((GS_GL->g_out_g.base));
-    t79 = 0;
-    t72.e[0] = p_g.s_g;
-    t72.e[1] = p_g.sx_g;
-    t72.e[2] = p_g.sz_g;
-    t72.e[3] = p_g.dx_g;
-    t72.e[4] = p_g.z_g;
-    t72.e[5] = p_g.up_g;
-    t72.e[6] = p_g.tilt_g;
-    t72.e[7] = p_g.eye_g;
-    t72.e[8] = p_g.gaze_g;
-    t72.e[9] = p_g.ex_g;
-    t72.e[10] = p_g.ez_g;
-    t72.e[11] = p_g.spin_g;
-    t71 = t72;
-    for (int64_t t73 = 0; t73 < (12); t73++) {
-        double v_g = t71.e[t73];
-        double t76 = v_g;
-        double *t77 = (double *)t78;
-        *(double *)t78 = t76;
-        t78 += 8;
-        t79++;
+    t71 = (uint8_t *)((GS_GL->g_out_g.base));
+    t72 = 0;
+    t65.e[0] = p_g.s_g;
+    t65.e[1] = p_g.sx_g;
+    t65.e[2] = p_g.sz_g;
+    t65.e[3] = p_g.dx_g;
+    t65.e[4] = p_g.z_g;
+    t65.e[5] = p_g.up_g;
+    t65.e[6] = p_g.tilt_g;
+    t65.e[7] = p_g.eye_g;
+    t65.e[8] = p_g.gaze_g;
+    t65.e[9] = p_g.ex_g;
+    t65.e[10] = p_g.ez_g;
+    t65.e[11] = p_g.spin_g;
+    t64 = t65;
+    for (int64_t t66 = 0; t66 < (12); t66++) {
+        double v_g = t64.e[t66];
+        double t69 = v_g;
+        double *t70 = (double *)t71;
+        *(double *)t71 = t69;
+        t71 += 8;
+        t72++;
     }
-    (&GS_GL->gs_gstk_g_out_g)->top = t78;
-    GS_GL->g_out_g.len = t79;
+    (&GS_GL->gs_gstk_g_out_g)->top = t71;
+    GS_GL->g_out_g.len = t72;
     return;
 }
 
 static void marks_g(int64_t gs_sp) {
     uint8_t *t34 = (&GS_GL->gs_gstk_g_out_g)->top;
     int64_t t35 = GS_GL->g_out_g.len;
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 246);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 246);
     t34 = (uint8_t *)((GS_GL->g_out_g.base));
     t35 = 0;
     int64_t from_g = 0;
@@ -4981,14 +5672,16 @@ static void marks_g(int64_t gs_sp) {
         int64_t e_g;
         int64_t i_g_2 = i_g;
         {
+            if (!((uint8_t)((int64_t)((int64_t)(i_g_2)) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 238);
+            if (!((uint8_t)((int64_t)((int64_t)(i_g_2)) < (int64_t)(((GS_GL->g_in_g.len)))))) gs_abort(GS_E_ASSERT, gs_file0, 238);
             if ((uint8_t)((int64_t)((int64_t)(gs_add_i64((int64_t)(i_g_2), 1, gs_file0, 239))) >= (int64_t)(((GS_GL->g_in_g.len))))) goto L4;
             int64_t t6 = i_g_2;
-            if (!((uint8_t)(!((double)((double)((((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t6), (GS_GL->g_in_g.len), gs_file0, 239)]))) == (double)(94.0))))) goto L5;
+            if (!((uint8_t)(!((double)((double)((((double *)((GS_GL->g_in_g.base)))[t6]))) == (double)(94.0))))) goto L5;
             int64_t t7 = i_g_2;
             if ((uint8_t)(!((double)((double)((((double *)((GS_GL->g_in_g.base)))[t7]))) == (double)(95.0)))) goto L4;
             L5:;
             int64_t t8 = gs_add_i64((int64_t)(i_g_2), 1, gs_file0, 239);
-            if (!((uint8_t)(!((double)((double)((((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t8), (GS_GL->g_in_g.len), gs_file0, 239)]))) == (double)(123.0))))) goto L3;
+            if (!((uint8_t)(!((double)((double)((((double *)((GS_GL->g_in_g.base)))[t8]))) == (double)(123.0))))) goto L3;
             L4:;
             {
                 e_g = -1;
@@ -4999,7 +5692,7 @@ static void marks_g(int64_t gs_sp) {
             int64_t t10 = ((GS_GL->g_in_g.len));
             for (int64_t j_g = t9; j_g < t10; j_g++) {
                 int64_t t13 = j_g;
-                if ((uint8_t)((double)((double)((((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t13), (GS_GL->g_in_g.len), gs_file0, 240)]))) == (double)(125.0))) {
+                if ((uint8_t)((double)((double)((((double *)((GS_GL->g_in_g.base)))[t13]))) == (double)(125.0))) {
                     e_g = j_g;
                     goto L2;
                 }
@@ -5077,112 +5770,33 @@ static void marks_g(int64_t gs_sp) {
     return;
 }
 
-static double small_g(double c_g, double shift_g) {
-    if (!((uint8_t)((double)((double)(c_g)) >= (double)(48.0)))) goto L0;
-    if (!((uint8_t)((double)((double)(c_g)) <= (double)(57.0)))) goto L0;
-    {
-        if ((uint8_t)((double)((double)(shift_g)) < (double)(0.0))) {
-            double t1;
-            t1 = ((double)((double)(((double)((double)(8320.0)) + (double)(c_g)))) - (double)(48.0));
-            return t1;
-        }
-        if ((uint8_t)((double)((double)(c_g)) == (double)(49.0))) {
-            double t2;
-            t2 = 185.0;
-            return t2;
-        }
-        if ((uint8_t)((double)((double)(c_g)) == (double)(50.0))) {
-            double t3;
-            t3 = 178.0;
-            return t3;
-        }
-        if ((uint8_t)((double)((double)(c_g)) == (double)(51.0))) {
-            double t4;
-            t4 = 179.0;
-            return t4;
-        }
-        double t5;
-        t5 = ((double)((double)(((double)((double)(8304.0)) + (double)(c_g)))) - (double)(48.0));
-        return t5;
-    }
-    L0:;
-    double base_g;
-    if ((uint8_t)((double)((double)(shift_g)) > (double)(0.0))) {
-        base_g = 8314.0;
-    } else {
-        base_g = 8330.0;
-    }
-    if ((uint8_t)((double)((double)(c_g)) == (double)(43.0))) {
-        double t6;
-        t6 = base_g;
-        return t6;
-    }
-    if ((uint8_t)((double)((double)(c_g)) == (double)(45.0))) {
-        double t7;
-        t7 = ((double)((double)(base_g)) + (double)(1.0));
-        return t7;
-    }
-    if ((uint8_t)((double)((double)(c_g)) == (double)(61.0))) {
-        double t8;
-        t8 = ((double)((double)(base_g)) + (double)(2.0));
-        return t8;
-    }
-    if ((uint8_t)((double)((double)(c_g)) == (double)(40.0))) {
-        double t9;
-        t9 = ((double)((double)(base_g)) + (double)(3.0));
-        return t9;
-    }
-    if ((uint8_t)((double)((double)(c_g)) == (double)(41.0))) {
-        double t10;
-        t10 = ((double)((double)(base_g)) + (double)(4.0));
-        return t10;
-    }
-    if (!((uint8_t)((double)((double)(shift_g)) > (double)(0.0)))) goto L11;
-    if (!((uint8_t)((double)((double)(c_g)) == (double)(110.0)))) goto L11;
-    {
-        double t12;
-        t12 = 8319.0;
-        return t12;
-    }
-    L11:;
-    if (!((uint8_t)((double)((double)(shift_g)) > (double)(0.0)))) goto L13;
-    if (!((uint8_t)((double)((double)(c_g)) == (double)(105.0)))) goto L13;
-    {
-        double t14;
-        t14 = 8305.0;
-        return t14;
-    }
-    L13:;
-    double t15;
-    t15 = 0.0;
-    return t15;
-}
-
 static void plain_g(int64_t gs_sp) {
     gs_rhdr parts_g;
-    uint8_t *t59 = (&GS_GL->gs_gstk_g_out_g)->top;
-    int64_t t60 = GS_GL->g_out_g.len;
-    (&GS_GL->gs_gstk_g_out_g)->top = t59;
-    GS_GL->g_out_g.len = t60;
+    uint8_t *t67 = (&GS_GL->gs_gstk_g_out_g)->top;
+    int64_t t68 = GS_GL->g_out_g.len;
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 285);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 285);
+    (&GS_GL->gs_gstk_g_out_g)->top = t67;
+    GS_GL->g_out_g.len = t68;
     marks_g(gs_sp + 0);
-    t59 = (&GS_GL->gs_gstk_g_out_g)->top;
-    t60 = GS_GL->g_out_g.len;
+    t67 = (&GS_GL->gs_gstk_g_out_g)->top;
+    t68 = GS_GL->g_out_g.len;
     parts_g.base = GS(gs_sp + 0)->top; parts_g.len = 0;
     parts_g.len = 0;
-    int64_t t0 = (t60);
+    int64_t t0 = (t68);
     uint8_t *t1 = (uint8_t *)((GS_GL->g_out_g.base));
-    uint8_t *t61 = GS(gs_sp + 0)->top;
+    uint8_t *t69 = GS(gs_sp + 0)->top;
     for (int64_t t2 = 0; t2 < (t0); t2++) {
         double v_g = (*(double *)((t1) + t2 * 8));
         double t5 = v_g;
-        double *t6 = (double *)t61;
-        *(double *)t61 = t5;
-        t61 += 8;
+        double *t6 = (double *)t69;
+        *(double *)t69 = t5;
+        t69 += 8;
         parts_g.len++;
     }
-    GS(gs_sp + 0)->top = t61;
-    t59 = (uint8_t *)((GS_GL->g_out_g.base));
-    t60 = 0;
+    GS(gs_sp + 0)->top = t69;
+    t67 = (uint8_t *)((GS_GL->g_out_g.base));
+    t68 = 0;
     int64_t k_g = 0;
     for (;;) {
         if (!((uint8_t)((int64_t)((int64_t)(gs_add_i64((int64_t)(k_g), 3, gs_file0, 291))) <= (int64_t)(((parts_g.len)))))) goto L7;
@@ -5199,10 +5813,10 @@ static void plain_g(int64_t gs_sp) {
             for (int64_t i_g = t12; i_g < t13; i_g++) {
                 int64_t t16 = i_g;
                 double t17 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t16), (GS_GL->g_in_g.len), gs_file0, 296)]);
-                double *t18 = (double *)t59;
-                *(double *)t59 = t17;
-                t59 += 8;
-                t60++;
+                double *t18 = (double *)t67;
+                *(double *)t67 = t17;
+                t67 += 8;
+                t68++;
             }
             goto L8;
         }
@@ -5211,90 +5825,234 @@ static void plain_g(int64_t gs_sp) {
         int64_t t19 = a_g;
         int64_t t20 = b_g;
         for (int64_t i_g_2 = t19; i_g_2 < t20; i_g_2++) {
-            int64_t t23 = i_g_2;
-            double t24 = small_g((((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t23), (GS_GL->g_in_g.len), gs_file0, 300)]), shift_g);
-            if ((uint8_t)((double)((double)(t24)) == (double)(0.0))) {
+            double t23;
+            int64_t t24 = i_g_2;
+            double c_g = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t24), (GS_GL->g_in_g.len), gs_file0, 300)]);
+            double shift_g_2 = shift_g;
+            {
+                if (!((uint8_t)(!((double)((double)(shift_g_2)) == (double)(0.0))))) gs_abort(GS_E_ASSERT, gs_file0, 262);
+                if (!((uint8_t)((double)((double)(c_g)) >= (double)(0.0)))) gs_abort(GS_E_ASSERT, gs_file0, 262);
+                if (!((uint8_t)((double)((double)(c_g)) >= (double)(48.0)))) goto L26;
+                if (!((uint8_t)((double)((double)(c_g)) <= (double)(57.0)))) goto L26;
+                {
+                    if ((uint8_t)((double)((double)(shift_g_2)) < (double)(0.0))) {
+                        t23 = ((double)((double)(((double)((double)(8320.0)) + (double)(c_g)))) - (double)(48.0));
+                        goto L25;
+                    }
+                    if ((uint8_t)((double)((double)(c_g)) == (double)(49.0))) {
+                        t23 = 185.0;
+                        goto L25;
+                    }
+                    if ((uint8_t)((double)((double)(c_g)) == (double)(50.0))) {
+                        t23 = 178.0;
+                        goto L25;
+                    }
+                    if ((uint8_t)((double)((double)(c_g)) == (double)(51.0))) {
+                        t23 = 179.0;
+                        goto L25;
+                    }
+                    t23 = ((double)((double)(((double)((double)(8304.0)) + (double)(c_g)))) - (double)(48.0));
+                    goto L25;
+                }
+                L26:;
+                double base_g;
+                if ((uint8_t)((double)((double)(shift_g_2)) > (double)(0.0))) {
+                    base_g = 8314.0;
+                } else {
+                    base_g = 8330.0;
+                }
+                if ((uint8_t)((double)((double)(c_g)) == (double)(43.0))) {
+                    t23 = base_g;
+                    goto L25;
+                }
+                if ((uint8_t)((double)((double)(c_g)) == (double)(45.0))) {
+                    t23 = ((double)((double)(base_g)) + (double)(1.0));
+                    goto L25;
+                }
+                if ((uint8_t)((double)((double)(c_g)) == (double)(61.0))) {
+                    t23 = ((double)((double)(base_g)) + (double)(2.0));
+                    goto L25;
+                }
+                if ((uint8_t)((double)((double)(c_g)) == (double)(40.0))) {
+                    t23 = ((double)((double)(base_g)) + (double)(3.0));
+                    goto L25;
+                }
+                if ((uint8_t)((double)((double)(c_g)) == (double)(41.0))) {
+                    t23 = ((double)((double)(base_g)) + (double)(4.0));
+                    goto L25;
+                }
+                if (!((uint8_t)((double)((double)(shift_g_2)) > (double)(0.0)))) goto L27;
+                if (!((uint8_t)((double)((double)(c_g)) == (double)(110.0)))) goto L27;
+                {
+                    t23 = 8319.0;
+                    goto L25;
+                }
+                L27:;
+                if (!((uint8_t)((double)((double)(shift_g_2)) > (double)(0.0)))) goto L28;
+                if (!((uint8_t)((double)((double)(c_g)) == (double)(105.0)))) goto L28;
+                {
+                    t23 = 8305.0;
+                    goto L25;
+                }
+                L28:;
+                t23 = 0.0;
+            }
+            L25:;
+            if ((uint8_t)((double)((double)(t23)) == (double)(0.0))) {
                 all_g = 0;
             }
-            int64_t t26 = i_g_2;
-            double c_g = (((double *)((GS_GL->g_in_g.base)))[t26]);
+            int64_t t30 = i_g_2;
+            double c_g_2 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t30), (GS_GL->g_in_g.len), gs_file0, 301)]);
             {
-                if (!((uint8_t)((double)((double)(c_g)) >= (double)(65.0)))) goto L28;
-                if ((uint8_t)((double)((double)(c_g)) <= (double)(90.0))) goto L25;
-                L28:;
-                if (!((uint8_t)((double)((double)(c_g)) >= (double)(97.0)))) goto L29;
-                if ((uint8_t)((double)((double)(c_g)) <= (double)(122.0))) goto L25;
-                L29:;
+                if (!((uint8_t)((double)((double)(c_g_2)) == (double)(c_g_2)))) gs_abort(GS_E_ASSERT, gs_file0, 280);
+                if (!((uint8_t)((double)((double)(c_g_2)) >= (double)(0.0)))) gs_abort(GS_E_ASSERT, gs_file0, 280);
+                if (!((uint8_t)((double)((double)(c_g_2)) >= (double)(65.0)))) goto L32;
+                if ((uint8_t)((double)((double)(c_g_2)) <= (double)(90.0))) goto L29;
+                L32:;
+                if (!((uint8_t)((double)((double)(c_g_2)) >= (double)(97.0)))) goto L33;
+                if ((uint8_t)((double)((double)(c_g_2)) <= (double)(122.0))) goto L29;
+                L33:;
             }
             {
                 word_g = 0;
             }
-            L25:;
+            L29:;
         }
         if (all_g) {
-            int64_t t30 = a_g;
-            int64_t t31 = b_g;
-            for (int64_t i_g_3 = t30; i_g_3 < t31; i_g_3++) {
-                int64_t t34 = i_g_3;
-                double t35 = small_g((((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t34), (GS_GL->g_in_g.len), gs_file0, 303)]), shift_g);
-                double t36 = t35;
-                double *t37 = (double *)t59;
-                *(double *)t59 = t36;
-                t59 += 8;
-                t60++;
+            int64_t t34 = a_g;
+            int64_t t35 = b_g;
+            for (int64_t i_g_3 = t34; i_g_3 < t35; i_g_3++) {
+                double t38;
+                int64_t t39 = i_g_3;
+                double c_g_3 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t39), (GS_GL->g_in_g.len), gs_file0, 303)]);
+                double shift_g_3 = shift_g;
+                {
+                    if (!((uint8_t)(!((double)((double)(shift_g_3)) == (double)(0.0))))) gs_abort(GS_E_ASSERT, gs_file0, 262);
+                    if (!((uint8_t)((double)((double)(c_g_3)) >= (double)(0.0)))) gs_abort(GS_E_ASSERT, gs_file0, 262);
+                    if (!((uint8_t)((double)((double)(c_g_3)) >= (double)(48.0)))) goto L41;
+                    if (!((uint8_t)((double)((double)(c_g_3)) <= (double)(57.0)))) goto L41;
+                    {
+                        if ((uint8_t)((double)((double)(shift_g_3)) < (double)(0.0))) {
+                            t38 = ((double)((double)(((double)((double)(8320.0)) + (double)(c_g_3)))) - (double)(48.0));
+                            goto L40;
+                        }
+                        if ((uint8_t)((double)((double)(c_g_3)) == (double)(49.0))) {
+                            t38 = 185.0;
+                            goto L40;
+                        }
+                        if ((uint8_t)((double)((double)(c_g_3)) == (double)(50.0))) {
+                            t38 = 178.0;
+                            goto L40;
+                        }
+                        if ((uint8_t)((double)((double)(c_g_3)) == (double)(51.0))) {
+                            t38 = 179.0;
+                            goto L40;
+                        }
+                        t38 = ((double)((double)(((double)((double)(8304.0)) + (double)(c_g_3)))) - (double)(48.0));
+                        goto L40;
+                    }
+                    L41:;
+                    double base_g_2;
+                    if ((uint8_t)((double)((double)(shift_g_3)) > (double)(0.0))) {
+                        base_g_2 = 8314.0;
+                    } else {
+                        base_g_2 = 8330.0;
+                    }
+                    if ((uint8_t)((double)((double)(c_g_3)) == (double)(43.0))) {
+                        t38 = base_g_2;
+                        goto L40;
+                    }
+                    if ((uint8_t)((double)((double)(c_g_3)) == (double)(45.0))) {
+                        t38 = ((double)((double)(base_g_2)) + (double)(1.0));
+                        goto L40;
+                    }
+                    if ((uint8_t)((double)((double)(c_g_3)) == (double)(61.0))) {
+                        t38 = ((double)((double)(base_g_2)) + (double)(2.0));
+                        goto L40;
+                    }
+                    if ((uint8_t)((double)((double)(c_g_3)) == (double)(40.0))) {
+                        t38 = ((double)((double)(base_g_2)) + (double)(3.0));
+                        goto L40;
+                    }
+                    if ((uint8_t)((double)((double)(c_g_3)) == (double)(41.0))) {
+                        t38 = ((double)((double)(base_g_2)) + (double)(4.0));
+                        goto L40;
+                    }
+                    if (!((uint8_t)((double)((double)(shift_g_3)) > (double)(0.0)))) goto L42;
+                    if (!((uint8_t)((double)((double)(c_g_3)) == (double)(110.0)))) goto L42;
+                    {
+                        t38 = 8319.0;
+                        goto L40;
+                    }
+                    L42:;
+                    if (!((uint8_t)((double)((double)(shift_g_3)) > (double)(0.0)))) goto L43;
+                    if (!((uint8_t)((double)((double)(c_g_3)) == (double)(105.0)))) goto L43;
+                    {
+                        t38 = 8305.0;
+                        goto L40;
+                    }
+                    L43:;
+                    t38 = 0.0;
+                }
+                L40:;
+                double t44 = t38;
+                double *t45 = (double *)t67;
+                *(double *)t67 = t44;
+                t67 += 8;
+                t68++;
             }
             goto L8;
         }
         if (word_g) {
-            int64_t t38 = a_g;
-            int64_t t39 = b_g;
-            for (int64_t i_g_4 = t38; i_g_4 < t39; i_g_4++) {
-                int64_t t42 = i_g_4;
-                double t43 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t42), (GS_GL->g_in_g.len), gs_file0, 304)]);
-                double *t44 = (double *)t59;
-                *(double *)t59 = t43;
-                t59 += 8;
-                t60++;
+            int64_t t46 = a_g;
+            int64_t t47 = b_g;
+            for (int64_t i_g_4 = t46; i_g_4 < t47; i_g_4++) {
+                int64_t t50 = i_g_4;
+                double t51 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t50), (GS_GL->g_in_g.len), gs_file0, 304)]);
+                double *t52 = (double *)t67;
+                *(double *)t67 = t51;
+                t67 += 8;
+                t68++;
             }
             goto L8;
         }
-        double t45;
+        double t53;
         if ((uint8_t)((double)((double)(shift_g)) > (double)(0.0))) {
-            t45 = 94.0;
+            t53 = 94.0;
         } else {
-            t45 = 95.0;
+            t53 = 95.0;
         }
-        double t46 = t45;
-        double *t47 = (double *)t59;
-        *(double *)t59 = t46;
-        t59 += 8;
-        t60++;
-        double t48 = 40.0;
-        double *t49 = (double *)t59;
-        *(double *)t59 = t48;
-        t59 += 8;
-        t60++;
-        int64_t t50 = a_g;
-        int64_t t51 = b_g;
-        for (int64_t i_g_5 = t50; i_g_5 < t51; i_g_5++) {
-            int64_t t54 = i_g_5;
-            double t55 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t54), (GS_GL->g_in_g.len), gs_file0, 307)]);
-            double *t56 = (double *)t59;
-            *(double *)t59 = t55;
-            t59 += 8;
-            t60++;
+        double t54 = t53;
+        double *t55 = (double *)t67;
+        *(double *)t67 = t54;
+        t67 += 8;
+        t68++;
+        double t56 = 40.0;
+        double *t57 = (double *)t67;
+        *(double *)t67 = t56;
+        t67 += 8;
+        t68++;
+        int64_t t58 = a_g;
+        int64_t t59 = b_g;
+        for (int64_t i_g_5 = t58; i_g_5 < t59; i_g_5++) {
+            int64_t t62 = i_g_5;
+            double t63 = (((double *)((GS_GL->g_in_g.base)))[GS_IDX((int64_t)(t62), (GS_GL->g_in_g.len), gs_file0, 307)]);
+            double *t64 = (double *)t67;
+            *(double *)t67 = t63;
+            t67 += 8;
+            t68++;
         }
-        double t57 = 41.0;
-        double *t58 = (double *)t59;
-        *(double *)t59 = t57;
-        t59 += 8;
-        t60++;
+        double t65 = 41.0;
+        double *t66 = (double *)t67;
+        *(double *)t67 = t65;
+        t67 += 8;
+        t68++;
         L8:;
     }
     L7:;
     GS(gs_sp + 0)->top = parts_g.base;
-    (&GS_GL->gs_gstk_g_out_g)->top = t59;
-    GS_GL->g_out_g.len = t60;
+    (&GS_GL->gs_gstk_g_out_g)->top = t67;
+    GS_GL->g_out_g.len = t68;
     return;
 }
 
@@ -5322,11 +6080,15 @@ static double stand_in_g(void) {
     return t0;
 }
 
-static double r3_g(double v_g) {
+static double r3_g(double v_g, int64_t gs_sp) {
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 325);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 325);
     double t0;
     double t1;
     double v_g_2 = ((double)((double)(v_g)) * (double)(1000.0));
     {
+        if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 19);
+        if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_out_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 19);
         double f_g;
         double t3 = v_g_2;
         double t4 = floor(t3);
@@ -5341,9 +6103,11 @@ static double r3_g(double v_g) {
     return t0;
 }
 
-static double stand_in_seconds_g(int32_t n_g) {
+static double stand_in_seconds_g(int32_t n_g, int64_t gs_sp) {
+    if (!((uint8_t)((int32_t)((int32_t)(n_g)) >= (int32_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 328);
+    if (!((uint8_t)((int32_t)((int32_t)(n_g)) < (int32_t)(100000)))) gs_abort(GS_E_ASSERT, gs_file0, 328);
     double t0;
-    double t1 = r3_g(((double)((double)(0.066)) * (double)((double)(n_g))));
+    double t1 = r3_g(((double)((double)(0.066)) * (double)((double)(n_g))), gs_sp + 0);
     t0 = t1;
     return t0;
 }
@@ -5351,6 +6115,8 @@ static double stand_in_seconds_g(int32_t n_g) {
 static double timeline_g(int64_t gs_sp) {
     uint8_t *t20 = (&GS_GL->gs_gstk_g_out_g)->top;
     int64_t t21 = GS_GL->g_out_g.len;
+    if (!((uint8_t)((int64_t)((int64_t)((int64_t)((uint64_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len))))) % (uint64_t)((int64_t)(2))))) == (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 332);
+    if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) < (int64_t)(1000000)))) gs_abort(GS_E_ASSERT, gs_file0, 332);
     t20 = (uint8_t *)((GS_GL->g_out_g.base));
     t21 = 0;
     double t_g = 0.04999999999999999;
@@ -5360,9 +6126,13 @@ static double timeline_g(int64_t gs_sp) {
         double start_g;
         double v_g = ((double)((double)(t_g)) + (double)(0.45));
         {
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 325);
+            if (!((uint8_t)((int64_t)((int64_t)(((t21)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 325);
             double t3;
             double v_g_2 = ((double)((double)(v_g)) * (double)(1000.0));
             {
+                if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 19);
+                if (!((uint8_t)((int64_t)((int64_t)(((t21)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 19);
                 double f_g;
                 double t5 = v_g_2;
                 double t6 = floor(t5);
@@ -5379,9 +6149,13 @@ static double timeline_g(int64_t gs_sp) {
         int64_t t7 = i_g;
         double v_g_3 = ((double)((double)(((double)((double)(t_g)) + (double)(0.45)))) + (double)((((double *)((GS_GL->g_in_g.base)))[t7])));
         {
+            if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 325);
+            if (!((uint8_t)((int64_t)((int64_t)(((t21)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 325);
             double t9;
             double v_g_4 = ((double)((double)(v_g_3)) * (double)(1000.0));
             {
+                if (!((uint8_t)((int64_t)((int64_t)(((GS_GL->g_in_g.len)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 19);
+                if (!((uint8_t)((int64_t)((int64_t)(((t21)))) >= (int64_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 19);
                 double f_g_2;
                 double t11 = v_g_4;
                 double t12 = floor(t11);
@@ -5413,7 +6187,11 @@ static double timeline_g(int64_t gs_sp) {
     if ((uint8_t)((int64_t)((int64_t)(i_g)) == (int64_t)(0))) {
         t18 = 0.0;
     } else {
-        double t19 = r3_g(((double)((double)(t_g)) + (double)(0.8)));
+        (&GS_GL->gs_gstk_g_out_g)->top = t20;
+        GS_GL->g_out_g.len = t21;
+        double t19 = r3_g(((double)((double)(t_g)) + (double)(0.8)), gs_sp + 0);
+        t20 = (&GS_GL->gs_gstk_g_out_g)->top;
+        t21 = GS_GL->g_out_g.len;
         t18 = t19;
     }
     (&GS_GL->gs_gstk_g_out_g)->top = t20;
@@ -5422,6 +6200,8 @@ static double timeline_g(int64_t gs_sp) {
 }
 
 static int32_t find_g(int32_t n_g, int64_t gs_sp) {
+    if (!((uint8_t)((int32_t)((int32_t)(n_g)) >= (int32_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 348);
+    if (!((uint8_t)((int64_t)((int64_t)(n_g)) <= (int64_t)(((GS_GL->g_in_g.len)))))) gs_abort(GS_E_ASSERT, gs_file0, 348);
     int64_t w_g = gs_sub_i64((int64_t)(((GS_GL->g_in_g.len))), n_g, gs_file0, 349);
     int64_t k_g = 0;
     for (;;) {
@@ -5450,9 +6230,12 @@ static int32_t find_g(int32_t n_g, int64_t gs_sp) {
     return t8;
 }
 
-static double cue_time_g(double start_g, double end_g, int32_t k_g, int32_t n_g, double offset_g) {
+static double cue_time_g(double start_g, double end_g, int32_t k_g, int32_t n_g, double offset_g, int64_t gs_sp) {
+    if (!((uint8_t)((int32_t)((int32_t)(n_g)) > (int32_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 362);
+    if (!((uint8_t)((int32_t)((int32_t)(k_g)) >= (int32_t)(0)))) gs_abort(GS_E_ASSERT, gs_file0, 362);
+    if (!((uint8_t)((double)((double)(end_g)) >= (double)(start_g)))) gs_abort(GS_E_ASSERT, gs_file0, 362);
     double t0;
-    double t1 = r3_g(((double)((double)(((double)((double)(start_g)) + (double)(((double)((double)(((double)((double)(((double)((double)(end_g)) - (double)(start_g)))) * (double)((double)(k_g))))) / (double)((double)(n_g))))))) + (double)(offset_g)));
+    double t1 = r3_g(((double)((double)(((double)((double)(start_g)) + (double)(((double)((double)(((double)((double)(((double)((double)(end_g)) - (double)(start_g)))) * (double)((double)(k_g))))) / (double)((double)(n_g))))))) + (double)(offset_g)), gs_sp + 0);
     t0 = t1;
     return t0;
 }
@@ -5493,7 +6276,7 @@ void goose_init(int argc, char **argv) {
 void clear(void) {
     if (!gs_program_initialized)
         gs_panic("goose_init must be called before exported functions");
-    clear_g(0);
+    clear_input_g(0);
 }
 
 void put(double gs_export_arg0) {
@@ -5571,7 +6354,7 @@ double stand_in(void) {
 double stand_in_seconds(int32_t gs_export_arg0_4) {
     if (!gs_program_initialized)
         gs_panic("goose_init must be called before exported functions");
-    return stand_in_seconds_g(gs_export_arg0_4);
+    return stand_in_seconds_g(gs_export_arg0_4, 0);
 }
 
 double timeline(void) {
@@ -5589,6 +6372,6 @@ int32_t find(int32_t gs_export_arg0_5) {
 double cue_time(double gs_export_arg0_6, double gs_export_arg1_2, int32_t gs_export_arg2_2, int32_t gs_export_arg3, double gs_export_arg4) {
     if (!gs_program_initialized)
         gs_panic("goose_init must be called before exported functions");
-    return cue_time_g(gs_export_arg0_6, gs_export_arg1_2, gs_export_arg2_2, gs_export_arg3, gs_export_arg4);
+    return cue_time_g(gs_export_arg0_6, gs_export_arg1_2, gs_export_arg2_2, gs_export_arg3, gs_export_arg4, 0);
 }
 

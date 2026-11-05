@@ -11,13 +11,13 @@ interface Seg { t: number; shot: string; frame: (string | undefined)[]; view?: n
 const PAGE = 'https://www.hometeamns.sg/khatib';
 const E = { estimated: true, source: 'estimated' };
 
-export function build(): FinishedReport {
-  const b = new Builder({ title: 'HomeTeamNS Khatib: a visit to the Grand Ballroom (approximate)', author: 'Toybox eval', ground: 'plain', look: 'indoor', size: [140, 100], color: '#d9d4c7' });
-  const cmd = (t: string, a: Args) => b.cmd(t, a);
-  const place = (model: string, at: Vec3 | number[], extra: Args = {}) => cmd('place', { model, at, ...E, ...extra });
-  cmd('set_cutaway', { ceilings: true, nearWalls: true });
-  cmd('add_credit', { text: `Public facts: address and ballroom name from ${PAGE}. The floor plan is not public. All sizes, positions and the route are approximate.` });
+type Cmd = (t: string, a: Args) => unknown;
+type Place = (model: string, at: Vec3 | number[], extra?: Args) => unknown;
+interface Ctx { b: Builder; cmd: Cmd; place: Place }
+interface Ends { entrance: number; reception: number; turn: number; stairs: number; corridor: number; door: number; hall: number }
 
+// The ground floor. Returns the id of the entrance door.
+function groundFloor({ cmd, place }: Ctx): string | undefined {
   // ---------- ground floor, x east, z south. Entrance on the south wall.
   const gf = cmd('build_room', { id: 'gf', at: [20, 0, -12], size: [70, 32, 4.5], doors: [{ wall: 's', at: 15, width: 2.4 }], ceiling: false, ...E });
   const door = idsOf(gf).find((i) => i.startsWith('gf-s-door'));
@@ -34,6 +34,11 @@ export function build(): FinishedReport {
   cmd('build_stairs', { id: 'stair-b', from: [13.3, 2.25, -7.18], yaw: 180, height: 2.25, ...E });
   cmd('place', { model: 'floor-tile', at: [12.65, 2.23, -6.5], scale: [1.4, 1, 0.65], tags: ['floor'], id: 'landing', ...E });
 
+  return door;
+}
+
+// Level 2. Returns the id of the ballroom door.
+function levelTwo({ cmd, place }: Ctx): string | undefined {
   // ---------- level 2: a corridor and the ballroom (1,014 square metres in the public page: 39 m by 26 m is an estimate of its shape)
   cmd('build_room', { id: 'corr', at: [13.3, 4.5, -18], size: [3, 14, 3.2], doors: [{ wall: 's', at: 1.5, width: 1.4 }, { wall: 'e', at: 10, width: 1.6 }], ...E });
   const ball = cmd('build_room', { id: 'ball', at: [34.3, 4.5, -15], size: [39, 26, 6], doors: [{ wall: 'w', at: 13, width: 1.6 }], ...E });
@@ -42,7 +47,11 @@ export function build(): FinishedReport {
   let k = 0;
   for (const x of [26, 32, 38, 44]) for (const z of [-24, -15, -6]) place('banquet-table-8', [x, 4.5, z], { id: `bt-${++k}` });
   place('plant', [17, 4.5, -13], { id: 'plant-2' }); place('plant', [17, 4.5, -17]);
+  return bdoor;
+}
 
+// The visitor and the walk. Returns the times at which the walk reaches each stage.
+function walk({ place, cmd }: Ctx): Ends {
   // ---------- the visitor (one person, variant fixed)
   place('person', [0, 0, 12], { id: 'visitor', variant: 9, colors: { shirt: '#3f6e9a', pants: '#3a3f47' } });
   const P: Vec3[] = [[0, 0, 12], [0, 0, 3.5], [0, 0, -4], [0, 0, -8], [0, 0, -10.2], [8, 0, -12.3], [12, 0, -12.3], [12, 0, -11.1], [12, 2.25, -7.18], [12.65, 2.25, -6.5], [13.3, 2.25, -7.18], [13.3, 4.5, -11.1], [13.3, 4.5, -15], [14.8, 4.5, -15], [17, 4.5, -15], [20, 4.5, -18.5], [46, 4.5, -18.5]];
@@ -55,8 +64,11 @@ export function build(): FinishedReport {
   cmd('move_along', { id: 'visitor', path: P, times: T, pose: 'walk', end_pose: 'stand' });
   const at = (i: number): number => { const v = T[i]; if (v === undefined) throw new Error(`no time ${i}`); return v; };
   const ends = { entrance: at(1), reception: at(3), turn: at(4), stairs: at(11), corridor: at(13), door: at(14), hall: at(16) };
+  return ends;
+}
 
-  // ---------- camera and chapters. Each chapter lasts until the visitor reaches the next stage.
+// One chapter, with the camera shots inside it.
+function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: string | undefined): void {
   const cam = (_s: number, e: number, segs: Seg[]) => segs.forEach((g, i) => {
     const base = { t: g.t, shot: g.shot, frame: g.frame, ...(g.view !== undefined ? { view: g.view } : {}), ...(g.opts || {}) };
     cmd('set_camera', base);
@@ -93,6 +105,18 @@ export function build(): FinishedReport {
     [{ t: edge(7), shot: 'wide', frame: ['stage', 'bt-1', 'bt-12', 'visitor'], view: 15 }], PAGE, false);
   chapter('c9', ...ch(8), 'Tables and stage', 'The visitor stops near the banquet tables. This is a model of a possible layout. Do not use it to find your way.', ['bt-6', 'visitor'], 'orbit',
     [{ t: edge(8), shot: 'orbit', frame: ['bt-6', 'bt-7', 'visitor'], view: 0 }]);
+}
+
+export function build(): FinishedReport {
+  const b = new Builder({ title: 'HomeTeamNS Khatib: a visit to the Grand Ballroom (approximate)', author: 'Toybox eval', ground: 'plain', look: 'indoor', size: [140, 100], color: '#d9d4c7' });
+  const cmd = (t: string, a: Args) => b.cmd(t, a);
+  const place = (model: string, at: Vec3 | number[], extra: Args = {}) => cmd('place', { model, at, ...E, ...extra });
+  cmd('set_cutaway', { ceilings: true, nearWalls: true });
+  cmd('add_credit', { text: `Public facts: address and ballroom name from ${PAGE}. The floor plan is not public. All sizes, positions and the route are approximate.` });
+  const c: Ctx = { b, cmd, place };
+  const door = groundFloor(c);
+  const bdoor = levelTwo(c);
+  addChapters(c, walk(c), door, bdoor);
   return finish(b, 'hometeamns', { fullPeople: false });
 }
 
