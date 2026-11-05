@@ -26,6 +26,7 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 ### Fixed
 
+- `bun run check` passes in a checkout whose path has a space: the tests turn file URLs into paths with `fileURLToPath`, not `URL.pathname`, which kept `%20`. The process replay compares against `origin/main` when the clone has no local `main`.
 - The scene duration can become shorter after a change that removes content, such as `make_voice` after stand-in times or `remove`. A longer duration from a scene file stays.
 - A motion word at the end of a scene is no longer cut off: the duration covers the full motion, including the hop bounce.
 - The voice speaks a narration sentence with raised or lowered text as plain text, and a cue time uses the spoken words.

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { fileURLToPath } from 'node:url';
 
 const KB = 1024;
 export const DEFAULT_BUDGET_KB = 710;
@@ -70,7 +71,7 @@ export function measurePages(webDir: string): PageSize[] {
 }
 
 if (import.meta.main) {
-  const root = resolve(dirname(new URL(import.meta.url).pathname), '..');
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   let failed = false;
   for (const p of measurePages(join(root, 'web'))) {
     const over = p.totalKb > p.budgetKb;
