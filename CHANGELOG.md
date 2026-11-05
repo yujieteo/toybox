@@ -6,6 +6,7 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 ### Changed
 
+- `bun run check` compiles `engine/*.c` for WebAssembly with all warnings and `-Werror`, and runs `clang --analyze`. Goose-made C has the five code-generator warnings and the dead-store check off. It needs emsdk (`EMSDK`).
 - All project JavaScript is strict TypeScript (`strict`, `noUncheckedIndexedAccess`) and runs with Bun. The daemon transpiles `web/*.ts` for the browser. `bun scripts/build-web.ts` writes `dist/web/` for a static host.
 - `bun run check` runs the type check, the escape-hatch scan, the web page budget, the dead-code check, the tests and a process replay against `main`.
 - The MP4 encoder level and bitrate follow the export size and the frame rate. The daemon refuses a size that the browser cannot encode before it starts a browser job.
