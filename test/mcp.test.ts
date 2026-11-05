@@ -85,7 +85,7 @@ test('MCP server over stdio: handshake, tools, saving, errors', async () => {
 
 test('render_preview posts t to the render url and returns the image path', async () => {
   let got: unknown = null;
-  const srv = createServer((req, res) => { let b = ''; req.on('data', (d: Buffer) => (b += d)); req.on('end', () => { got = JSON.parse(b); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ path: '/tmp/frame-3.png' })); }); });
+  const srv = createServer((req, res) => { let b = ''; req.on('data', (d: Buffer) => (b += d.toString())); req.on('end', () => { got = JSON.parse(b); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ path: '/tmp/frame-3.png' })); }); });
   await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => { r(); }));
   const scene = join(mkdtempSync(join(tmpdir(), 'tbmcp-')), 's.toybox.json');
   const c = start(['--scene', scene, '--render-url', `http://127.0.0.1:${port(srv)}/render`]);

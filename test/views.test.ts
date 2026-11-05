@@ -7,7 +7,7 @@ import type { Scene, Outfit } from '../web/types.ts';
 import { must as need, okResult, firstError, isOk, view } from './helpers.ts';
 
 // The result of a successful command, as the type T.
-const must = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const must = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 interface Blocked { id: string; by: string }
 interface Clear { view: string; elevation: number }
 interface CamResult { blocked?: Blocked[]; clear_views: Clear[] }

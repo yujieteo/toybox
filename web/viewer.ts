@@ -3,7 +3,7 @@
 // the hosted viewer use this same module. The canvas must have the id "canvas" (the engine
 // finds it by that id).
 import { poseAt, seedOf, marks } from './vid.js';
-import { context2d, isRecord } from './dom.js';
+import { context2d, isRecord, orEmpty } from './dom.js';
 import { isCatalogue } from './format.js';
 
 // ---------------------------------------------------------------- types
@@ -23,7 +23,7 @@ function flag(x: object, key: string): boolean {
   return isRecord(x) && x[key] === true; }
 function vec3Of(x: unknown): Vec3 | undefined {
   if (!Array.isArray(x) || x.length !== 3) return undefined;
-  const [a, b, c] = x;
+  const a: unknown = x[0], b: unknown = x[1], c: unknown = x[2];
   return typeof a === 'number' && typeof b === 'number' && typeof c === 'number' ? [a, b, c] : undefined;
 }
 function numberOf(v: TrackValue): number { const returned = typeof v === 'number' ? v : 0;
@@ -159,10 +159,10 @@ export function signLabelShown(scene: Pick<Scene, 'chapters'>, id: string, t: nu
   assert(typeof t === 'number');
   assert(id.length < 1e7);
   assert(!Number.isNaN(t));
-  const cs = scene.chapters || [];
-  if (!cs.some(c => (c.focus || []).includes(id))) return true;
-  const c = cs.find(k => k.start <= t && t < k.end) || cs.find(k => k.start <= t && t <= k.end);
-  return !!c && (c.focus || []).includes(id);
+  const cs = orEmpty(scene.chapters);
+  if (!cs.some(c => (c.focus ?? []).includes(id))) return true;
+  const c = cs.find(k => k.start <= t && t < k.end) ?? cs.find(k => k.start <= t && t <= k.end);
+  return !!c && (c.focus ?? []).includes(id);
 }
 function loadScript(src: string): Promise<void> {
   assert(typeof src === 'string');
@@ -252,7 +252,7 @@ export async function createViewer(opts: ViewerOptions): Promise<Viewer> {
   if (!isCatalogue(catalogueData)) throw new Error('The catalogue file has no models.');
   const catalogue: Catalogue = catalogueData;
   const models = new Map(catalogue.models.map((m): [string, Model] => [m.id, m]));
-  const outfits = new Map((catalogue.outfits || []).map((f): [string, Outfit] => [f.id, f]));
+  const outfits = new Map((catalogue.outfits ?? []).map((f): [string, Outfit] => [f.id, f]));
   const meshIds = await loadMeshes(M, assetsUrl, catalogue);
   const v = makeViewer(() => c, M, catalogue, models);
   const c: Ctx = { M, v, w, h, overlay, octx: overlay ? context2d(overlay) : null, models, outfits, meshIds, audios: new Map(), mapGeneration: 0, dragFrame: 0, last: 0 };
@@ -297,7 +297,7 @@ function resize(c: Ctx, w: number, h: number): void {
 }
 
 // ---- build the engine scene from the scene file
-const flagsOf = (o: SceneObject): number => (o.hidden ? FLAG.hidden : 0) | ((o.tags || []).includes('ceiling') ? FLAG.ceiling : 0) | ((o.tags || []).includes('wall') ? FLAG.wall : 0);
+const flagsOf = (o: SceneObject): number => (o.hidden ? FLAG.hidden : 0) | ((o.tags ?? []).includes('ceiling') ? FLAG.ceiling : 0) | ((o.tags ?? []).includes('wall') ? FLAG.wall : 0);
 function add(c: Ctx, prim: number, mesh: number, parent: number, flags: number, variant: number, pose: number, flip: boolean | undefined,
   at: Vec3, yaw: number, rot: Vec3, sc: Vec3, c1: Vec3, c2: Vec3, shadow: number): number {
   assert(typeof c === 'object');
@@ -320,12 +320,12 @@ function add(c: Ctx, prim: number, mesh: number, parent: number, flags: number, 
   assert(!Number.isNaN(flags));
   assert(!Number.isNaN(variant));
   assert(!Number.isNaN(pose));
-  assert(at.length < 1e7);
+  assert(!Number.isNaN(at[0]));
   assert(!Number.isNaN(yaw));
-  assert(rot.length < 1e7);
-  assert(sc.length < 1e7);
-  assert(c1.length < 1e7);
-  assert(c2.length < 1e7);
+  assert(!Number.isNaN(rot[0]));
+  assert(!Number.isNaN(sc[0]));
+  assert(!Number.isNaN(c1[0]));
+  assert(!Number.isNaN(c2[0]));
   assert(!Number.isNaN(shadow));
   const returned = c.M._obj_add(prim, mesh, parent, flags, variant, pose, flip ? 1 : 0, at[0], at[1], at[2], yaw, rot[0], rot[1], rot[2],
     sc[0], sc[1], sc[2], c1[0], c1[1], c1[2], c2[0], c2[1], c2[2], shadow);
@@ -335,7 +335,7 @@ function add(c: Ctx, prim: number, mesh: number, parent: number, flags: number, 
 function sizeOf(c: Ctx, o: { model: string }): Vec3 { 
   assert(typeof c === 'object');
   assert(typeof o === 'object');
-  return o.model === 'person' ? PERSON_SIZE : c.models.get(o.model)?.size || [1, 1, 1]; }
+  return o.model === 'person' ? PERSON_SIZE : c.models.get(o.model)?.size ?? [1, 1, 1]; }
 
 function loadScene(c: Ctx, scene: Scene, keepTime: boolean): void {
   assert(typeof c === 'object');
@@ -346,19 +346,19 @@ function loadScene(c: Ctx, scene: Scene, keepTime: boolean): void {
   if (!keepTime) v.t = 0;
   M._scene_reset();
   v.rootIds.clear();
-  const bd: Partial<Scene['backdrop']> = scene.backdrop || {};
+  const bd: Partial<Scene['backdrop']> = isRecord(scene.backdrop) ? scene.backdrop : {};
   const bc = hexRGB(bd.color || '#9fb88c');
-  M._set_backdrop(GROUND[bd.ground || 'grass'] ?? 0, (bd.size || [80, 80])[0], (bd.size || [80, 80])[1], bc[0], bc[1], bc[2]);
+  M._set_backdrop(GROUND[bd.ground || 'grass'] ?? 0, (bd.size ?? [80, 80])[0], (bd.size ?? [80, 80])[1], bc[0], bc[1], bc[2]);
   M._set_cutaway(scene.cutaway?.ceilings ? 1 : 0, scene.cutaway?.nearWalls ? 1 : 0);
   addObjects(c, scene);
   buildPosed(c, scene);
   hush(c);
   buildClips(c, scene);
   loadTracks(c, scene);
-  for (const k of scene.camera || []) M._cam_add(k.t, k.eye[0], k.eye[1], k.eye[2], k.target[0], k.target[1], k.target[2], k.fov || 50, EASE[k.ease ?? ''] ?? 1);
+  for (const k of orEmpty(scene.camera)) M._cam_add(k.t, k.eye[0], k.eye[1], k.eye[2], k.target[0], k.target[1], k.target[2], k.fov || 50, EASE[k.ease ?? ''] ?? 1);
   const looks = scene.lighting?.length ? scene.lighting : [{ t: 0, look: bd.ground === 'floor' ? 'indoor' : 'day' }];
   for (const l of looks) M._light_add(l.t, LOOKS[l.look] ?? 0);
-  buildMap(c, scene);
+  void buildMap(c, scene);
   v.draw(v.t);
   if (v.onchange) v.onchange('load');
 }
@@ -369,7 +369,7 @@ function addObjects(c: Ctx, scene: Scene): void {
   const done = new Set();
   for (const first of scene.objects) {
     const chain: SceneObject[] = [];
-    for (let o: SceneObject | undefined = first; o && !done.has(o.id); o = o.parent ? scene.objects.find(x => x.id === o?.parent) : undefined) {
+    for (let o: SceneObject | undefined = first; o && !done.has(o.id); o = o.parent ? scene.objects.find(x => x.id === o.parent) : undefined) {
       done.add(o.id);
       chain.push(o);
     }
@@ -386,11 +386,11 @@ function addOne(c: Ctx, scene: Scene, o: SceneObject): void {
   const m = c.models.get(o.model);
   if (!m) return;
   const at = atOf(o), sc = scaleOf(o), flags = flagsOf(o);
-  const structural = (o.tags || []).some(t => t === 'wall' || t === 'floor' || t === 'ceiling');
+  const structural = (o.tags ?? []).some(t => t === 'wall' || t === 'floor' || t === 'ceiling');
   const shadow = structural || ['road', 'building'].includes(m.kind || '') ? 0 : 0.45 * Math.max(m.size[0], m.size[2]);
   const root = add(c, 6, 0, parent, flags, 0, 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc, [0, 0, 0], [0, 0, 0], shadow);
   c.v.rootIds.set(o.id, root);
-  if (meshOf(m)) (c.meshIds.get(m.id) || []).forEach((id, k) => {
+  if (meshOf(m)) (c.meshIds.get(m.id) ?? []).forEach((id, k) => {
     assert(typeof id === 'number');
     assert(typeof k === 'number');
     assert(!Number.isNaN(id));
@@ -401,7 +401,7 @@ function addOne(c: Ctx, scene: Scene, o: SceneObject): void {
   else for (const p of m.parts) {
     const col = hexRGB((o.colors && p.slot && o.colors[p.slot]) || p.color);
     const prim = PRIMS[p.prim] ?? 0;
-    add(c, prim, 0, root, flags | (p.eye ? FLAG.eye : 0), 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, col, [0, 0, 0], 0);
+    add(c, prim, 0, root, flags | (p.eye ? FLAG.eye : 0), 0, 0, false, p.pos, 0, p.rot ?? [0, 0, 0], p.size, col, [0, 0, 0], 0);
   }
 }
 function addPerson(c: Ctx, o: SceneObject, parent: number): void {
@@ -417,7 +417,7 @@ function addPerson(c: Ctx, o: SceneObject, parent: number): void {
   c.v.rootIds.set(o.id, id);
   for (const p of fit ? fit.parts : []) {
     const prim = PRIMS[p.prim] ?? 0;
-    c.M._obj_bone(add(c, prim, 0, id, flags, 0, 0, false, p.pos, 0, p.rot || [0, 0, 0], p.size, hexRGB(p.color), [0, 0, 0], 0), BONES.get(p.bone || '') ?? -1);
+    c.M._obj_bone(add(c, prim, 0, id, flags, 0, 0, false, p.pos, 0, p.rot ?? [0, 0, 0], p.size, hexRGB(p.color), [0, 0, 0], 0), BONES.get(p.bone || '') ?? -1);
   }
 }
 function buildPosed(c: Ctx, scene: Scene): void {
@@ -425,8 +425,8 @@ function buildPosed(c: Ctx, scene: Scene): void {
   assert(typeof scene === 'object');
   c.v.posed = [];
   for (const o of scene.objects) {
-    const motions = (scene.motions || []).filter(m => m.object === o.id), id = c.v.rootIds.get(o.id);
-    const character = (c.models.get(o.model)?.tags || []).includes('character');
+    const motions = (scene.motions ?? []).filter(m => m.object === o.id), id = c.v.rootIds.get(o.id);
+    const character = (c.models.get(o.model)?.tags ?? []).includes('character');
     if (id === undefined || (!motions.length && !character)) continue;
     const size = sizeOf(c, o), sy = o.scale ? (Array.isArray(o.scale) ? o.scale[1] : o.scale) : 1;
     c.v.posed.push({ id, motions, seed: character ? seedOf(o.id) : null, unit: size[1] * sy / 2, pivot: size[1] / 2 });
@@ -437,7 +437,7 @@ function buildClips(c: Ctx, scene: Scene): void {
   assert(typeof scene === 'object');
   const voiceUrl = c.v.voiceUrl;
   c.v.clips = [];
-  if (voiceUrl) for (const n of scene.narration || []) {
+  if (voiceUrl) for (const n of scene.narration ?? []) {
     if (!n.voice || n.start === undefined || n.end === undefined) continue;
     const url = voiceUrl(n.voice);
     let audio = c.audios.get(url);
@@ -448,7 +448,7 @@ function buildClips(c: Ctx, scene: Scene): void {
 function loadTracks(c: Ctx, scene: Scene): void {
   assert(typeof c === 'object');
   const M = c.M;
-  for (const tr of scene.tracks || []) {
+  for (const tr of orEmpty(scene.tracks)) {
     const id = c.v.rootIds.get(tr.object);
     if (id === undefined || !tr.keys.length) continue;
     const ch = CHANNELS[tr.channel];
@@ -456,9 +456,9 @@ function loadTracks(c: Ctx, scene: Scene): void {
     M._trk_begin(id, ch);
     const ease = (e: string | undefined): number => EASE[e ?? ''] ?? 0;
     for (const k of tr.keys) {
-      if (tr.channel === 'at') { const [a, b, d] = vec3Of(k.v) || [0, 0, 0]; M._key_add(k.t, a, b, d, ease(k.ease)); }
+      if (tr.channel === 'at') { const [a, b, d] = vec3Of(k.v) ?? [0, 0, 0]; M._key_add(k.t, a, b, d, ease(k.ease)); }
       else if (tr.channel === 'yaw') M._key_add(k.t, numberOf(k.v), 0, 0, ease(k.ease));
-      else if (tr.channel === 'scale') { const [a, b, d] = vec3Of(k.v) || [numberOf(k.v), numberOf(k.v), numberOf(k.v)]; M._key_add(k.t, a, b, d, ease(k.ease)); }
+      else if (tr.channel === 'scale') { const [a, b, d] = vec3Of(k.v) ?? [numberOf(k.v), numberOf(k.v), numberOf(k.v)]; M._key_add(k.t, a, b, d, ease(k.ease)); }
       else M._key_add(k.t, typeof k.v === 'string' ? POSES[k.v] ?? 0 : 0, 0, 0, 2);
     }
   }
@@ -527,10 +527,10 @@ function buildMap(c: Ctx, scene: Scene): Promise<void> {
   v.mapImage = false;
   v.tilesReady = Promise.resolve();
   if (!map) return v.tilesReady;
-  if (map.osm?.buildings?.length) uploadBuildings(c, map.osm.buildings);
+  if (map.osm?.buildings.length) uploadBuildings(c, map.osm.buildings);
   // The tiles load from the network. The promise lets the export wait for the map before the
   // first frame. The authoring page does not wait: the map appears when it arrives.
-  if (map.origin && v.oneMap(scene)) v.tilesReady = loadTiles(c, map, map.origin, generation).catch(() => {});
+  if (map.origin && v.oneMap(scene)) v.tilesReady = loadTiles(c, map, map.origin, generation).catch(() => { /* a failed tile load leaves the map out */ });
   return v.tilesReady;
 }
 function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
@@ -550,10 +550,10 @@ function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
     const mesh = 8 + gi;
     c.M._toybox_mesh_upload(mesh, g.length);
     const id = add(c, 5, mesh, -1, 0, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], nth(palette, gi), [0, 0, 0], 0);
-    c.v.rootIds.set('__osm' + gi, id);
+    c.v.rootIds.set(`__osm${gi}`, id);
   });
 }
-function oneMap(scene: Scene): boolean { return !!(scene.map?.origin && scene.backdrop?.ground === 'map'); }
+function oneMap(scene: Scene): boolean { return !!(scene.map?.origin && scene.backdrop.ground === 'map'); }
 const mercator = (lat: number, lon: number, z: number): Vec2 => {
   assert(typeof lat === 'number');
   assert(typeof lon === 'number');
@@ -595,7 +595,7 @@ async function loadTiles(c: Ctx, map: SceneMap, o: { lat: number; lon: number },
   assert(typeof o === 'object');
   assert(typeof generation === 'number');
   assert(!Number.isNaN(generation));
-  const om = map.onemap || {}, z = om.zoom || 18, style = om.style || 'Default';
+  const om = map.onemap ?? {}, z = om.zoom || 18, style = om.style || 'Default';
   const [fx, fy] = mercator(o.lat, o.lon, z), cx = Math.floor(fx), cy = Math.floor(fy), R = 1;
   const mPerTile = 156543.03392 * Math.cos(o.lat * Math.PI / 180) / 2 ** z * 256;
   const cv = document.createElement('canvas'); cv.width = cv.height = 256 * (2 * R + 1);
@@ -771,7 +771,7 @@ function drawSigns(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, h: number, 
   const { M, v } = c;
   for (const o of sc.objects) {
     const m = c.models.get(o.model);
-    if (!m || m.kind !== 'sign' || !o.label || !signLabelShown(sc, o.id, t)) continue;
+    if (m?.kind !== 'sign' || !o.label || !signLabelShown(sc, o.id, t)) continue;
     const id = v.rootIds.get(o.id); if (id === undefined) continue;
     const p = v.project(M._obj_wx(id), M._obj_wy(id) + m.size[1] * 0.6, M._obj_wz(id));
     if (!p) continue;
@@ -795,7 +795,7 @@ function drawCallouts(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
   assert(!Number.isNaN(h));
   assert(!Number.isNaN(t));
   const { M, v } = c;
-  for (const k of sc.callouts || []) {
+  for (const k of orEmpty(sc.callouts)) {
     if (t < k.start || t >= k.end) continue;
     let pos = vec3Of(isRecord(k) ? k.at : undefined);
     if (k.object) { const id = v.rootIds.get(k.object); if (id === undefined) continue; const co = sc.objects.find(o => o.id === k.object); pos = [M._obj_wx(id), M._obj_wy(id) + ((co ? sizeOf(c, co)[1] : 1) || 1.7), M._obj_wz(id)]; }
@@ -821,7 +821,7 @@ function drawChapter(ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: num
   assert(typeof t === 'number');
   assert(!Number.isNaN(h));
   assert(!Number.isNaN(t));
-  const ch = (sc.chapters || []).find(c => t >= c.start && t < c.end);
+  const ch = (orEmpty(sc.chapters)).find(c => t >= c.start && t < c.end);
   if (!ch || !(ch.clock || ch.title)) return;
   const s = Math.round(h * 0.042);
   const txt = [ch.clock, ch.title].filter(Boolean).join('  ·  ');
@@ -831,7 +831,7 @@ function drawChapter(ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: num
   fillText(ctx, txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8, s, 600);
   if (flag(ch, 'estimated')) approx(ctx, h * 0.02 + tw + s * 1.3, h * 0.02 + s * 0.2, s * 0.8);
 }
-const hasOsm = (sc: Scene): boolean => !!(sc.map?.osm?.buildings?.length);
+const hasOsm = (sc: Scene): boolean => !!(sc.map?.osm?.buildings.length);
 function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number, t: number): void {
   assert(typeof c === 'object');
   assert(typeof ctx === 'object');
@@ -842,12 +842,12 @@ function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
   assert(!Number.isNaN(w));
   assert(!Number.isNaN(h));
   assert(!Number.isNaN(t));
-  const caps = (sc.captions || []).filter(k => t >= k.start && t < k.end);
+  const caps = (orEmpty(sc.captions)).filter(k => t >= k.start && t < k.end);
   if (!caps.length) return;
   const fs = Math.round(h * 0.045);
   const lines = wrap(ctx, caps.map(k => k.text).join(' '), w * 0.82, fs, 500), lh = fs * 1.25;
   const bw = Math.max(...lines.map(l => textW(ctx, l, fs, 500))) + fs, bh = lines.length * lh + fs * 0.5;
-  const nCred = (sc.credits || []).length + (hasOsm(sc) ? 1 : 0) + (c.v.mapImage ? 1 : 0);
+  const nCred = (orEmpty(sc.credits)).length + (hasOsm(sc) ? 1 : 0) + (c.v.mapImage ? 1 : 0);
   const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
   pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
@@ -861,7 +861,7 @@ function drawCredits(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number
   assert(typeof h === 'number');
   assert(!Number.isNaN(w));
   assert(!Number.isNaN(h));
-  const credits = [...(sc.credits || [])];
+  const credits = [...(orEmpty(sc.credits))];
   if (hasOsm(sc)) credits.push(OSM_CREDIT);
   if (c.v.mapImage) credits.push(ONEMAP_CREDIT);
   if (!credits.length) return;
@@ -881,7 +881,7 @@ function storyCam(c: Ctx, t: number): { target: Vec3; fov: number } {   // the s
   assert(typeof c === 'object');
   assert(typeof t === 'number');
   assert(!Number.isNaN(t));
-  const ks = cur(c).camera || [];
+  const ks = orEmpty(cur(c).camera);
   if (!ks.length) return { target: [0, 1, 0], fov: 50 };
   let a = 0;
   ks.forEach((k, i) => { 
@@ -933,7 +933,7 @@ function storyCamera(c: Ctx): void { c.v.userCam = false; c.v.draw(c.v.t); }
 
 // ---- picking and edits
 function scaleOf(o: SceneObject): Vec3 { return o.scale ? (Array.isArray(o.scale) ? o.scale : [o.scale, o.scale, o.scale]) : [1, 1, 1]; }
-function atOf(o: SceneObject): Vec3 { return o.at || [0, 0, 0]; }
+function atOf(o: SceneObject): Vec3 { return o.at ?? [0, 0, 0]; }
 function bbox(c: Ctx, o: SceneObject): Vec3[] | null {
   const { M } = c;
   const id = c.v.rootIds.get(o.id); if (id === undefined) return null;
@@ -963,7 +963,7 @@ function pick(c: Ctx, px: number, py: number): string | null {   // px, py in ca
   assert(!Number.isNaN(py));
   let best: string | null = null, area = 1e18;
   for (const o of cur(c).objects) {
-    if (o.parent || (o.tags || []).includes('floor') || (o.tags || []).includes('ceiling')) continue;
+    if (o.parent || (o.tags ?? []).includes('floor') || (o.tags ?? []).includes('ceiling')) continue;
     const b = screenBox(c, o.id); if (!b) continue;
     if (px >= b.x0 && px <= b.x1 && py >= b.y0 && py <= b.y1) { const a = (b.x1 - b.x0) * (b.y1 - b.y0); if (a < area) { area = a; best = o.id; } }
   }
@@ -1006,7 +1006,7 @@ const moveObj = (c: Ctx, o: SceneObject, dx: number, dz: number): void => {
   assert(typeof dx === 'number');
   const [ax, ay, az] = atOf(o);
   o.at = [ax + dx, ay, az + dz];
-  for (const tr of cur(c).tracks || []) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) { const w = vec3Of(k.v); if (w) k.v = [w[0] + dx, w[1], w[2] + dz]; }
+  for (const tr of orEmpty(cur(c).tracks)) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) { const w = vec3Of(k.v); if (w) k.v = [w[0] + dx, w[1], w[2] + dz]; }
 };
 function edit(c: Ctx, op: EditOp, arg?: Vec2 | number): void {
   assert(typeof c === 'object');
@@ -1023,7 +1023,7 @@ function edit(c: Ctx, op: EditOp, arg?: Vec2 | number): void {
   if (op === 'duplicate') duplicate(c, scn, o);
   if (op === 'delete') {
     scn.objects = scn.objects.filter(x => x.id !== o.id && x.parent !== o.id);
-    scn.tracks = (scn.tracks || []).filter(tr => tr.object !== o.id);
+    scn.tracks = (orEmpty(scn.tracks)).filter(tr => tr.object !== o.id);
     c.v.selected = null;
   }
   c.v.load(scn);
@@ -1062,13 +1062,13 @@ const tick = (c: Ctx, now: number): void => {
   const v = c.v;
   if (!v.playing) return;
   const dt = (now - c.last) / 1000; c.last = now;
-  const dur = v.scene && v.scene.duration ? v.scene.duration : 60;
+  const dur = v.scene?.duration ? v.scene.duration : 60;
   let t = v.t + dt;
   // While a sentence plays, the clock moves to the time of its sound by at most 2 ms in each frame.
   // So the picture and the voice stay together, and the picture never jumps.
   for (const k of v.clips) {
     const on = t >= k.start && t < k.end;
-    if (on && !k.on) { k.audio.currentTime = t - k.start; k.audio.play().catch(() => {}); }
+    if (on && !k.on) { k.audio.currentTime = t - k.start; k.audio.play().catch(() => { /* the browser may refuse the sound before a touch */ }); }
     if (!on && k.on) k.audio.pause();
     if (on && k.on && !k.audio.paused) t += Math.max(-0.002, Math.min(0.002, k.start + k.audio.currentTime - t));
     k.on = on;

@@ -122,8 +122,8 @@ export interface LightingKey {
 
 export interface OsmBuilding {
   id: string;
-  height?: number;
-  levels?: number;
+  height?: number | undefined;
+  levels?: number | undefined;
   poly: Vec2[];
 }
 export interface SceneMap {

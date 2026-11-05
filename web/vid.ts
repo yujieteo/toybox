@@ -4,7 +4,7 @@ import { assert } from './assert.ts';
 // WebAssembly, in the browser and in Node, and gives numbers and texts to it.
 
 const url = new URL('./vid.wasm', import.meta.url);
-const bytes = typeof process === 'object' && process.versions?.node
+const bytes = typeof process === 'object' && process.versions.node
   ? (await import('node:fs')).readFileSync(url)
   : await (await fetch(url)).arrayBuffer();
 const fail = (): never => { throw new Error('vid.wasm stopped'); };
@@ -49,7 +49,7 @@ const exportsOf = (ex: WebAssembly.Exports): VidExports => {
   };
 };
 const { instance } = await WebAssembly.instantiate(bytes, {
-  env: { emscripten_notify_memory_growth() {} },
+  env: { emscripten_notify_memory_growth() { /* the module needs no news of its memory growth */ } },
   wasi_snapshot_preview1: { proc_exit: fail, fd_close: () => 8, fd_write: () => 8, fd_seek: () => 8 },
 });
 const W = exportsOf(instance.exports);
@@ -78,7 +78,7 @@ const textOf = (units: number[]): string => String.fromCharCode(...units);
 W.moves();
 export const MOVES = textOf(result()).split(' ');
 const KEYS = ['s', 'sx', 'sz', 'dx', 'z', 'up', 'tilt', 'eye', 'gaze', 'ex', 'ez', 'spin'];
-const num = (v: number | undefined): number => (v === undefined ? NaN : Number(v));   // NaN: the scene leaves the value out
+const num = (v: number | undefined): number => (v ?? NaN);   // NaN: the scene leaves the value out
 
 export function seedOf(id: string): number { 
   assert(typeof W === 'object');
@@ -125,7 +125,7 @@ export function marks(text: string): Mark[] {
   assert(typeof result === 'function');
   assert(typeof text === 'string');
   assert(text.length < 1e7);
-  const s = String(text), r = (put(s), W.marks(), result()), parts: Mark[] = [];
+  const s = text, r = (put(s), W.marks(), result()), parts: Mark[] = [];
   for (let k = 0; k < r.length; k += 3) parts.push({ text: s.slice(r[k + 1], r[k + 2]), shift: r[k] ?? 0 });
   return parts;
 }
@@ -136,7 +136,7 @@ export function plain(text: string): string {
   assert(typeof result === 'function');
   assert(typeof text === 'string');
   assert(text.length < 1e7);
-  put(String(text)); W.plain(); const returned = textOf(result());
+  put(text); W.plain(); const returned = textOf(result());
 assert(typeof returned === 'string');
 assert(returned.length < 1e7);
 return returned; }

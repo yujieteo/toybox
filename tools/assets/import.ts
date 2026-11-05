@@ -243,7 +243,7 @@ function png(buf: Buffer): Png {
 function mat4(n: GltfNode): Mat4 {
   assert(typeof n === 'object');
   if (n.matrix) return n.matrix;
-  const [x, y, z, w] = n.rotation || [0, 0, 0, 1], [sx, sy, sz] = n.scale || [1, 1, 1], [tx, ty, tz] = n.translation || [0, 0, 0];
+  const [x, y, z, w] = n.rotation ?? [0, 0, 0, 1], [sx, sy, sz] = n.scale ?? [1, 1, 1], [tx, ty, tz] = n.translation ?? [0, 0, 0];
   return [(1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0,
     2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0,
     2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0, tx, ty, tz, 1];
@@ -251,8 +251,8 @@ function mat4(n: GltfNode): Mat4 {
 const mul = (a: Mat4, b: Mat4): Mat4 => {
   assert(typeof a === 'object');
   assert(typeof b === 'object');
-  assert(a.length < 1e7);
-  assert(b.length < 1e7);
+  assert(!Number.isNaN(a[0]));
+  assert(!Number.isNaN(b[0]));
   const o: number[] = [];
   for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += (a[k * 4 + r] ?? 0) * (b[c * 4 + k] ?? 0); o.push(s); }
   if (!isMat4(o)) throw new Error('mul: bad matrix');
@@ -260,7 +260,7 @@ const mul = (a: Mat4, b: Mat4): Mat4 => {
 };
 function normalMat(m: Mat4): { det: number; n: Mat3 } {   // inverse transpose of the upper 3x3, column-major
   assert(typeof m === 'object');
-  assert(m.length < 1e7);
+  assert(!Number.isNaN(m[0]));
   const [a, b, c, d, e, f, g, h, i] = [m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10]];
   const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g, det = a * A + b * B + c * C;
   const q = (v: number): number => {
@@ -389,7 +389,7 @@ function colourReader(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer)
     assert(bins.length < 1e7);
     assert(typeof k === 'number');
     assert(!Number.isNaN(k));
-    return cache[k] || (cache[k] = (() => {
+    return cache[k] ?? (cache[k] = (() => {
     assert(typeof json === 'object');
     assert(typeof k === 'number');
     assert(typeof bins === 'object');
@@ -404,8 +404,8 @@ function colourReader(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer)
   })());
   };
   const colourOf = (matIndex: number | undefined, uv: [number, number] | null): Vec3 => {
-    const pm = (matIndex === undefined ? undefined : json.materials?.[matIndex])?.pbrMetallicRoughness || {};
-    const f = pm.baseColorFactor || [1, 1, 1, 1];
+    const pm = (matIndex === undefined ? undefined : json.materials?.[matIndex])?.pbrMetallicRoughness ?? {};
+    const f = pm.baseColorFactor ?? [1, 1, 1, 1];
     // The factor is used as a display colour, not as a linear value: then Kenney models match the Kenney previews.
     let t: Vec3 = [255, 255, 255];
     if (pm.baseColorTexture && uv) {
@@ -439,7 +439,7 @@ function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tr
     assert(typeof ni === 'number');
     assert(typeof parent === 'object');
     assert(!Number.isNaN(ni));
-    assert(parent.length < 1e7);
+    assert(!Number.isNaN(parent[0]));
     const node = at(json.nodes, ni, 'nodes'), m = mul(parent, mat4(node));
     if (node.mesh !== undefined) {
       const { det, n: nm } = normalMat(m);
@@ -475,7 +475,7 @@ function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tr
         }
       }
     }
-    return (node.children || []).map((c): [number, Mat4] => [c, m]);
+    return (node.children ?? []).map((c): [number, Mat4] => [c, m]);
   };
   const I4: Mat4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
   const pending = at(json.scenes, json.scene || 0, 'scenes').nodes.map((ni): [number, Mat4] => [ni, I4]).reverse();
@@ -506,12 +506,12 @@ function cluster(tris: Tri[], maxColors: number): Group[] {
       assert(typeof returned === 'number');
       return returned;
     }).join(',');
-    let b = bins.get(key);
-    if (!b) bins.set(key, (b = { sum: [0, 0, 0], n: 0, members: [] }));
+    const b = bins.get(key) ?? { sum: [0, 0, 0], n: 0, members: [] };
+    bins.set(key, b);
     b.sum = per((i) => {
       assert(typeof i === 'number');
       assert(!Number.isNaN(i));
-      const returned = (b ? b.sum[i] : 0) + t.color[i];
+      const returned = b.sum[i] + t.color[i];
       assert(typeof returned === 'number');
       return returned;
     }); b.n++; b.members.push(t);
@@ -555,7 +555,7 @@ function convert(a: Source, tris: Tri[]): { entry: ModelEntry; bin: Buffer } {
   for (const t of tris) for (const { p } of t.v) for (const i of AXES) { lo[i] = Math.min(lo[i], p[i]); hi[i] = Math.max(hi[i], p[i]); }
   const ext = per((i) => hi[i] - lo[i]);
   // fit: target metres per axis; an axis without a target uses the mean factor of the others. No fit: the source is in metres.
-  const fit = a.fit || [null, null, null], fitAt = (i: Axis): number | null => fit[i] ?? null;
+  const fit = a.fit ?? [null, null, null], fitAt = (i: Axis): number | null => fit[i] ?? null;
   const given = AXES.map((i) => { const f = fitAt(i); return f ? f / ext[i] : null; }).filter((f): f is number => f !== null);
   const mean = given.length ? given.reduce((s, f) => s + f, 0) / given.length : 1;
   const k = per((i) => { 
@@ -587,7 +587,7 @@ function convert(a: Source, tris: Tri[]): { entry: ModelEntry; bin: Buffer } {
   // slots: { name: "#rrggbb" } gives the name to the group with the nearest colour.
   const rgb = (h: string): Vec3 => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
   const slots: Record<number, string> = {};
-  for (const [name, hex] of Object.entries(a.slots || {})) {
+  for (const [name, hex] of Object.entries(a.slots ?? {})) {
     const hx = rgb(hex);
     const d = groups.map((g) => { 
       assert(typeof g === 'object');

@@ -13,7 +13,7 @@ import { writeSceneOdbl } from '../core/osm.ts';
 import { FORMAT, parseScene, upgradeScene } from '../web/format.js';
 import { encoderConfig } from '../web/export.js';
 import type { Scene } from '../web/types.js';
-import { isRecord, messageOf } from '../web/dom.js';
+import { isRecord, messageOf, textOf } from '../web/dom.js';
 import type { ExportState, Streaming } from './export-job.ts';
 import { assert } from '../core/assert.ts';
 
@@ -35,6 +35,8 @@ ensureScene();
 
 // The first run starts with an empty scene.
 function ensureScene(): void {
+  assert(typeof scenePath === 'string');
+  assert(scenePath.length > 0);
   if (fs.existsSync(scenePath)) return;
   fs.writeFileSync(scenePath, JSON.stringify({ toybox: FORMAT, title: 'Untitled', duration: 30, backdrop: { ground: 'grass', size: [80, 80] }, objects: [], tracks: [], camera: [{ t: 0, eye: [0, 8, 16], target: [0, 1, 0], fov: 50 }], captions: [], callouts: [], chapters: [], credits: [] }, null, 2));
 }
@@ -66,6 +68,8 @@ let previewSeq = 0;
 
 // The code of a system error, such as ENOENT.
 function errorCode(e: unknown): unknown { 
+  assert(typeof e !== 'symbol');
+  assert(typeof e !== 'bigint');
   return typeof e === 'object' && e !== null && 'code' in e ? e.code : undefined; }
 function removeProfile(dir: string): void {
   assert(typeof dir === 'string');
@@ -75,7 +79,9 @@ function removeProfile(dir: string): void {
 }
 // Remove the files of a failed job. A good export with the same name keeps its .mp4.
 function cleanupJobFiles(j: Job | null): void {
-  if (!j || j.kind !== 'export' || j.state.phase !== 'streaming' || j.state.keepArtifacts) return;
+  assert(j === null || typeof j === 'object');
+  assert(typeof j !== 'string');
+  if (j?.kind !== 'export' || j.state.phase !== 'streaming' || j.state.keepArtifacts) return;
   for (const ext of ['.h264', '.srt', '.toybox.json']) { try { fs.rmSync(j.state.base + ext, { force: true }); } catch { /* already gone */ } }
 }
 function runBrowser(query: string, timeoutMs: number, mine: Job): Promise<JobResult> {
@@ -94,6 +100,7 @@ function runBrowser(query: string, timeoutMs: number, mine: Job): Promise<JobRes
   if (child.pid) pids.add(child.pid);
   return new Promise((resolve) => {
     assert(typeof resolve === 'function');
+    assert(query.length < 1e7);
     let done = false, timer: ReturnType<typeof setTimeout> | null = null;
     const stop = () => {
       if (child.pid) { try { process.kill(child.pid); } catch {} pids.delete(child.pid); }
@@ -101,11 +108,13 @@ function runBrowser(query: string, timeoutMs: number, mine: Job): Promise<JobRes
     };
     const finish = (v: JobResult): void => { 
       assert(typeof v === 'object');
+    assert(typeof mine === 'object');
       if (done) return; done = true; if (timer) clearTimeout(timer); stop(); resolve(v); };
     mine.resolve = finish;
     timer = setTimeout(() => { finish({ error: 'The browser job took too long.' }); }, timeoutMs);
     child.on('error', (e) => {
       assert(typeof e === 'object');
+    assert(typeof chrome === 'string');
       const why = errorCode(e) === 'ENOENT'
         ? `The daemon cannot start Chrome at "${chrome}". Install Google Chrome, or set the environment variable TOYBOX_CHROME to the path of Chrome.`
         : `Chrome could not start: ${e.message || e}`;
@@ -126,7 +135,7 @@ async function oneJob(kind: 'export' | 'frame', query: string, timeoutMs: number
   job = mine;
   try {
     const r = await runBrowser(query, timeoutMs, mine);
-    if (r?.error) cleanupJobFiles(mine);
+    if (r.error) cleanupJobFiles(mine);
     return r;
   } finally { if (job === mine) job = null; }
 }
@@ -140,6 +149,7 @@ function soundArgs(voice: VoiceBeat[]): string[] {
   if (!voice.length) return ['-c:v', 'copy'];
   const inputs = voice.flatMap((n) => {
     assert(typeof n === 'object');
+    assert(typeof voice === 'object');
     return ['-i', path.join(path.dirname(scenePath), n.voice)];
   });
   const delays = voice.map((n, k) => {
@@ -164,7 +174,8 @@ function soundArgs(voice: VoiceBeat[]): string[] {
 }
 
 // ---- the chat agent: the claude CLI with only the Toybox MCP server
-let sessionId = crypto.randomUUID(), sessionStarted = false;
+const sessionId = crypto.randomUUID();
+let sessionStarted = false;
 const mcpConfig = path.join(outDir, 'mcp.json');
 fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { toybox: { command: process.execPath, args: [path.join(root, 'core/mcp.ts'), '--scene', scenePath, '--render-url', `${origin}/api/render?token=${token}`] } } }));
 function chat(text: string, res: ServerResponse): void {
@@ -185,7 +196,8 @@ function chat(text: string, res: ServerResponse): void {
   let buf = '';
   child.stdout.on('data', (d: Buffer) => {
     assert(typeof d === 'object');
-    buf += d; let i: number;
+    assert(typeof buf === 'string');
+    buf += d.toString(); let i: number;
     while ((i = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, i); buf = buf.slice(i + 1);
       try {
@@ -202,6 +214,7 @@ function chat(text: string, res: ServerResponse): void {
   });
   child.stderr.on('data', (d: Buffer) => {
     assert(typeof d === 'object');
+    assert(typeof child === 'object');
     return ev({ log: String(d).slice(0, 300) });
   });
   child.on('exit', (code) => { if (childPid) pids.delete(childPid); ev({ done: true, code }); res.end(); });
@@ -211,6 +224,7 @@ function chat(text: string, res: ServerResponse): void {
 // The JSON object in the body of a request. Anything else is an error, as before.
 async function jsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   assert(typeof req === 'object');
+    assert(typeof body === 'function');
   const x: unknown = JSON.parse((await body(req)).toString('utf8'));
   if (!isRecord(x)) throw new TypeError('The request body is not a JSON object.');
   return x;
@@ -234,6 +248,7 @@ function routeVoice(_req: IncomingMessage, res: ServerResponse, u: URL): void {
   if (!/^voice\/[0-9a-f]{12}\.wav$/.test(f)) { send(res, 400, { error: 'bad voice file' }); return; }
   fs.readFile(path.join(path.dirname(scenePath), f), (e, d) => { 
     assert(typeof d === 'object');
+    assert(typeof f === 'string');
     if (e) { send(res, 404, { error: 'no' }); return; } res.setHeader('content-type', 'audio/wav'); res.end(d); });
 }
 function routeVersion(_req: IncomingMessage, res: ServerResponse): void { 
@@ -251,13 +266,13 @@ async function routeScenePost(req: IncomingMessage, res: ServerResponse, u: URL)
 async function routeChat(req: IncomingMessage, res: ServerResponse): Promise<void> { 
   assert(typeof req === 'object');
   assert(typeof res === 'object');
-  const { text } = await jsonBody(req); chat(String(text || ''), res); }
+  const { text } = await jsonBody(req); chat(textOf(text || ''), res); }
 async function routeRender(req: IncomingMessage, res: ServerResponse): Promise<void> {
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   const { t = 0, w = 1280, h = 720 } = await jsonBody(req);
   const png = path.join(outDir, `preview-${Date.now()}-${++previewSeq}.png`);
-  const r = await oneJob('frame', `mode=frame&t=${Number(t)}&w=${w}&h=${h}&png=${encodeURIComponent(png)}`, 60000);
+  const r = await oneJob('frame', `mode=frame&t=${Number(t)}&w=${textOf(w)}&h=${textOf(h)}&png=${encodeURIComponent(png)}`, 60000);
   if (r.error) { send(res, 500, r); return; }
   previews.add(png);
   send(res, 200, { path: png });
@@ -269,11 +284,11 @@ async function routeExport(req: IncomingMessage, res: ServerResponse): Promise<v
   const width = Number(o.width || 1920), height = Number(o.height || 1080), fps = Number(o.fps || 30);
   try { encoderConfig(width, height, fps); }   // refuse a size the browser cannot encode here, not in the browser
   catch (e) { send(res, 400, { error: messageOf(e) }); return; }
-  const name = (String(o.name || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
+  const name = (textOf(o.name || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
   const sc: unknown = JSON.parse(fs.readFileSync(scenePath, 'utf8'));
   const dur = Number(isRecord(sc) && sc.duration || 60);
   const r = await oneJob('export', `mode=export&name=${encodeURIComponent(name)}&w=${width}&h=${height}&fps=${fps}${o.hashes ? '&hashes=1' : ''}`, Math.max(120000, dur * 6000));
-  r.error ? send(res, 500, r) : send(res, 200, r);
+  send(res, r.error ? 500 : 200, r);
 }
 
 // ---- job page callbacks
@@ -281,7 +296,7 @@ async function routeExportStart(req: IncomingMessage, res: ServerResponse, u: UR
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (!job || job.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
+  if (job?.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
   const j = job;
   let payload: unknown;
   try { payload = JSON.parse((await body(req)).toString('utf8')); }
@@ -291,7 +306,7 @@ async function routeExportStart(req: IncomingMessage, res: ServerResponse, u: UR
   let startScene: Scene;
   try { startScene = parseScene(payload.scene); }
   catch (e) { send(res, 400, { error: 'The export start data has no valid scene. ' + messageOf(e) }); return; }
-  const name = (String(u.searchParams.get('name') || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
+  const name = ((u.searchParams.get('name') || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
   const fps = Number(u.searchParams.get('fps') || 30);
   const base = path.join(outDir, name);
   // startScene is the exact scene that the page renders and encodes.
@@ -299,15 +314,16 @@ async function routeExportStart(req: IncomingMessage, res: ServerResponse, u: UR
   j.state = st;
   st.h264.on('error', (e) => { 
     assert(typeof e === 'object');
+    assert(typeof st === 'object');
     st.writeError = messageOf(e); });
-  fs.writeFileSync(base + '.srt', String(payload.srt || ''));
+  fs.writeFileSync(base + '.srt', textOf(payload.srt || ''));
   fs.writeFileSync(base + '.toybox.json', JSON.stringify(startScene, null, 2));
   send(res, 200, { ok: true });
 }
 async function routeExportChunk(req: IncomingMessage, res: ServerResponse): Promise<void> {
   assert(typeof req === 'object');
   assert(typeof res === 'object');
-  if (!job || job.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
+  if (job?.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
   const j = job.state;
   if (j.phase !== 'streaming') { send(res, 409, { error: 'The export has not started.' }); return; }
   if (j.writeError) { send(res, 500, { error: 'The video data could not be written: ' + j.writeError }); return; }
@@ -316,7 +332,7 @@ async function routeExportChunk(req: IncomingMessage, res: ServerResponse): Prom
   j.chain = j.chain.then(() => new Promise<void>((ok, fail) => {
     assert(typeof ok === 'function');
     assert(typeof fail === 'function');
-    return out.write(b, (e) => { e ? fail(e) : ok(); });
+    return out.write(b, (e) => { if (e) fail(e); else ok(); });
   }));
   try { await j.chain; }
   catch (e) { j.writeError = messageOf(e); j.chain = Promise.resolve(); send(res, 500, { error: 'The video data could not be written: ' + j.writeError }); return; }
@@ -325,8 +341,9 @@ async function routeExportChunk(req: IncomingMessage, res: ServerResponse): Prom
 // The narration beats that have a voice file.
 function voiceBeats(scene: Scene): VoiceBeat[] {
   assert(typeof scene === 'object');
+    assert(typeof isRecord === 'function');
   const voice: VoiceBeat[] = [];
-  for (const n of scene.narration || []) if (n.voice && /^voice\/[0-9a-f]{12}\.wav$/.test(n.voice)) voice.push({ voice: n.voice, start: n.start ?? 0 });
+  for (const n of scene.narration ?? []) if (n.voice && /^voice\/[0-9a-f]{12}\.wav$/.test(n.voice)) voice.push({ voice: n.voice, start: n.start ?? 0 });
   return voice;
 }
 // Mux the h264 frames and the voice into an MP4. Returns the error text, or null when it worked.
@@ -372,7 +389,7 @@ async function routeExportEnd(_req: IncomingMessage, res: ServerResponse, u: URL
   assert(typeof _req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (!job || job.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
+  if (job?.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
   const mine = job, j = job.state;
   if (j.phase !== 'streaming') { send(res, 409, { error: 'The export has not started.' }); return; }
   // Every terminal answer must resolve the job, or /api/export waits for the timeout.
@@ -388,9 +405,10 @@ async function routeExportEnd(_req: IncomingMessage, res: ServerResponse, u: URL
     if (done) done({ error: text });
   };
   const { h264, scene: jscene, fps, base: jbase } = j;
-  await j.chain.catch(() => {});
+  await j.chain.catch(() => undefined);
   await new Promise<void>((ok) => { 
     assert(typeof ok === 'function');
+    assert(typeof h264 === 'object');
     h264.on('close', () => { ok(); }); h264.on('error', () => { ok(); }); h264.end(); });
   if (j.writeError) { finishError(500, 'The video data could not be written: ' + j.writeError, false); return; }
   const voice = voiceBeats(jscene);
@@ -409,7 +427,7 @@ async function routeFrameResult(req: IncomingMessage, res: ServerResponse, u: UR
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (!job || job.kind !== 'frame') { send(res, 409, { error: 'No picture job is running.' }); return; }
+  if (job?.kind !== 'frame') { send(res, 409, { error: 'No picture job is running.' }); return; }
   const png = u.searchParams.get('png');
   if (!png || path.dirname(png) !== outDir) { send(res, 400, { error: 'bad path' }); return; }
   fs.writeFileSync(png, await body(req));
@@ -463,6 +481,7 @@ function handleStatic(res: ServerResponse, p: string): void {
   }
   fs.readFile(f, (e, d) => { 
     assert(typeof d === 'object');
+    assert(typeof f === 'string');
     if (e) { send(res, 404, { error: 'no' }); return; } res.setHeader('content-type', types[path.extname(f)] || 'application/octet-stream'); res.end(d); });
 }
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -503,6 +522,7 @@ function forceRemove(dir: string): void {
   profiles.delete(dir);
 }
 function bye(): void {
+  assert(pids.size >= 0);
   for (const pid of pids) { try { process.kill(pid); } catch {} }
   if (job) cleanupJobFiles(job);   // a partial export must not leave a half MP4 side by side with a good one
   pause(150);

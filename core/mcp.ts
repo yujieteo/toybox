@@ -12,7 +12,7 @@ import { assert } from './assert.ts';
 
 export const PROTOCOL = '2025-06-18';
 
-export interface McpOpts { scene?: string; renderUrl?: string }
+export interface McpOpts { scene?: string | undefined; renderUrl?: string | undefined }
 export type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
 export interface ToolReply { content: Content[]; isError?: boolean }
 export interface RpcMessage { id?: string | number | null; method?: string; params?: { name?: string; arguments?: unknown } }
@@ -65,7 +65,7 @@ async function toolCall(opts: McpOpts, name: string, args: unknown): Promise<Too
       const content: Content[] = [{ type: 'text', text: JSON.stringify(out) }];
       try {
         const png = bodyPath ? readFileSync(bodyPath) : null;
-        if (png && png.length) content.push({ type: 'image', data: png.toString('base64'), mimeType: 'image/png' });
+        if (png?.length) content.push({ type: 'image', data: png.toString('base64'), mimeType: 'image/png' });
       } catch { /* a missing picture is not an MCP error: the client still gets the path */ }
       return { content };
     } catch (e) {
@@ -130,5 +130,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (out) process.stdout.write(JSON.stringify(out) + '\n');
     });
   });
-  rl.on('close', () => { chain.then(() => process.exit(0)); });
+  rl.on('close', () => { void chain.then(() => process.exit(0)); });
 }

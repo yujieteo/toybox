@@ -50,6 +50,7 @@ function install(): void {   // npm ci in VOICE_HOME when the packages are missi
 
 // The part of kokoro-js that this file uses.
 interface Tts { generate(text: string, opts: { voice: string }): Promise<{ audio: Float32Array }> }
+interface KokoroModule { KokoroTTS: { from_pretrained(model: string, opts: { dtype: string; device: string }): Promise<Tts> } }
 let tts: Tts | null = null;
 async function speak(text: unknown): Promise<Buffer> {   // 16-bit mono WAV bytes, without the long silence at each end
   assert(typeof VOICE_HOME === 'string');
@@ -58,11 +59,11 @@ async function speak(text: unknown): Promise<Buffer> {   // 16-bit mono WAV byte
   assert(VOICE_HOME.length < 1e7);
   if (!tts) {
     install();
-    const { KokoroTTS } = await import(pathToFileURL(path.join(VOICE_HOME, 'node_modules', 'kokoro-js', 'dist', 'kokoro.js')).href);
-    tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
+    const mod = await import(pathToFileURL(path.join(VOICE_HOME, 'node_modules', 'kokoro-js', 'dist', 'kokoro.js')).href) as KokoroModule; // allow-unsafe: the file is installed from voice/package-lock.json and has this shape
+    tts = await mod.KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
   }
   const engine = tts;
-  if (!engine) throw new Error('The voice model did not load.');
+  assert(typeof engine.generate === 'function');
   const a = (await engine.generate(plain(String(text)), { voice: VOICE })).audio, loud = (v: number): boolean => Math.abs(v) > 0.01;
   // Keep the spoken part with 50 ms of silence at each end. A silent result (no sample over the
   // threshold: punctuation only, or an empty render) keeps a short quiet clip, so the file is not

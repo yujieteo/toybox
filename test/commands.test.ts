@@ -15,7 +15,7 @@ interface StairsResult { top: Vec }
 
 const fresh = (): Scene => newScene({});
 // The result of a successful command, as the type T.
-const done = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const done = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 // One component of a vector.
 const comp = (v: readonly number[] | number | undefined, i: number): number => {
   if (typeof v === 'number') throw new Error('a number is not a vector');

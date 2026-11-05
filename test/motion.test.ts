@@ -7,7 +7,7 @@ import type { Scene, Outfit, Part } from '../web/types.ts';
 import { must as need, okResult, isOk } from './helpers.ts';
 
 // The result of a successful command, as the type T.
-const must = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const must = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 const cat = loadCatalogue();
 const codes = (errs: { code: string }[]): string[] => errs.map((e) => e.code);
 // A straight road along z, 8 s long.

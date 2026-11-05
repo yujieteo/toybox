@@ -77,7 +77,7 @@ function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: 
     assert(typeof g === 'object');
     assert(typeof i === 'number');
     assert(!Number.isNaN(i));
-    const base = { t: g.t, shot: g.shot, frame: g.frame, ...(g.view !== undefined ? { view: g.view } : {}), ...(g.opts || {}) };
+    const base = { t: g.t, shot: g.shot, frame: g.frame, ...(g.view !== undefined ? { view: g.view } : {}), ...(g.opts ?? {}) };
     cmd('set_camera', base);
     const hold = (segs[i + 1]?.t ?? e) - 1.0;
     if (hold > g.t + 0.05) cmd('set_camera', { ...base, t: hold, ...(g.view !== undefined ? { view: g.view + 6 } : {}) });

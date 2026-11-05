@@ -63,7 +63,7 @@ test('real sizes are plausible', () => {
   assert.ok(get('car-sedan')[2] >= 4 && get('car-sedan')[2] <= 5);
   assert.ok(get('stairs-14')[1] > 2.2 && get('stairs-14')[1] < 2.6);
   assert.equal(get('wall-3')[0], 3); assert.equal(get('wall-5')[0], 5);
-  assert.ok(get('stairs-14').length === 3);
+  assert.equal(get('stairs-14').length, 3);
   // MRT station kit: a full train car, a full-height screen door bay and a fare gate pedestal
   const train = get('mrt-train-car');
   assert.ok(train[2] >= 18 && train[2] <= 26, `train length ${train[2]}`);
@@ -93,7 +93,7 @@ function attribution(): Record<string, string | undefined>[] {
 function readMesh(file: URL): { counts: number[]; min: Triple; max: Triple } {
   const b = readFileSync(file);
   assert.equal(b.toString('ascii', 0, 4), 'TBM1', String(file));
-  const g = b.readUInt32LE(4), s = b.readFloatLE(8), counts = [...Array(g)].map((_: unknown, i: number) => b.readUInt32LE(12 + 4 * i));
+  const g = b.readUInt32LE(4), s = b.readFloatLE(8), counts = Array.from({ length: g }, (_: unknown, i: number) => b.readUInt32LE(12 + 4 * i));
   const n = counts.reduce((t, c) => t + c, 0), base = 12 + 4 * g;
   assert.equal(b.length, base + n * 12, `${file} length`);
   const min: Triple = [Infinity, Infinity, Infinity], max: Triple = [-Infinity, -Infinity, -Infinity];

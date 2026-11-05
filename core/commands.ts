@@ -13,8 +13,9 @@ import { rotYaw } from './geom.ts';
 import type { Scene, SceneObject, SceneMap, Vec3, Cue, Catalogue, Model, TrackKey, CameraFrame, Chapter, Callout, NarrationBeat, Motion, Ease, Channel, Look, Ground, Shot } from '../web/types.js';
 import { parseOverpass, toMapBlock, writeSceneOdbl, validBbox } from './osm.ts';
 import { assert } from './assert.ts';
+import { orEmpty } from './lists.ts';
 
-export interface ToolError { code: string; message: string; path?: string }
+export interface ToolError { code: string; message: string; path?: string | undefined }
 export interface ToolOk<R = unknown> { ok: true; result: R }
 export interface ToolFail { ok: false; errors: ToolError[] }
 export type ToolResult<R = unknown> = ToolOk<R> | ToolFail;
@@ -81,8 +82,8 @@ function nth<T>(arr: readonly T[], i: number): T {
 const isXZ2 = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number');
 type XZ = [number, number] | Vec3;
 type Timed<T> = T & { t: number };
-interface Cam { eye: Vec3; target: Vec3; fov?: number }
-interface FrameOpts { view?: number; elevation?: number; margin?: number; distance?: number; fov?: number }
+interface Cam { eye: Vec3; target: Vec3; fov?: number | undefined }
+interface FrameOpts { view?: number; elevation?: number; margin?: number; distance?: number; fov?: number | undefined }
 
 
 // ---------- JSON Schema pieces and a small argument checker
@@ -152,8 +153,8 @@ function checkNode(job: Extract<ArgJob, { kind: 'node' }>): ArgJob[] {
   } else if (t === 'object') {
     if (!isRecord(v)) e('must be an object.');
     else {
-      for (const k of schema.required || []) if (v[k] === undefined) out.push({ code: 'bad_args', message: `${path}.${k}: is required.` });
-      for (const [k, s] of Object.entries(schema.properties || {})) if (v[k] !== undefined && v[k] !== null) parts.push({ kind: 'node', schema: s, v: v[k], path: `${path}.${k}`, out });
+      for (const k of schema.required ?? []) if (v[k] === undefined) out.push({ code: 'bad_args', message: `${path}.${k}: is required.` });
+      for (const [k, s] of Object.entries(schema.properties ?? {})) if (v[k] !== undefined && v[k] !== null) parts.push({ kind: 'node', schema: s, v: v[k], path: `${path}.${k}`, out });
       if (schema.additionalProperties === false) for (const k of Object.keys(v)) if (!schema.properties?.[k]) out.push({ code: 'bad_args', message: `${path}.${k}: unknown argument.` });
     }
   }
@@ -181,23 +182,50 @@ export function checkArgs(schema: JsonSchema, v: unknown, path = 'args'): ToolEr
   return errs;
 }
 
-// The one place that gives typed arguments to a tool: the checker has just compared them with the schema.
-function validArgs<A>(schema: JsonSchema, args: unknown): { ok: true; args: A } | ToolFail {
+// Compares the arguments of a tool with its schema. defineTool is the one place that then gives them a type.
+function validArgs(schema: JsonSchema, args: unknown): { ok: true; args: unknown } | ToolFail {
   assert(typeof schema === 'object');
   const errs = checkArgs(schema, args);
   if (errs.length) return fail(errs);
-  return { ok: true, args: args as A }; // allow-unsafe: args were validated against the tool's inputSchema by checkArgs
+  return { ok: true, args };
 }
 
 // ---------- helpers
 function cloneScene(s: Scene): Scene { 
   assert(typeof s === 'object');
   return structuredClone(s); }
+// Drops one key of a scene. A key that the Scene type does not know (a hand-made file may carry one)
+// cannot be deleted by a computed name, so it is set to undefined, which JSON leaves out.
+function dropKey(bag: Partial<Scene>, k: string): void {
+  assert(k.length > 0);
+  assert(typeof bag === 'object');
+  switch (k) {
+    case 'toybox': delete bag.toybox; break;
+    case 'title': delete bag.title; break;
+    case 'author': delete bag.author; break;
+    case 'duration': delete bag.duration; break;
+    case 'backdrop': delete bag.backdrop; break;
+    case 'map': delete bag.map; break;
+    case 'lighting': delete bag.lighting; break;
+    case 'cutaway': delete bag.cutaway; break;
+    case 'drive': delete bag.drive; break;
+    case 'objects': delete bag.objects; break;
+    case 'tracks': delete bag.tracks; break;
+    case 'camera': delete bag.camera; break;
+    case 'chapters': delete bag.chapters; break;
+    case 'captions': delete bag.captions; break;
+    case 'callouts': delete bag.callouts; break;
+    case 'credits': delete bag.credits; break;
+    case 'facts': delete bag.facts; break;
+    case 'narration': delete bag.narration; break;
+    case 'motions': delete bag.motions; break;
+    default: Object.assign(bag, { [k]: undefined });
+  }
+}
 function replaceScene(target: Scene, src: Scene): void {
   assert(typeof target === 'object');
   assert(typeof src === 'object');
-  const bag = target as unknown as Record<string, unknown>; // allow-unsafe: a scene is a plain object, and every key of it is dropped
-  for (const k of Object.keys(bag)) delete bag[k];
+  for (const k of Object.keys(target)) dropKey(target, k);
   Object.assign(target, src);
 }
 function maxTime(s: Scene): number {
@@ -205,12 +233,12 @@ function maxTime(s: Scene): number {
   let m = 0;
   const see = (t: unknown) => { 
     if (typeof t === 'number' && Number.isFinite(t) && t > m) m = t; };
-  for (const t of s.tracks || []) for (const k of t.keys || []) see(k.t);
-  for (const k of s.camera || []) see(k.t);
-  for (const k of s.lighting || []) see(k.t);
-  for (const k of [...(s.chapters || []), ...(s.captions || []), ...(s.callouts || [])]) see(k.end);
-  for (const k of s.motions || []) see(motionEnd(k));   // the whole motion, not only t + d
-  for (const n of s.narration || []) see(n?.end);        // the voice is content too
+  for (const t of orEmpty(s.tracks)) for (const k of orEmpty(t.keys)) see(k.t);
+  for (const k of orEmpty(s.camera)) see(k.t);
+  for (const k of s.lighting ?? []) see(k.t);
+  for (const k of [...orEmpty(s.chapters), ...orEmpty(s.captions), ...orEmpty(s.callouts)]) see(k.end);
+  for (const k of s.motions ?? []) see(motionEnd(k));   // the whole motion, not only t + d
+  for (const n of s.narration ?? []) see(n.end);        // the voice is content too
   see(narrationLength(s.narration));
   return m;
 }
@@ -232,7 +260,7 @@ function hardErrors(errs: ToolError[]): ToolError[] {
 function mutate<R>(scene: Scene, ctx: ToolContext | null | undefined, fn: (copy: Scene, cat: Catalogue) => R): ToolResult<R> {
   assert(typeof scene === 'object');
   assert(typeof fn === 'function');
-  const cat = ctx?.catalogue || loadCatalogue();
+  const cat = ctx?.catalogue ?? loadCatalogue();
   // A duration that the tools computed from the content can be recomputed after an edit that makes
   // the content shorter (make_voice after stand-in times, remove, a shorter track). A duration that
   // a scene file set longer than the content is a floor and stays.
@@ -274,7 +302,7 @@ function mutate<R>(scene: Scene, ctx: ToolContext | null | undefined, fn: (copy:
 function reframe(s: Scene, cat: Catalogue): void {
   assert(typeof s === 'object');
   assert(typeof cat === 'object');
-  for (const k of s.camera || []) if (k.frame) {
+  for (const k of orEmpty(s.camera)) if (k.frame) {
     const { ids, ...opts } = k.frame;
     const f = frameCamera(s, cat, ids, k.shot ?? 'wide', k.t, { ...opts, fov: k.fov });
     k.eye = f.eye; k.target = f.target;
@@ -307,7 +335,7 @@ function catModel(cat: Catalogue, model: string): Model {
   if (!m) {
     const near = cat.models.filter((x) => {
       assert(typeof x === 'object');
-      return x.id.includes(String(model).split('-')[0] ?? '') || x.name.toLowerCase().includes(String(model).toLowerCase());
+      return x.id.includes(model.split('-')[0] ?? '') || x.name.toLowerCase().includes(model.toLowerCase());
     }).slice(0, 5).map((x) => {
       assert(typeof x === 'object');
       const returned = x.id;
@@ -367,9 +395,9 @@ function pick<T>(arr: readonly T[], r: number): T {
 
 // ---------- argument types (each one follows the inputSchema of its tool)
 interface PlaceProps {
-  model: string; at?: XZ; yaw?: number; scale?: number | Vec3; flip?: boolean; colors?: Record<string, string>;
-  variant?: number; pose?: string; outfit?: string;
-  id?: string; label?: string; tags?: string[]; source?: string; estimated?: boolean; measured?: boolean;
+  model: string; at?: XZ | undefined; yaw?: number | undefined; scale?: number | Vec3 | undefined; flip?: boolean | undefined; colors?: Record<string, string> | undefined;
+  variant?: number | undefined; pose?: string | undefined; outfit?: string | undefined;
+  id?: string | undefined; label?: string | undefined; tags?: string[] | undefined; source?: string | undefined; estimated?: boolean | undefined; measured?: boolean | undefined;
 }
 interface PlaceArgs extends PlaceProps { at: XZ }
 interface PlaceNearArgs extends PlaceProps { near: string; offset?: XZ }
@@ -415,7 +443,7 @@ type NoArgs = Record<string, never>;
 interface AddFactArgs { id?: string; text: string; source: string }
 interface AddMotionArgs { id: string; move: string; t?: number; cue?: Cue; d?: number; h?: number; x?: number; y?: number; deg?: number }
 interface RenderPreviewArgs { t: number }
-interface ExportSceneArgs { path?: string }
+interface ExportSceneArgs { path?: string | undefined }
 interface GuideArgs { name?: string }
 
 function makeObject(s: Scene, cat: Catalogue, a: PlaceProps, extra: { at?: Vec3 } = {}): SceneObject {
@@ -439,7 +467,7 @@ function makeObject(s: Scene, cat: Catalogue, a: PlaceProps, extra: { at?: Vec3 
     ...(a.colors ? { colors: a.colors } : {}),
     ...(person ? { pose: a.pose || 'stand' } : a.pose ? { pose: a.pose } : {}),
     ...(person && a.outfit ? { outfit: a.outfit } : {}),
-    tags: a.tags || [],
+    tags: a.tags ?? [],
     label: a.label || '',
     parent: null,
     source: a.source || '',
@@ -613,7 +641,7 @@ interface ToolEntry extends ToolSpec { run: ToolRun }
 const tools: ToolEntry[] = [];
 // A tool is defined once. Its run function checks the arguments, then calls fn with typed arguments.
 function defineTool<A>(name: ToolName, description: string, properties: Record<string, JsonSchema>, required: readonly string[],
-  fn: (scene: Scene, a: A, ctx: ToolContext) => ToolResult, answer?: (s: Scene) => unknown): void {
+  fn: (scene: Scene, a: A, ctx: ToolContext) => ToolResult, answer?: (s: Scene, a: A) => unknown): void {
   assert(typeof name === 'string');
   assert(typeof description === 'string');
   assert(typeof properties === 'object');
@@ -630,11 +658,12 @@ function defineTool<A>(name: ToolName, description: string, properties: Record<s
     assert(name.length < 1e7);
     assert(typeof scene === 'object');
     captureCall(name, scene, args, ctx);
-    const checked = validArgs<A>(inputSchema, args || {});
+    const checked = validArgs(inputSchema, args || {});
     if (!checked.ok) return checked;
+    const typed = checked.args as A; // allow-unsafe: args were validated against the tool's inputSchema by checkArgs
     try {
-      const r = fn(scene, checked.args, ctx || {});
-      return r.ok && answer ? okr(answer(scene)) : r;
+      const r = fn(scene, typed, ctx ?? {});
+      return r.ok && answer ? okr(answer(scene, typed)) : r;
     } catch (e) { if (e instanceof Fail) return fail([{ code: e.code, message: e.message }]); throw e; }
   };
   tools.push({ name, description, inputSchema, run });
@@ -653,7 +682,7 @@ function trackValue(v: unknown): TrackKey['v'] {
 }
 
 // ---------- narration, facts and motion words (guide "narration")
-const beats = (s: Scene) => ({ length: s.captions.at(-1)?.end ?? 0, beats: (s.narration || []).map((n, i) => {
+const beats = (s: Scene) => ({ length: s.captions.at(-1)?.end ?? 0, beats: (s.narration ?? []).map((n, i) => {
   assert(typeof n === 'object');
   assert(typeof i === 'number');
   assert(!Number.isNaN(i));
@@ -670,11 +699,11 @@ function defineTools1(): void {
       assert(typeof _scene === 'object');
       assert(typeof a === 'object');
       assert(typeof ctx === 'object');
-      const cat = ctx.catalogue || loadCatalogue();
+      const cat = ctx.catalogue ?? loadCatalogue();
       const words = (a.query || '').toLowerCase().split(/\s+/).filter(Boolean);
       const rows: { id: string; name: string; kind: string; size: Vec3; tags: string[] }[] = cat.models.map((m) => {
         assert(typeof m === 'object');
-        return { id: m.id, name: m.name, kind: m.kind, size: m.size, tags: m.tags || [] };
+        return { id: m.id, name: m.name, kind: m.kind, size: m.size, tags: m.tags ?? [] };
       });
       rows.unshift({ id: 'person', name: 'Person (variant 0 to 23, poses: ' + POSES.join(', ') + ')', kind: 'person', size: [0.5, 1.75, 0.35], tags: ['people', 'human'] });
       const out = rows.filter((m) => {
@@ -688,7 +717,7 @@ function defineTools1(): void {
         return `${m.id} ${m.name} ${m.tags.join(' ')}`.toLowerCase().includes(w);
       });
       });
-      const outfits = (cat.outfits || []).map(({ id, name, source, note }) => ({ id, name, source, note }));
+      const outfits = (cat.outfits ?? []).map(({ id, name, source, note }) => ({ id, name, source, note }));
       return okr({ count: out.length, models: out, outfits });
     });
 
@@ -707,7 +736,7 @@ function defineTools2(): void {
       assert(typeof a === 'object');
       if (a.full) return okr(scene);
       return okr({
-        title: scene.title, duration: scene.duration, backdrop: scene.backdrop, lighting: scene.lighting, map: scene.map ? { origin: scene.map.origin, osm: scene.map.osm ? `${scene.map.osm.buildings?.length || 0} buildings` : undefined } : undefined,
+        title: scene.title, duration: scene.duration, backdrop: scene.backdrop, lighting: scene.lighting, map: scene.map ? { origin: scene.map.origin, osm: scene.map.osm ? `${scene.map.osm.buildings.length} buildings` : undefined } : undefined,
         counts: { objects: scene.objects.length, tracks: scene.tracks.length, camera: scene.camera.length, chapters: scene.chapters.length, captions: scene.captions.length, callouts: scene.callouts.length },
         objects: scene.objects.map((o) => {
           assert(typeof o === 'object');
@@ -783,7 +812,7 @@ function defineTools4(): void {
       modelOrFail(cat, a.model);
       if (a.count > 500) throw new Fail('bad_args', 'count must be 500 or fewer.');
       const rng = mulberry32(a.seed ?? 1), n = a.count, sp = a.spacing ?? 1.2, c = at3(a.at), person = a.model === 'person';
-      const pts: { p: Vec3; yaw?: number }[] = [];
+      const pts: { p: Vec3; yaw?: number | undefined }[] = [];
       const dirv = rotYaw([1, 0, 0], a.angle ?? 0), dirz = rotYaw([0, 0, 1], a.angle ?? 0);
       if (a.pattern === 'line' || !a.pattern) for (let i = 0; i < n; i++) pts.push({ p: [c[0] + dirv[0] * i * sp, c[1], c[2] + dirv[2] * i * sp] });
       else if (a.pattern === 'grid') { const cols = a.cols ?? Math.ceil(Math.sqrt(n)); for (let i = 0; i < n; i++) { const x = (i % cols) * sp, z = Math.floor(i / cols) * sp; pts.push({ p: [c[0] + dirv[0] * x + dirz[0] * z, c[1], c[2] + dirv[2] * x + dirz[2] * z] }); } }
@@ -812,9 +841,9 @@ function defineTools4(): void {
         assert(typeof i === 'number');
         assert(!Number.isNaN(i));
         const v = person ? (a.variants?.length ? pick(a.variants, rng()) : Math.floor(rng() * 24)) : undefined;
-        const colors = a.colors || (person && !a.outfit ? { shirt: pick(SHIRTS, rng()), pants: pick(PANTS, rng()) } : undefined);
+        const colors = a.colors ?? (person && !a.outfit ? { shirt: pick(SHIRTS, rng()), pants: pick(PANTS, rng()) } : undefined);
         const pose = a.poses?.length ? pick(a.poses, rng()) : a.pose;
-        const o = makeObject(s, cat, { ...a, id: uniqueId(s, `${base}-${i + 1}`), variant: v, colors, pose, yaw: pt.yaw ?? a.yaw ?? 0, tags: [...(a.tags || []), `group:${base}`] }, { at: r3(pt.p) });
+        const o = makeObject(s, cat, { ...a, id: uniqueId(s, `${base}-${i + 1}`), variant: v, colors, pose, yaw: pt.yaw ?? a.yaw ?? 0, tags: [...(a.tags ?? []), `group:${base}`] }, { at: r3(pt.p) });
         s.objects.push(o); ids.push(o.id);
       });
       return { count: ids.length, ids };
@@ -921,9 +950,9 @@ function defineTools8(): void {
         assert(typeof tags === 'object');
         assert(model.length < 1e7);
         assert(id.length < 1e7);
-        assert(pos.length < 1e7);
+        assert(Array.isArray(pos));
         assert(!Number.isNaN(yaw));
-        assert(scale.length < 1e7);
+        assert(Array.isArray(scale));
         assert(tags.length < 1e7);
         const o = makeObject(s, cat, { model, id, yaw, scale, tags: [...tags, a.id], ...meta }, { at: r3(pos) }); s.objects.push(o); made.push(o.id); };
       const walls: Record<string, Wall> = {
@@ -932,7 +961,7 @@ function defineTools8(): void {
         e: { L: d, yaw: 90, pos: (u) => [c[0] + w / 2, c[1], c[2] - d / 2 + u], lo: T / 2, hi: d - T / 2 },
         w: { L: d, yaw: 270, pos: (u) => [c[0] - w / 2, c[1], c[2] - d / 2 + u], lo: T / 2, hi: d - T / 2 },
       };
-      const ops = (key: string, list: Opening[] | undefined, kind: 'door' | 'window') => (list || []).filter((o) => o.wall === key).map((o) => {
+      const ops = (key: string, list: Opening[] | undefined, kind: 'door' | 'window') => (list ?? []).filter((o) => o.wall === key).map((o) => {
         const wd = o.width ?? (kind === 'door' ? 1.0 : 1.2);
         return { u0: o.at - wd / 2, u1: o.at + wd / 2, kind, wd, y0: kind === 'door' ? 0 : 0.9, y1: 2.1 };
       });
@@ -1117,7 +1146,7 @@ function defineTools13(): void {
       }
       if (!trackOf(s, o.id, 'at')?.keys.some((k) => k.t < t0)) o.at = r3(nth(P, 0));
       const out = { id: o.id, start: t0, end: tEnd, pose: o.model === 'person' ? moving : undefined };
-      const hits = motionErrors(s, ctx.catalogue || loadCatalogue(), { only: [o.id], from: t0, to: tEnd });
+      const hits = motionErrors(s, ctx.catalogue ?? loadCatalogue(), { only: [o.id], from: t0, to: tEnd });
       if (hits.length) Object.assign(out, { collisions: hits.slice(0, 5).map((e) => e.message), warning: 'The path runs into something. Change the path or the times before export.' });
       return out;
     }));
@@ -1163,7 +1192,7 @@ function defineTools14(): void {
         return returned;
       });
       const out = { t: key.t, shot: key.shot, eye: key.eye, target: key.target, fov };
-      const blocked = blocksAt(s, cat, key, a.frame || [], a.t);
+      const blocked = blocksAt(s, cat, key, a.frame ?? [], a.t);
       if (blocked.length) Object.assign(out, { blocked, warning: 'Something stands between the camera and the subject. Change the view before export.', ...(ids ? { clear_views: clearViews(s, cat, ids, a) } : {}) });
       return out;
     });
@@ -1179,7 +1208,7 @@ function defineTools15(): void {
       return mutate(scene, ctx, (s) => {
       assert(typeof s === 'object');
       const t = timeArg(s, a.cue, a.t);
-      s.lighting = (s.lighting || []).filter((k) => {
+      s.lighting = (s.lighting ?? []).filter((k) => {
         assert(typeof k === 'object');
         return k.t !== t;
       }); s.lighting.push({ t, look: a.look, ...(a.cue ? { cue: a.cue } : {}) }); s.lighting.sort((p, q) => {
@@ -1233,7 +1262,7 @@ function defineTools16(): void {
       assert(typeof s === 'object');
       if (a.caption && s.narration?.length) throw new Fail('narrated', 'A narrated scene makes its captions from the narration. Do not give a chapter a caption.');
       const id = a.id || `c${s.chapters.length + 1}`;
-      const c: Chapter = { id, start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus || [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
+      const c: Chapter = { id, start: timeArg(s, a.cue, a.start, 'start'), end: timeArg(s, a.end_cue, a.end, 'end', 'end_cue'), title: a.title, ...(a.cue ? { cue: a.cue } : {}), ...(a.end_cue ? { endCue: a.end_cue } : {}), clock: a.clock || '', caption: a.caption || '', focus: a.focus ?? [], ...(a.shot !== undefined ? { shot: a.shot } : {}), source: a.source || '' };
       if (a.estimated !== undefined) c.estimated = a.estimated;
       if (a.measured !== undefined) c.measured = a.measured;
       for (const f of c.focus ?? []) find(s, f);
@@ -1282,7 +1311,7 @@ function defineTools18(): void {
         const [so, w, n, e] = a.bbox;
         if (!validBbox(a.bbox)) throw new Fail('bad_args', 'bbox is [south, west, north, east] with south < north, west < east and at most 0.01 degrees a side.');
         if (!ctx.overpass) throw new Fail('no_osm_data', 'No OpenStreetMap answer. Call import_osm through the MCP server or the command line.');
-        const origin = s.map?.origin || { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
+        const origin = s.map?.origin ?? { lat: Math.round((so + n) * 5e5) / 1e6, lon: Math.round((w + e) * 5e5) / 1e6 };
         const map = s.map ?? { origin };
         s.map = map;
         map.origin = origin;
@@ -1317,7 +1346,7 @@ function defineTools19(): void {
       assert(typeof ctx === 'object');
       return mutate(scene, ctx, (s) => { 
       assert(typeof s === 'object');
-      s.credits = s.credits || []; if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; });
+      if (!s.credits.includes(a.text)) s.credits.push(a.text); return { credits: s.credits.length }; });
     });
 }
 function defineTools20(): void {
@@ -1375,7 +1404,7 @@ function defineTools21(): void {
       assert(typeof ctx === 'object');
       return mutate(scene, ctx, (s) => {
       assert(typeof s === 'object');
-      s.facts = s.facts || [];
+      s.facts = s.facts ?? [];
       const id = a.id || `f${s.facts.length + 1}`;
       if (s.facts.some((f) => {
         assert(typeof f === 'object');
@@ -1404,7 +1433,7 @@ function defineTools22(): void {
       if (a.y !== undefined) m.y = a.y;
       if (a.deg !== undefined) m.deg = a.deg;
       if (a.cue) m.cue = a.cue;
-      s.motions = s.motions || [];
+      s.motions = s.motions ?? [];
       s.motions.push(m);
       return { id: a.id, move: a.move, t: m.t };
     });
@@ -1415,7 +1444,7 @@ function defineTools22(): void {
       assert(typeof scene === 'object');
       assert(typeof _a === 'object');
       assert(typeof ctx === 'object');
-      const errs = checkScene(scene, ctx.catalogue || loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
+      const errs = checkScene(scene, ctx.catalogue ?? loadCatalogue()); return okr({ valid: errs.length === 0, count: errs.length, errors: errs }); });
 
   defineTool<RenderPreviewArgs>('render_preview', 'Render a picture of the scene at time t so you can look at it. The daemon does the rendering.', { t: num }, ['t'],
     (_scene, a) => {
@@ -1431,7 +1460,7 @@ function defineTools23(): void {
       assert(typeof ctx === 'object');
       assert(typeof scene === 'object');
       assert(typeof a === 'object');
-      const errs = checkScene(scene, ctx.catalogue || loadCatalogue());
+      const errs = checkScene(scene, ctx.catalogue ?? loadCatalogue());
       if (!a.path) return okr({ errors: errs.length, scene });
       let file = a.path;
       if (ctx.exportDir) {
@@ -1440,7 +1469,7 @@ function defineTools23(): void {
         if (!rel || rel.startsWith('..') || isAbsolute(rel) || !file.endsWith('.toybox.json')) throw new Fail('bad_path', `path must be a .toybox.json file inside ${ctx.exportDir}.`);
       }
       saveScene(file, scene);
-      if (ctx.sceneDir && resolve(dirname(file)) !== resolve(ctx.sceneDir)) for (const n of scene.narration || []) if (n.voice) {
+      if (ctx.sceneDir && resolve(dirname(file)) !== resolve(ctx.sceneDir)) for (const n of scene.narration ?? []) if (n.voice) {
         mkdirSync(join(dirname(file), 'voice'), { recursive: true });
         copyFileSync(join(ctx.sceneDir, n.voice), join(dirname(file), n.voice));
       }

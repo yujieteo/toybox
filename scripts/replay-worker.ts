@@ -10,6 +10,8 @@ const [treeArg, inputsArg, outputsArg] = process.argv.slice(2);
 if (!treeArg || !inputsArg || !outputsArg) throw new Error('Usage: bun scripts/replay-worker.ts TREE_ROOT INPUTS_DIR OUTPUTS_DIR');
 const tree = resolve(treeArg);
 
+function isRunTool(x: unknown): x is RunTool { return typeof x === 'function'; }
+
 async function loadRunTool(): Promise<RunTool> {
   for (const ext of ['ts', 'mjs']) {
     const file = join(tree, 'core', `commands.${ext}`);
@@ -17,7 +19,7 @@ async function loadRunTool(): Promise<RunTool> {
     const mod: unknown = await import(pathToFileURL(file).href);
     if (isRecord(mod)) {
       const fn = mod.runTool;
-      if (typeof fn === 'function') return (scene, name, args, ctx) => fn(scene, name, args, ctx);
+      if (isRunTool(fn)) return fn;
     }
   }
   throw new Error(`No core/commands.ts or core/commands.mjs with runTool in ${tree}`);

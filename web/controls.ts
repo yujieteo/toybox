@@ -112,7 +112,7 @@ function bindKeys(v: Viewer, canvas: HTMLCanvasElement): void {
     if (k === 'ArrowLeft') v.orbitBy(-0.1, 0); else if (k === 'ArrowRight') v.orbitBy(0.1, 0);
     else if (k === 'ArrowUp') v.orbitBy(0, 0.08); else if (k === 'ArrowDown') v.orbitBy(0, -0.08);
     else if (k === '+' || k === '=') v.zoomBy(0.85); else if (k === '-') v.zoomBy(1.18);
-    else if (k === ' ') { v.playing ? v.pause() : v.play(); }
+    else if (k === ' ') { if (v.playing) v.pause(); else v.play(); }
     else if (k === 'Escape') v.select(null);
     else if (k === 'Delete' || k === 'Backspace') v.edit('delete');
     else return;
@@ -125,7 +125,7 @@ function bindPanel(v: Viewer, ui: ControlsUi): void {
   assert(typeof ui === 'object');
   ui.play.onclick = () => {
     assert(typeof v === 'object'); assert(typeof ui.play === 'object');
-    v.playing ? v.pause() : v.play();
+    if (v.playing) v.pause(); else v.play();
   };
   ui.seek.oninput = () => { 
     assert(typeof v === 'object');

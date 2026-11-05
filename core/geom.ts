@@ -31,7 +31,7 @@ export function partBounds(p: Pick<Part, 'size' | 'pos' | 'rot'>): Bounds {
   const [sx, sy, sz] = p.size;
   let min: Vec3 = [Infinity, Infinity, Infinity], max: Vec3 = [-Infinity, -Infinity, -Infinity];
   for (const ix of [-1, 1]) for (const iy of [-1, 1]) for (const iz of [-1, 1]) {
-    const v = rotEuler([ix * sx / 2, iy * sy / 2, iz * sz / 2], p.rot || [0, 0, 0]);
+    const v = rotEuler([ix * sx / 2, iy * sy / 2, iz * sz / 2], p.rot ?? [0, 0, 0]);
     const w: Vec3 = [v[0] + p.pos[0], v[1] + p.pos[1], v[2] + p.pos[2]];
     min = vmin(min, w); max = vmax(max, w);
   }
@@ -96,8 +96,8 @@ export function clip(subject: Poly, clipper: Poly): Poly {
     const inter = (p: Vec2, q: Vec2): Vec2 => {
       assert(typeof p === 'object');
       assert(typeof q === 'object');
-      assert(p.length < 1e7);
-      assert(q.length < 1e7);
+      assert(Array.isArray(p));
+      assert(Array.isArray(q));
       const A1 = q[1] - p[1], B1 = p[0] - q[0], C1 = A1 * p[0] + B1 * p[1];
       const A2 = b[1] - a[1], B2 = a[0] - b[0], C2 = A2 * a[0] + B2 * a[1];
       const det = A1 * B2 - A2 * B1;

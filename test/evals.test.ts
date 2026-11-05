@@ -63,7 +63,7 @@ test('narrated scene: the voice sets the beats, and the motion words follow the 
   const narration = must(s.narration), facts = must(s.facts);
   assert.ok(narration.every((n) => n.voice && existsSync(new URL(`../evals/out/${n.voice}`, import.meta.url))));
   assert.ok(facts.every((f) => must(f.source).startsWith("https://")));
-  assert.ok(narration.flatMap((n) => n.facts || []).every((f) => facts.some((x) => x.id === f)));
+  assert.ok(narration.flatMap((n) => n.facts ?? []).every((f) => facts.some((x) => x.id === f)));
   assert.deepEqual(s.captions.map((c) => c.text), narration.map((n) => n.text));
   const motions = must(s.motions);
   assert.ok(motions.length >= 8 && motions.every((m) => m.cue));
@@ -81,7 +81,7 @@ test('mrt scene: a narrated Singapore platform boarding story', () => {
   assert.ok(narration.length >= 8 && narration.length <= 12);
   assert.ok(narration.every((n) => n.voice && existsSync(new URL(`../web/scenes/mrt/${n.voice}`, import.meta.url))));
   assert.ok(facts.every((f) => must(f.source).startsWith("https://")));
-  assert.ok(narration.flatMap((n) => n.facts || []).every((f) => facts.some((x) => x.id === f)));
+  assert.ok(narration.flatMap((n) => n.facts ?? []).every((f) => facts.some((x) => x.id === f)));
   assert.deepEqual(s.captions.map((c) => c.text), narration.map((n) => n.text));
   const people = s.objects.filter((o) => o.model === 'person');
   assert.ok(people.length >= 12, `${people.length} people`);

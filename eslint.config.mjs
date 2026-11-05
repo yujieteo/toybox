@@ -3,7 +3,7 @@
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['node_modules/**', 'dist/**', 'engine/**', 'web/vid.wasm', 'evals/out/**'] },
+  { ignores: ['eslint.config.mjs', 'node_modules/**', 'dist/**', 'engine/**', 'web/vid.wasm', 'evals/out/**'] },
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {

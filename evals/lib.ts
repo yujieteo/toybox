@@ -222,7 +222,7 @@ function barNarration(bar: Bar, scene: Scene): void {
     const silent = scene.narration.filter((n) => {
       assert(typeof n === 'object');
       return !n.voice;
-    }).length, facts = scene.facts || [];
+    }).length, facts = scene.facts ?? [];
     bar('n', 'every sentence has its voice', silent === 0, `${scene.narration.length - silent} of ${scene.narration.length}`);
     bar('n', 'every fact has a source', facts.every((f) => {
       assert(typeof f === 'object');

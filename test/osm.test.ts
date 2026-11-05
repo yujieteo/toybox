@@ -16,7 +16,7 @@ const origin = { lat: 1.3068, lon: 103.8512 };
 
 function tests1(): void {
 test('projection: x east, z south, in metres', () => {
-  const [x = NaN, z = NaN] = project(1.3068 + 0.001, 103.8512 + 0.001, origin);
+  const [x, z] = project(1.3068 + 0.001, 103.8512 + 0.001, origin);
   assert.ok(Math.abs(x - 111.2) < 1 && Math.abs(z + 111.2) < 1, `${x} ${z}`);
 });
 
@@ -36,13 +36,13 @@ test('parse recorded sample and build the map block', () => {
   assert.equal(b2.height, 9);
   const blk = toMapBlock(b, origin);
   assert.equal(blk.attribution, '© OpenStreetMap contributors');
-  assert.ok(blk.buildings.every((x) => !('ll' in x) && x.poly.every((p) => p.length === 2)));
+  assert.ok(blk.buildings.every((x) => !('ll' in x) && x.poly.every((p) => Object.keys(p).length === 2)));
   const s = newScene({}); s.map = { origin, osm: blk }; assert.deepEqual(validate(s), []);
 });
 
 test('fetchBuildings sends the Overpass query', async () => {
   let seen: { url: string; body: string } | undefined;
-  const fake: FetchLike = async (url, init) => { seen = { url, body: decodeURIComponent(init.body) }; return { ok: true, status: 200, json: async () => sample }; };
+  const fake: FetchLike = (url, init) => { seen = { url, body: decodeURIComponent(init.body) }; return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(sample) }); };
   const b = await fetchBuildings({ lat: 1.3068, lon: 103.8512, radius: 100, fetchImpl: fake });
   const sent = must(seen, 'the request');
   assert.equal(sent.url, OVERPASS_URL);

@@ -16,7 +16,7 @@ interface Footprint { poly: Vec2[] }
 interface OdblFile { header: { license: string }; bearing: number; osm: { buildings: unknown[] } }
 
 // The result of a successful command, as the type T.
-const done = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const done = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 const overpass = JSON.parse(readFileSync(new URL('../evals/fixtures/race-course-road-osm.json', import.meta.url), 'utf8'));
 const BBOX = [1.3077, 103.8501, 1.3101, 103.8524];
 
@@ -108,7 +108,7 @@ test('daemon: static files stay in their folders, host is checked, stale scene w
   const child = spawn(process.execPath, [fileURLToPath(new URL('../app/serve.ts', import.meta.url)), '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
   tc.after(() => child.kill());
   const token = await new Promise<string>((ok, no) => {
-    let out = ''; child.stdout.on('data', (d: Buffer) => { out += d; const m = /token=(\w+)/.exec(out); if (m?.[1]) ok(m[1]); });
+    let out = ''; child.stdout.on('data', (d: Buffer) => { out += d.toString(); const m = /token=(\w+)/.exec(out); if (m?.[1]) ok(m[1]); });
     child.on('exit', () => { no(new Error('daemon stopped')); });
   });
   const base = `http://127.0.0.1:${port}`;

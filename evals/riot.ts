@@ -204,7 +204,7 @@ function gather({ person, leg }: Kit): string[] {
   spots.forEach((tgt, i) => {
     assert(typeof tgt === 'object');
     assert(typeof i === 'number');
-    assert(tgt.length < 1e7);
+    assert(!Number.isNaN(tgt[0]));
     assert(!Number.isNaN(i));
     const id = `cr-${i + 1}`, wave = Math.floor(i / 20), k = i % 20;
     const arrive = (([49, 72, 78][wave] ?? 0) + k * ([0.5, 0.25, 0.25][wave] ?? 0)), from: P2 = [-70 - i * 0.5, tgt[1]];
@@ -247,7 +247,7 @@ function police({ place, leg, timed, appear }: Kit): string[] {
     assert(typeof pts === 'object');
     assert(typeof speed === 'number');
     assert(!Number.isNaN(i));
-    assert(door.length < 1e7);
+    assert(!Number.isNaN(door[0]));
     assert(!Number.isNaN(t));
     assert(pts.length < 1e7);
     assert(!Number.isNaN(speed));
@@ -358,7 +358,7 @@ function camerasAndChapters({ b }: Kit, crowd: string[], cops: string[], soc: st
   const VIEW0: Record<string, number | undefined> = { wide: 20, medium: 20, close: 15, top: 0, orbit: 0 };
   const cam = (_start: number, end: number, segs: Seg[]) => { segs.forEach((s, i) => {
     const view = s.view ?? VIEW0[s.shot];
-    const args = (t: number, v: number | undefined) => ({ t, shot: s.shot, frame: s.frame, ...(v !== undefined ? { view: v } : {}), ...(s.opts || {}) });
+    const args = (t: number, v: number | undefined) => ({ t, shot: s.shot, frame: s.frame, ...(v !== undefined ? { view: v } : {}), ...(s.opts ?? {}) });
     b.cmd('set_camera', args(s.t, view));
     const hold = (segs[i + 1]?.t ?? end) - 1.0;
     if (hold > s.t + 0.05) b.cmd('set_camera', args(hold, view === undefined ? undefined : view + (s.shot === 'orbit' ? 45 : 6)));

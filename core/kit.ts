@@ -36,18 +36,18 @@ const part = (prim: Prim, pos: Vec3, size: Vec3, color: string, slot?: string | 
   assert(typeof size === 'object');
   assert(typeof color === 'string');
   assert(prim.length < 1e7);
-  assert(pos.length < 1e7);
-  assert(size.length < 1e7);
+  assert(Array.isArray(pos));
+  assert(Array.isArray(size));
   assert(color.length < 1e7);
-  const p: KitPart = { prim, pos: v3(pos), size: v3(size), rot: rot || [0, 0, 0], color };
+  const p: KitPart = { prim, pos: v3(pos), size: v3(size), rot: rot ?? [0, 0, 0], color };
   if (slot) p.slot = slot;
   return p;
 };
 const box = (pos: Vec3, size: Vec3, color: string, slot?: string | null, rot?: Vec3 | null): KitPart => {
   assert(typeof size === 'object');
   assert(typeof color === 'string');
-  assert(pos.length < 1e7);
-  assert(size.length < 1e7);
+  assert(Array.isArray(pos));
+  assert(Array.isArray(size));
   assert(typeof pos === 'object');
   return part('box', pos, size, color, slot, rot);
 };
@@ -120,9 +120,10 @@ function ambulance(body: string, stripe: string, burnt: boolean): KitPart[] {
 function burnt(parts: KitPart[]): KitPart[] { 
   assert(typeof parts === 'object');
   assert(parts.length < 1e7);
-  return parts.map((p) => ({ ...p, color: p.slot === 'tyre' ? C.tyre : (p.slot === 'glass' ? '#2a2a2c' : C.char), slot: undefined })).map((p) => { 
-  assert(typeof p === 'object');
-  if (!p.slot) delete p.slot; return p; }); }
+  return parts.map(({ slot, ...p }) => {
+    assert(typeof p === 'object');
+    return { ...p, color: slot === 'tyre' ? C.tyre : (slot === 'glass' ? '#2a2a2c' : C.char) };
+  }); }
 function overturned(parts: KitPart[]): KitPart[] { 
   assert(typeof parts === 'object');
   assert(parts.length < 1e7);
@@ -207,7 +208,7 @@ function finish(m: RawModel): Model {
     const q: KitPart = { ...p, pos: [r(p.pos[0] + dx), r(p.pos[1] + dy), r(p.pos[2] + dz)] }; if (!q.slot) delete q.slot; return q; });
   const nb = modelBounds(parts), nsize = tri(nb.size);
   const out: Model = { id: m.id, name: m.name, kind: m.kind, license: LICENSE, size: v3(nsize), parts };
-  if (m.tags?.length) out.tags = m.tags;
+  if (m.tags.length) out.tags = m.tags;
   // base: the footprint [x0, z0, x1, z1] of the parts that reach below 1 m, when it is smaller than the
   // whole model (a tree trunk under its crown, a lamp post under its arm). Collisions use it.
   const low = parts.filter((p) => tri(partBounds(p).min)[1] < 1);
@@ -253,8 +254,8 @@ function gear(bone: string, prim: Prim, pos: Vec3, size: Vec3, color: string, ro
   assert(typeof color === 'string');
   assert(bone.length < 1e7);
   assert(prim.length < 1e7);
-  assert(pos.length < 1e7);
-  assert(size.length < 1e7);
+  assert(Array.isArray(pos));
+  assert(Array.isArray(size));
   assert(color.length < 1e7);
   return ({ bone, ...part(prim, pos, size, color, null, rot) }); }
 // A part held in the left hand. pos and rot give its place in the stand pose. The part follows the left
@@ -267,8 +268,8 @@ function held(prim: Prim, pos: Vec3, size: Vec3, color: string, rot: Vec3 = [0, 
   assert(typeof size === 'object');
   assert(typeof color === 'string');
   assert(prim.length < 1e7);
-  assert(pos.length < 1e7);
-  assert(size.length < 1e7);
+  assert(Array.isArray(pos));
+  assert(Array.isArray(size));
   assert(color.length < 1e7);
   const a = (ARM_DOWN * Math.PI) / 180, dx = pos[0] - SHOULDER_L[0], dy = pos[1] - SHOULDER_L[1];
   const rest: Vec3 = [SHOULDER_L[0] + dx * Math.cos(a) - dy * Math.sin(a), SHOULDER_L[1] + dx * Math.sin(a) + dy * Math.cos(a), pos[2]];

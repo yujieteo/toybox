@@ -66,7 +66,7 @@ test('valueAt stays between the first and last key of a number track', () => {
     const keys = values.map((v, i) => ({ t: i * 2, v: vec(v) }));
     const got = valueAt(keys, t);
     assert.ok(Array.isArray(got));
-    const x = Number(got[0]);
+    const x = got[0];
     assert.ok(x >= Math.min(...values) - 1e-9 && x <= Math.max(...values) + 1e-9);
   }));
 });

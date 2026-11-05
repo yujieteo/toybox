@@ -4,15 +4,23 @@
 import { createViewer } from './viewer.js';
 import { bindControls } from './controls.js';
 import { isScene } from './viewer.js';
-import { byId, htmlById, isRecord, messageOf } from './dom.js';
+import { byId, htmlById, isRecord, messageOf, textOf } from './dom.js';
 import { assert } from './assert.ts';
 
 const $ = htmlById;
 const q = new URLSearchParams(location.search);
 let token = q.get('token');
 try { if (token) sessionStorage.setItem('tb', token); else token = sessionStorage.getItem('tb'); } catch {}
-const api = (p: string, opt?: RequestInit): Promise<Response> => fetch(`${p}${p.includes('?') ? '&' : '?'}token=${token}`, opt);
-const status = (t: string): void => { $('status').textContent = t; };
+const api = (p: string, opt?: RequestInit): Promise<Response> => {
+  assert(p.startsWith('/'));
+  assert(p.length < 1e7);
+  return fetch(`${p}${p.includes('?') ? '&' : '?'}token=${token}`, opt);
+};
+const status = (t: string): void => {
+  assert(typeof t === 'string');
+  assert(t.length < 1e7);
+  $('status').textContent = t;
+};
 
 const canvas = byId('canvas', HTMLCanvasElement), overlay = byId('overlay', HTMLCanvasElement);
 const v = await createViewer({ canvas, overlay });
@@ -46,7 +54,7 @@ async function pull(): Promise<void> {
     assert(typeof o === 'object');
     return o.id === sel;
   }) ? sel : null;
-  if (v.oneMap(s) && !v.logo) v.loadLogo().then(() => {
+  if (v.oneMap(s) && !v.logo) void v.loadLogo().then(() => {
     assert(typeof v === 'object');
     v.draw(v.t);
   });   // the logo arrives after the first frame
@@ -61,7 +69,7 @@ async function poll(): Promise<void> {
     const ver = isRecord(reply) && typeof reply.v === 'number' ? reply.v : undefined;
     if (ver !== undefined && ver !== lastVersion && !savingNow && saveTimer === null) { lastVersion = ver; await pull(); }
   } catch { status('The Toybox daemon does not answer.'); }
-  setTimeout(poll, 1000);
+  setTimeout(() => { void poll(); }, 1000);
 }
 // The text of the error field of a reply, or a fallback text.
 function errorOf(a: unknown): string { 
@@ -90,11 +98,12 @@ function queueSave(delay = 400): void {
     assert(typeof delay === 'number');
     assert(!Number.isNaN(delay));
     assert(typeof resolve === 'function');
-    saveTimer = setTimeout(async () => {
+    const run = async (): Promise<void> => {
       assert(typeof status === 'function');
       assert(typeof resolve === 'function');
       try { await saveScene(); } catch (e) { status('The scene could not be saved: ' + messageOf(e)); } finally { resolve(); }
-    }, delay);
+    };
+    saveTimer = setTimeout(() => { void run(); }, delay);
   });
 }
 // The export reads the scene file from the disk. Send a pending edit first, so the export cannot
@@ -118,7 +127,8 @@ const add = (cls: string, text: string): HTMLParagraphElement => {
 let ctl: AbortController | null = null;
 // A chat reply of more chunks than this is cut off.
 const MAX_CHUNKS = 1_000_000;
-form.addEventListener('submit', async e => {
+form.addEventListener('submit', e => { void onSubmit(e); });
+async function onSubmit(e: Event): Promise<void> {
   e.preventDefault();
   assert(msg.value.length < 1e7); assert(typeof log === 'object');
   const text = msg.value.trim(); if (!text || ctl) return;
@@ -135,13 +145,17 @@ form.addEventListener('submit', async e => {
         const line = buf.slice(0, i).replace(/^data: /, ''); buf = buf.slice(i + 2);
         const m: unknown = JSON.parse(line);
         if (!isRecord(m)) continue;
-        if (m.text) add('agent', String(m.text)); else if (m.tool) add('tool', 'Tool: ' + String(m.tool));
+        if (m.text) add('agent', textOf(m.text)); else if (m.tool) add('tool', 'Tool: ' + textOf(m.tool));
       }
     }
   } catch (err) { if (!(err instanceof Error && err.name === 'AbortError')) add('tool', 'The chat stopped: ' + messageOf(err)); }
   ctl = null; byId('send', HTMLButtonElement).disabled = false;
-});
-$('stop').onclick = () => { if (ctl) ctl.abort(); };
+}
+$('stop').onclick = () => {
+  assert(typeof ctl === 'object');
+  assert(typeof $ === 'function');
+  if (ctl) ctl.abort();
+};
 msg.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) form.requestSubmit(); });
 
 const mp4 = byId('mp4', HTMLButtonElement);
@@ -151,7 +165,7 @@ mp4.onclick = async () => {
     await flushSave();
     const r: unknown = await (await api('/api/export', { method: 'POST', body: JSON.stringify({ name: (v.scene?.title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() }) })).json();
     if (!isRecord(r)) throw new Error('The daemon sent no export result.');
-    status(r.error ? String(r.error) : `Done. Files: ${[r.mp4, r.srt, r.scene, r.odbl].filter(Boolean).join(', ')}`);
+    status(r.error ? textOf(r.error) : `Done. Files: ${[r.mp4, r.srt, r.scene, r.odbl].filter(Boolean).join(', ')}`);
   } catch (e) { status('The export failed: ' + messageOf(e)); }
   mp4.disabled = false;
 };

@@ -4,7 +4,7 @@
 import { plain } from './vid.js';
 import type { Scene } from './types.js';
 import type { Viewer } from './viewer.js';
-import { byId, context2d, isRecord } from './dom.js';
+import { byId, context2d, isRecord, orEmpty, textOf } from './dom.js';
 import { assert } from './assert.ts';
 
 export function srt(scene: Pick<Scene, 'captions'>): string {
@@ -20,7 +20,7 @@ export function srt(scene: Pick<Scene, 'captions'>): string {
   assert(typeof returned === 'string');
   assert(returned.length < 1e7);
   return returned; };
-  return [...(scene.captions || [])].sort((a, b) => {
+  return [...(orEmpty(scene.captions))].sort((a, b) => {
     assert(typeof a === 'object');
     return a.start - b.start;
   }).map((c, i) => {
@@ -74,7 +74,8 @@ export async function exportVideo(v: Viewer, { width = 1920, height = 1080, fps 
   const out = document.createElement('canvas'); out.width = width; out.height = height;
   const g = context2d(out);
   const gl = byId('canvas', HTMLCanvasElement), overlay = byId('overlay', HTMLCanvasElement);
-  let enc: VideoEncoder | null = null, chain: Promise<unknown> = Promise.resolve(), bytes = 0, encErr: unknown = null;
+  let enc: VideoEncoder | null = null, chain: Promise<unknown> = Promise.resolve(), bytes = 0;
+  const errBox: { err: Error | null } = { err: null };
   const hashList: number[] = [];
   try {
     v.pause(); v.selected = null; v.userCam = false; v.exporting = true;
@@ -84,7 +85,7 @@ export async function exportVideo(v: Viewer, { width = 1920, height = 1080, fps 
     const start = await fetch(startUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ srt: srt(scene), scene }) });
     if (!start.ok) {
       let message = 'The server refused the start of the export.';
-      try { const j: unknown = await start.json(); if (isRecord(j) && j.error) message = String(j.error); } catch { /* the body is not JSON */ }
+      try { const j: unknown = await start.json(); if (isRecord(j) && j.error) message = textOf(j.error); } catch { /* the body is not JSON */ }
       throw new Error(message);
     }
     const encoder = new VideoEncoder({
@@ -93,12 +94,12 @@ export async function exportVideo(v: Viewer, { width = 1920, height = 1080, fps 
         const b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); bytes += b.length; chain = chain.then(() => fetch(`${base}/export/chunk?token=${token}`, { method: 'POST', body: b })); },
       error: e => { 
         assert(typeof e === 'object');
-        encErr = e; } });
+        errBox.err = e; } });
     enc = encoder;
     encoder.configure({ codec: cfg.codec, width, height, bitrate: cfg.bitrate, framerate: fps, avc: { format: 'annexb' }, latencyMode: 'quality' });
     const t0 = performance.now();
     for (let i = 0; i < n; i++) {
-      if (encErr) throw encErr;
+      if (errBox.err) throw errBox.err;
       v.draw(i / fps);                                   // draws the scene and the overlay
       g.drawImage(gl, 0, 0, width, height);
       g.drawImage(overlay, 0, 0, width, height);
@@ -109,11 +110,11 @@ export async function exportVideo(v: Viewer, { width = 1920, height = 1080, fps 
       if (onprogress && i % 15 === 0) onprogress(i / n);
     }
     await encoder.flush(); await chain;
-    if (encErr) throw encErr;
+    if (errBox.err) throw errBox.err;
     const info: ExportInfo = { frames: n, seconds: dur, fps, width, height, h264_bytes: bytes, encode_ms: Math.round(performance.now() - t0) };
     if (hashes) info.hashes = hashList.join(',');
-    const res: unknown = await (await fetch(`${base}/export/end?token=${token}&` + new URLSearchParams(Object.entries(info).map(([k, x]) => [k, String(x)])), { method: 'POST' })).json();
-    if (isRecord(res) && res.error) throw new Error(String(res.error));
+    const res: unknown = await (await fetch(`${base}/export/end?token=${token}&` + new URLSearchParams(Object.entries(info).map(([k, x]) => [k, textOf(x)])).toString(), { method: 'POST' })).json();
+    if (isRecord(res) && res.error) throw new Error(textOf(res.error));
     return { ...info, ...(isRecord(res) ? res : {}) };
   } finally {
     // Always give the viewer back, even when the export failed. The page that runs the export

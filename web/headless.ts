@@ -33,7 +33,7 @@ try {
   // wait is part of the capture. A slow or blocked tile server must not hang the job: stop waiting
   // after 15 s. The OneMap logo is only a credit. It gets a short separate wait and never holds
   // the tiles back.
-  await Promise.race([v.tilesReady || Promise.resolve(), sleep(15000)]);
+  await Promise.race([v.tilesReady, sleep(15000)]);
   if (v.oneMap(scene)) await Promise.race([v.loadLogo(), sleep(5000)]);
   await document.fonts.load('500 20px "DM Sans"'); await document.fonts.load('600 20px "DM Sans"');
   if (q.get('mode') === 'frame') {

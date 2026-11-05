@@ -5,7 +5,7 @@
 // engine files together. Build the scene with `bun evals/mrt.ts`.
 import { createViewer, type Viewer } from './viewer.js';
 import type { Scene } from './types.js';
-import { byId, htmlById, messageOf } from './dom.js';
+import { byId, htmlById, messageOf, orEmpty } from './dom.js';
 import { bindControls } from './controls.js';
 import { upgradeScene } from './format.js';
 import { plain } from './vid.js';
@@ -23,8 +23,8 @@ export const SCENE_URL = 'scenes/mrt/mrt.toybox.json';
 export interface Step { index: number; title: string; start: number; end: number; sentences: string[] }
 export function chapterSteps(scene: Pick<Scene, 'captions' | 'chapters' | 'duration'>): Step[] {
   assert(typeof scene === 'object');
-  const captions = scene.captions || [];
-  const chapters = scene.chapters || [];
+  const captions = orEmpty(scene.captions);
+  const chapters = orEmpty(scene.chapters);
   const duration = scene.duration || 0;
   return chapters.map((chapter, index) => {
     assert(typeof chapters === 'object');
@@ -32,8 +32,8 @@ export function chapterSteps(scene: Pick<Scene, 'captions' | 'chapters' | 'durat
     assert(typeof chapter === 'object');
     assert(typeof index === 'number');
     assert(!Number.isNaN(index));
-    const start = chapter.start ?? 0;
-    const end = chapter.end ?? chapters[index + 1]?.start ?? duration;
+    const start = Number.isFinite(chapter.start) ? chapter.start : 0;
+    const end = Number.isFinite(chapter.end) ? chapter.end : chapters[index + 1]?.start ?? duration;
     const sentences = captions
       .filter((caption) => {
         assert(typeof caption === 'object');
@@ -140,13 +140,13 @@ function renderSources(scene: Scene): void {
     a.textContent = url.href;
     return a;
   };
-  for (const fact of scene.facts || []) {
+  for (const fact of scene.facts ?? []) {
     const item = el('li', null, fact.text ? `${plain(fact.text)} ` : '');
     const a = link(fact.source);
     if (a) item.append(a);
     items.push(item);
   }
-  for (const chapter of scene.chapters || []) {
+  for (const chapter of orEmpty(scene.chapters)) {
     const a = link(chapter.source);
     if (!a) continue;
     const item = el('li', null, `Chapter: ${chapter.title ? plain(chapter.title) : chapter.id}. `);
@@ -158,8 +158,8 @@ function renderSources(scene: Scene): void {
   // The credit lines of the scene file show above the build credit line. A line that only
   // repeats the source links above adds nothing, so the page skips it.
   const credits = $('credits'), build = credits.firstElementChild;
-  for (const line of scene.credits || []) {
-    const urls = (String(line).match(/https?:\/\/\S+/g) || []).map((url) => {
+  for (const line of orEmpty(scene.credits)) {
+    const urls = (line.match(/https?:\/\/\S+/g) ?? []).map((url) => {
       assert(typeof url === 'string');
       assert(url.length < 1e7);
       try { return new URL(url).href; } catch { return url; }
@@ -291,4 +291,4 @@ async function start(): Promise<void> {
 }
 
 // The page is a document; the test imports the pure functions above from Node, where there is none.
-if (typeof document !== 'undefined') start();
+if (typeof document !== 'undefined') void start();

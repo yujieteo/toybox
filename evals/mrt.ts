@@ -93,7 +93,7 @@ function platform({ cmd }: Ctx): void {
     assert(typeof model === 'string');
     assert(typeof p === 'object');
     assert(model.length < 1e7);
-    assert(p.length < 1e7);
+    assert(!Number.isNaN(p[0]));
     return cmd('place', { model, at: p, ...E, ...extra });
   };
   // the floor the visitor walks on (tag floor: a surface, not a wall)
@@ -142,7 +142,7 @@ function people({ cmd }: Ctx): void {
     assert(typeof p === 'object');
     assert(id.length < 1e7);
     assert(!Number.isNaN(variant));
-    assert(p.length < 1e7);
+    assert(!Number.isNaN(p[0]));
     return cmd('place', { model: 'person', at: [p[0], 0.02, p[1]], id, variant, ...PERSON, ...extra });
   };
   person('main', 8, [0, 11.8], { yaw: 180, colors: { shirt: '#3f6e9a', pants: '#3a3f47' } });

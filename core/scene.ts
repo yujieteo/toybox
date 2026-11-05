@@ -8,7 +8,9 @@ import type { Scene, SceneObject, Catalogue, Model, Vec2, Vec3, Ease, Channel, S
 import { narrationErrors, narrationLength } from './narration.ts';
 import { MOVES, plain } from '../web/vid.js';
 import { FORMAT, isCatalogue, upgradeScene } from '../web/format.js';
+import { isRecord } from '../web/dom.js';
 import { assert } from './assert.ts';
+import { orEmpty } from './lists.ts';
 
 export type { Bounds };
 // One problem that validate, blockedViews or motionErrors found.
@@ -16,7 +18,7 @@ export interface ValidationError { code: string; path?: string; message: string 
 // The box of an object at one time: its footprint corners ([x, z]), position, yaw and size.
 export interface ObjectBounds extends Bounds { corners: Poly; at: Vec3; yaw: number; size: Vec3 }
 export interface ObjectState { at: Vec3; yaw: number; scale: Vec3 }
-export interface CameraState { eye: Vec3; target: Vec3; fov: number; shot?: Shot }
+export interface CameraState { eye: Vec3; target: Vec3; fov: number; shot?: Shot | undefined }
 export interface Camera { eye: Vec3; target: Vec3; fov: number }
 const oneOf = (list: readonly string[], v: unknown): boolean => typeof v === 'string' && list.includes(v);
 
@@ -53,7 +55,7 @@ export function newScene(opts: NewSceneOpts = {}): Scene {
     title: opts.title || 'Untitled',
     author: opts.author || '',
     duration: opts.duration || 0,
-    backdrop: { ground, size: opts.size || [80, 80], color: opts.color || '#9fb88c' },
+    backdrop: { ground, size: opts.size ?? [80, 80], color: opts.color || '#9fb88c' },
     lighting: [{ t: 0, look: opts.look || 'day' }],
     objects: [], tracks: [], camera: [], chapters: [], captions: [], callouts: [], credits: [],
   };
@@ -119,7 +121,7 @@ export function trackOf(scene: Scene, id: string, channel: Channel): Track | und
   assert(typeof channel === 'string');
   assert(id.length < 1e7);
   assert(channel.length < 1e7);
-  return scene.tracks?.find((k) => k.object === id && k.channel === channel); }
+  return scene.tracks.find((k) => k.object === id && k.channel === channel); }
 export function stateAt(scene: Scene, o: SceneObject, t?: number | null): ObjectState {
   assert(typeof scene === 'object');
   assert(typeof o === 'object');
@@ -141,8 +143,8 @@ export function cameraAt(scene: Scene, t: number): CameraState | null {
   assert(typeof t === 'number');
   assert(!Number.isNaN(t));
   const ks = scene.camera;
-  const first = ks?.[0];
-  if (!ks || !first) return null;
+  const first = ks[0];
+  if (!first) return null;
   const pack = (k: CameraKey): Camera => ({ eye: k.eye, target: k.target, fov: k.fov ?? 50 });
   if (t <= first.t) return { ...pack(first), shot: first.shot };
   for (const [i, a] of ks.entries()) {
@@ -188,8 +190,8 @@ function modelSize(o: SceneObject, cat: Catalogue): Vec3 | null {
 }
 export function objectBounds(scene: Scene, catalogue: Catalogue | null | undefined, t?: number | null): Record<string, ObjectBounds> {
   assert(typeof scene === 'object');
-  const cat = catalogue || loadCatalogue();
-  const byId = new Map((scene.objects || []).map((o): [string, SceneObject] => [o.id, o]));
+  const cat = catalogue ?? loadCatalogue();
+  const byId = new Map(orEmpty(scene.objects).map((o): [string, SceneObject] => [o.id, o]));
   const world = (o: SceneObject): ObjectState => {
     assert(typeof o === 'object');
     const chain = [o]; // the object, then its parents up to 8 levels
@@ -204,7 +206,7 @@ export function objectBounds(scene: Scene, catalogue: Catalogue | null | undefin
     return ps;
   };
   const out: Record<string, ObjectBounds> = {};
-  for (const o of scene.objects || []) {
+  for (const o of orEmpty(scene.objects)) {
     const sz = modelSize(o, cat);
     if (!sz) continue;
     const st = world(o);
@@ -212,13 +214,13 @@ export function objectBounds(scene: Scene, catalogue: Catalogue | null | undefin
     const corners = rectCorners(st.at[0], st.at[2], w, d, st.yaw);
     const xs = corners.map((c) => {
       assert(typeof c === 'object');
-      assert(c.length < 1e7);
+      assert(Array.isArray(c));
       const returned = c[0];
       assert(typeof returned === 'number');
       return returned;
     }), zs = corners.map((c) => {
       assert(typeof c === 'object');
-      assert(c.length < 1e7);
+      assert(Array.isArray(c));
       const returned = c[1];
       assert(typeof returned === 'number');
       return returned;
@@ -232,7 +234,7 @@ export function objectBounds(scene: Scene, catalogue: Catalogue | null | undefin
 export function project(cam: Camera, p: Vec3, aspect: number = ASPECT): { x: number; y: number; depth: number } | null {
   assert(typeof cam === 'object');
   assert(typeof p === 'object');
-  assert(p.length < 1e7);
+  assert(Array.isArray(p));
   const f = norm(sub(cam.target, cam.eye));
   const right = norm(cross(f, [0, 1, 0]));
   const up = cross(right, f);
@@ -247,7 +249,7 @@ export const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2
 export const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 export const norm = (a: Vec3): Vec3 => { 
   assert(typeof a === 'object');
-  assert(a.length < 1e7);
+  assert(Array.isArray(a));
   const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 export function boundsVisible(cam: Camera, b: ObjectBounds): boolean {
   assert(typeof cam === 'object');
@@ -257,7 +259,7 @@ export function boundsVisible(cam: Camera, b: ObjectBounds): boolean {
   pts.push([(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2]);
   return pts.some((p) => { 
     assert(typeof p === 'object');
-    assert(p.length < 1e7);
+    assert(Array.isArray(p));
     const q = project(cam, p); return q && Math.abs(q.x) <= 1 && Math.abs(q.y) <= 1; });
 }
 
@@ -280,13 +282,13 @@ function prism(id: string, poly: Poly, y0: number, y1: number): Prism {
   assert(!Number.isNaN(y1));
   const xs = poly.map((p) => {
     assert(typeof p === 'object');
-    assert(p.length < 1e7);
+    assert(Array.isArray(p));
     const returned = p[0];
     assert(typeof returned === 'number');
     return returned;
   }), zs = poly.map((p) => {
     assert(typeof p === 'object');
-    assert(p.length < 1e7);
+    assert(Array.isArray(p));
     const returned = p[1];
     assert(typeof returned === 'number');
     return returned;
@@ -297,11 +299,11 @@ export function occluders(scene: Scene, cat: Catalogue, bt: Record<string, Objec
   assert(typeof scene === 'object');
   assert(typeof cat === 'object');
   assert(typeof bt === 'object');
-  const out = (scene.map?.osm?.buildings || []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9));
+  const out = (scene.map?.osm?.buildings ?? []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9));
   const kinds = new Map(cat.models.map((m): [string, string] => [m.id, m.kind]));
-  const cut = scene.cutaway || {};
+  const cut = scene.cutaway ?? {};
   for (const o of scene.objects) {
-    const b = bt[o.id], tags = o.tags || [], kind = kinds.get(o.model);
+    const b = bt[o.id], tags = o.tags ?? [], kind = kinds.get(o.model);
     if (!b || o.hidden || skip.has(o.id) || !kind || !OCCLUDER_KINDS.has(kind) || tags.includes('floor')) continue;
     if ((cut.nearWalls && tags.includes('wall')) || (cut.ceilings && tags.includes('ceiling'))) continue;
     if (b.size[0] < 0.05 || b.size[1] < 0.05 || b.size[2] < 0.05) continue; // scaled to nothing (swapped out)
@@ -324,17 +326,17 @@ function segsCross(p: Vec2, q: Vec2, a: Vec2, b: Vec2): boolean {
   assert(typeof q === 'object');
   assert(typeof a === 'object');
   assert(typeof b === 'object');
-  assert(p.length < 1e7);
-  assert(q.length < 1e7);
-  assert(a.length < 1e7);
-  assert(b.length < 1e7);
+  assert(Array.isArray(p));
+  assert(Array.isArray(q));
+  assert(Array.isArray(a));
+  assert(Array.isArray(b));
   const o = (u: Vec2, v: Vec2, w: Vec2): number => {
     assert(typeof u === 'object');
     assert(typeof v === 'object');
     assert(typeof w === 'object');
-    assert(u.length < 1e7);
-    assert(v.length < 1e7);
-    assert(w.length < 1e7);
+    assert(Array.isArray(u));
+    assert(Array.isArray(v));
+    assert(Array.isArray(w));
     const returned = Math.sign((v[0] - u[0]) * (w[1] - u[1]) - (v[1] - u[1]) * (w[0] - u[0]));
     assert(typeof returned === 'number');
     return returned;
@@ -346,8 +348,8 @@ export function segmentHits(a: Vec3, b: Vec3, o: Prism): boolean {
   assert(typeof a === 'object');
   assert(typeof b === 'object');
   assert(typeof o === 'object');
-  assert(a.length < 1e7);
-  assert(b.length < 1e7);
+  assert(Array.isArray(a));
+  assert(Array.isArray(b));
   let s0 = 0, s1 = 1;
   const dy = b[1] - a[1];
   if (Math.abs(dy) < 1e-9) { if (a[1] < o.y0 || a[1] > o.y1) return false; }
@@ -374,8 +376,8 @@ export function blockerOf(cam: Camera, b: ObjectBounds, occ: Prism[]): string | 
   const c = b.corners.reduce<Vec2>((s, p) => {
     assert(typeof s === 'object');
     assert(typeof p === 'object');
-    assert(s.length < 1e7);
-    assert(p.length < 1e7);
+    assert(Array.isArray(s));
+    assert(Array.isArray(p));
     return [s[0] + p[0] / 4, s[1] + p[1] / 4];
   }, [0, 0]);
   const midY = (b.min[1] + b.max[1]) / 2;
@@ -410,8 +412,8 @@ export function frameCover(cam: Camera, occ: Prism[]): { part: number; by: strin
       assert(typeof cam === 'object');
       assert(typeof f === 'object');
       assert(typeof r === 'object');
-      assert(f.length < 1e7);
-      assert(r.length < 1e7);
+      assert(Array.isArray(f));
+      assert(Array.isArray(r));
       assert(typeof k === 'number');
       assert(!Number.isNaN(k));
       const returned = cam.eye[k] + (f[k] + r[k] * x + u[k] * y) * depth;
@@ -426,8 +428,8 @@ export function frameCover(cam: Camera, occ: Prism[]): { part: number; by: strin
   return { part: hidden / 144, by: [...count].sort((a, b) => {
     assert(typeof a === 'object');
     assert(typeof b === 'object');
-    assert(a.length < 1e7);
-    assert(b.length < 1e7);
+    assert(Array.isArray(a));
+    assert(Array.isArray(b));
     const returned = b[1] - a[1];
     assert(typeof returned === 'number');
     return returned;
@@ -456,9 +458,9 @@ export function focusAt(scene: Scene, t: number): string[] | null {
   assert(typeof scene === 'object');
   assert(typeof t === 'number');
   assert(!Number.isNaN(t));
-  const cs = scene.chapters || [];
+  const cs = orEmpty(scene.chapters);
   const c = cs.find((k) => k.start <= t && t < k.end) ?? cs.find((k) => k.start <= t && t <= k.end);
-  return c ? (c.focus || []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden)) : null;
+  return c ? (c.focus ?? []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden)) : null;
 }
 
 // Every time span longer than MAX_BLOCKED in which an occluder hides a chapter focus object, or covers
@@ -470,9 +472,9 @@ export function blockedViews(scene: Scene, catalogue?: Catalogue | null): Valida
   assert(!Number.isNaN(MAX_BLOCKED));
   assert(!Number.isNaN(MAX_COVER));
   assert(typeof scene === 'object');
-  const cat = catalogue || loadCatalogue();
+  const cat = catalogue ?? loadCatalogue();
   const errs: ValidationError[] = [];
-  (scene.chapters || []).forEach((c, i) => {
+  orEmpty(scene.chapters).forEach((c, i) => {
     assert(typeof scene === 'object');
     assert(typeof MAX_BLOCKED === 'number');
     assert(typeof errs === 'object');
@@ -481,7 +483,7 @@ export function blockedViews(scene: Scene, catalogue?: Catalogue | null): Valida
     assert(typeof c === 'object');
     assert(typeof i === 'number');
     assert(!Number.isNaN(i));
-    const focus = (c.focus || []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden));
+    const focus = (c.focus ?? []).filter((f) => scene.objects.some((o) => o.id === f && !o.hidden));
     if (!(c.end > c.start)) return;
     const FRAME = '\u0000frame', runs = new Map<string, { t0: number; by: string } | null>([...focus, FRAME].map((f): [string, null] => [f, null]));
     const close = (f: string, t: number): void => {
@@ -543,25 +545,25 @@ function solidsAt(scene: Scene, cat: Catalogue, models: Map<string, Model>, t: n
   assert(!Number.isNaN(t));
   const bt = objectBounds(scene, cat, t), out: Solid[] = [];
   for (const o of scene.objects) {
-    const b = bt[o.id], m = models.get(o.model), tags = o.tags || [];
-    if (!b || o.hidden || o.parent || Math.min(...b.size) < 0.05 || (m && m.kind === 'road')) continue;
-    if (tags.includes('floor') || tags.includes('ceiling') || (m?.tags || []).includes('effect') || o.model === 'door') continue;
+    const b = bt[o.id], m = models.get(o.model), tags = o.tags ?? [];
+    if (!b || o.hidden || o.parent || Math.min(...b.size) < 0.05 || (m?.kind === 'road')) continue;
+    if (tags.includes('floor') || tags.includes('ceiling') || (m?.tags ?? []).includes('effect') || o.model === 'door') continue;
     const poly = footprint(o, b, m), xs = poly.map((p) => {
       assert(typeof p === 'object');
-      assert(p.length < 1e7);
+      assert(Array.isArray(p));
       const returned = p[0];
       assert(typeof returned === 'number');
       return returned;
     }), zs = poly.map((p) => {
       assert(typeof p === 'object');
-      assert(p.length < 1e7);
+      assert(Array.isArray(p));
       const returned = p[1];
       assert(typeof returned === 'number');
       return returned;
     });
     const ptrack = o.model === 'person' ? trackOf(scene, o.id, 'pose') : undefined;
     const pose = o.model === 'person' ? (ptrack ? valueAt(ptrack.keys, t) : o.pose) : null;
-    out.push({ o, b, kind: o.model === 'person' ? 'person' : m?.kind, tags: [...tags, ...(m?.tags || [])], poly, y0: b.min[1], y1: b.max[1], pose,
+    out.push({ o, b, kind: o.model === 'person' ? 'person' : m?.kind, tags: [...tags, ...(m?.tags ?? [])], poly, y0: b.min[1], y1: b.max[1], pose,
       box: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)] });
   }
   return { bt, solids: out };
@@ -586,8 +588,8 @@ function inFootprint(s: Solid, poly: Poly): boolean {
   const c = s.poly.reduce<Vec2>((a, p) => {
     assert(typeof a === 'object');
     assert(typeof p === 'object');
-    assert(a.length < 1e7);
-    assert(p.length < 1e7);
+    assert(Array.isArray(a));
+    assert(Array.isArray(p));
     return [a[0] + p[0] / s.poly.length, a[1] + p[1] / s.poly.length];
   }, [0, 0]);
   const pts: Vec2[] = [c, ...s.poly.map((p): Vec2 => [p[0] * 0.7 + c[0] * 0.3, p[1] * 0.7 + c[1] * 0.3])];
@@ -642,13 +644,13 @@ function heldUp(ctx: MotionCtx, S: Solid, bt: Record<string, ObjectBounds>, c: V
   assert(typeof S === 'object');
   assert(typeof bt === 'object');
   assert(typeof c === 'object');
-  assert(c.length < 1e7);
+  assert(Array.isArray(c));
   const y = S.y0;
   return ctx.scene.objects.some((o) => {
     assert(typeof o === 'object');
     const b = bt[o.id], m = ctx.models.get(o.model);
     if (!b || o.id === S.o.id || o.model === 'person' || !inPoly(c, b.corners)) return false;
-    if ((o.tags || []).includes('stairs') || (m?.tags || []).includes('stairs') || o.model === 'escalator') return y >= b.min[1] - 0.05 && y <= b.max[1] + 0.05;
+    if ((o.tags ?? []).includes('stairs') || (m?.tags ?? []).includes('stairs') || o.model === 'escalator') return y >= b.min[1] - 0.05 && y <= b.max[1] + 0.05;
     return Math.abs(b.max[1] - y) <= 0.1;
   });
 }
@@ -708,7 +710,7 @@ function solidsStep(ctx: MotionCtx, t: number, solids: Solids, bt: Record<string
 // problem is reported once, with the time span in which it holds.
 export function motionErrors(scene: Scene, catalogue?: Catalogue | null, opts: { only?: Iterable<string> | null; from?: number; to?: number } = {}): ValidationError[] {
   assert(typeof scene === 'object');
-  const cat = catalogue || loadCatalogue(), models = new Map(cat.models.map((m): [string, Model] => [m.id, m]));
+  const cat = catalogue ?? loadCatalogue(), models = new Map(cat.models.map((m): [string, Model] => [m.id, m]));
   const runs = new Map<string, Run[]>();
   const seen = (key: string, t: number, make: (r: Run) => string): void => {
     assert(typeof key === 'string');
@@ -723,12 +725,12 @@ export function motionErrors(scene: Scene, catalogue?: Catalogue | null, opts: {
   };
   const ctx: MotionCtx = {
     scene, models, seen, drive: scene.drive || 'left',
-    movers: new Set((scene.tracks || []).filter((k) => MOVE_CHANNELS.has(k.channel)).map((k) => k.object)),
+    movers: new Set(orEmpty(scene.tracks).filter((k) => MOVE_CHANNELS.has(k.channel)).map((k) => k.object)),
     only: opts.only ? new Set(opts.only) : null,
-    osm: (scene.map?.osm?.buildings || []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9)),
+    osm: (scene.map?.osm?.buildings ?? []).map((b) => prism(`osm:${b.id}`, b.poly, 0, b.height || 9)),
     roads: scene.objects.filter((o) => ['road-straight', 'road-zebra'].includes(o.model) && !o.parent),
   };
-  const t0 = opts.from ?? 0, t1 = opts.to ?? scene.duration ?? 0, n = Math.max(0, Math.round((t1 - t0) / VIEW_STEP));
+  const t0 = opts.from ?? 0, t1 = opts.to ?? scene.duration, n = Math.max(0, Math.round((t1 - t0) / VIEW_STEP));
   let prev: Record<string, ObjectBounds> | null = null;
   for (let k = 0; k <= n; k++) {
     const t = Math.min(t1, t0 + k * VIEW_STEP), { bt, solids } = solidsAt(scene, cat, models, t);
@@ -801,7 +803,7 @@ function ts(sec: number): string {
 }
 export function srt(scene: Scene): string {
   assert(typeof scene === 'object');
-  return [...(scene.captions || [])].sort((a, b) => {
+  return [...orEmpty(scene.captions)].sort((a, b) => {
     assert(typeof a === 'object');
     assert(typeof b === 'object');
     const returned = a.start - b.start;
@@ -848,8 +850,8 @@ function checkTop(v: V): void {
   assert(typeof v === 'object');
   const { scene, E } = v;
   if (!isNum(scene.duration) || scene.duration < 0) E('schema', 'duration', 'duration must be a number of seconds.');
-  if (scene.backdrop && !oneOf(GROUNDS, scene.backdrop.ground)) E('schema', 'backdrop.ground', `ground must be one of ${GROUNDS.join(', ')}.`);
-  if (scene.backdrop?.ground === 'map' && scene.map?.bearing) E('schema', 'map.bearing', 'OneMap tiles cannot turn. Use a ground other than "map" when the map has a bearing.');
+  if (isRecord(scene.backdrop) && !oneOf(GROUNDS, scene.backdrop.ground)) E('schema', 'backdrop.ground', `ground must be one of ${GROUNDS.join(', ')}.`);
+  if (isRecord(scene.backdrop) && scene.backdrop.ground === 'map' && scene.map?.bearing) E('schema', 'map.bearing', 'OneMap tiles cannot turn. Use a ground other than "map" when the map has a bearing.');
   if (scene.lighting !== undefined && !Array.isArray(scene.lighting)) E('schema', 'lighting', 'lighting must be an array.');
 }
 function checkObjects(v: V): void {
@@ -860,7 +862,7 @@ function checkObjects(v: V): void {
     assert(typeof i === 'number');
     assert(!Number.isNaN(i));
     const p = `objects[${i}]`;
-    if (!o || typeof o.id !== 'string' || !o.id) { E('schema', p, 'Object needs a string id.'); return; }
+    if (!isRecord(o) || typeof o.id !== 'string' || !o.id) { E('schema', p, 'Object needs a string id.'); return; }
     if (ids.has(o.id)) E('duplicate_id', p, `Duplicate object id ${o.id}.`);
     ids.add(o.id);
     if (typeof o.model !== 'string') E('schema', `${p}.model`, 'model must be a string.');
@@ -872,7 +874,7 @@ function checkObjects(v: V): void {
     if (o.model === 'person') {
       if (!Number.isInteger(o.variant ?? 0) || (o.variant ?? 0) < 0 || (o.variant ?? 0) > 23) E('schema', `${p}.variant`, 'Person variant must be 0 to 23.');
       if (o.colors) for (const k of Object.keys(o.colors)) if (!['shirt', 'pants'].includes(k)) E('schema', `${p}.colors.${k}`, 'A person uses the slots shirt and pants only.');
-      if (o.outfit !== undefined && !(cat.outfits || []).some((f) => f.id === o.outfit)) E('schema', `${p}.outfit`, `Unknown outfit "${o.outfit}". Outfits: ${(cat.outfits || []).map((f) => f.id).join(', ')}.`);
+      if (o.outfit !== undefined && !(cat.outfits ?? []).some((f) => f.id === o.outfit)) E('schema', `${p}.outfit`, `Unknown outfit "${o.outfit}". Outfits: ${(cat.outfits ?? []).map((f) => f.id).join(', ')}.`);
     }
     if (o.pose !== undefined && !oneOf(POSES, o.pose)) E('schema', `${p}.pose`, `pose must be one of ${POSES.join(', ')}.`);
     if (o.tags !== undefined && !Array.isArray(o.tags)) E('schema', `${p}.tags`, 'tags must be an array.');
@@ -964,7 +966,7 @@ function checkChapters(v: V): void {
     if (!hasCap) E('chapter_no_caption', p, `Chapter ${c.id} has no caption.`);
     if (c.measured === true && !c.source) E('measured_no_source', p, `Chapter ${c.id} is measured but has no source.`);
     if (typeof c.source === 'string' && /^estimated/i.test(c.source) && c.estimated !== true) E('estimate_not_flagged', p, `Chapter ${c.id} has an estimated source but estimated is not true.`);
-    for (const f of c.focus || []) if (!ids.has(f)) E('unknown_object', `${p}.focus`, `Focus object ${f} does not exist.`);
+    for (const f of c.focus ?? []) if (!ids.has(f)) E('unknown_object', `${p}.focus`, `Focus object ${f} does not exist.`);
   });
 }
 
@@ -1072,7 +1074,7 @@ function checkGeometry(v: V): void {
   });
   const movers = new Set(scene.tracks.filter((t) => t.channel === 'at' || t.channel === 'scale').map((t) => t.object));
   const cand = scene.objects.filter((o) => bounds[o.id] && !o.hidden && !o.parent && !movers.has(o.id)
-    && !(o.tags || []).some((t) => STRUCTURAL_TAGS.includes(t)) && models.get(o.model)?.kind !== 'road' && o.pose !== 'sit');
+    && !(o.tags ?? []).some((t) => STRUCTURAL_TAGS.includes(t)) && models.get(o.model)?.kind !== 'road' && o.pose !== 'sit');
   for (let a = 0; a < cand.length; a++) for (let b = a + 1; b < cand.length; b++) {
     const A = cand[a], B = cand[b];
     if (!A || !B) continue;
@@ -1098,7 +1100,7 @@ function checkVanishing(v: V): void {
     if (o.hidden) E('object_hidden', `objects[${i}]`, `Object ${o.id} is hidden. Do not hide an object to clear a view: move the camera. Remove an object only when it does not belong in the scene.`); });
   const kindOf = (o: SceneObject): string | undefined => models.get(o.model)?.kind;
   const tiny = (v: TrackValue | undefined): boolean => (typeof v === 'number' ? v < 0.05 : Array.isArray(v) && Math.min(...v) < 0.05);
-  const changes = (o: SceneObject, grow: boolean): number[] => (trackOf(scene, o.id, 'scale')?.keys || []).filter((k, j, ks) => {
+  const changes = (o: SceneObject, grow: boolean): number[] => (trackOf(scene, o.id, 'scale')?.keys ?? []).filter((k, j, ks) => {
     assert(typeof k === 'object');
     assert(typeof j === 'number');
     assert(typeof ks === 'object');
@@ -1112,8 +1114,8 @@ function checkVanishing(v: V): void {
     assert(!Number.isNaN(i));
     const kind = kindOf(o);
     if (!kind || !['building', 'structure', 'vehicle'].includes(kind)) return;
-    const first = trackOf(scene, o.id, 'scale')?.keys?.[0];
-    if ((scene.motions || []).some((m) => m.object === o.id && (m.move === 'pop' || m.move === 'out')))
+    const first = trackOf(scene, o.id, 'scale')?.keys[0];
+    if ((scene.motions ?? []).some((m) => m.object === o.id && (m.move === 'pop' || m.move === 'out')))
       E('object_vanishes', `objects[${i}]`, `${kind.charAt(0).toUpperCase()}${kind.slice(1)} ${o.id} has a pop or an out motion. A real object does not appear from nothing or disappear.`);
     if (kind !== 'vehicle' && ((o.scale !== undefined && tiny(o.scale)) || (first && tiny(first.v))))
       E('object_vanishes', `objects[${i}]`, `${kind.charAt(0).toUpperCase()}${kind.slice(1)} ${o.id} is too small to see (scale below 0.05). A real object does not disappear: move the camera to clear a view.`);
@@ -1128,7 +1130,7 @@ function checkVanishing(v: V): void {
     assert(typeof o === 'object');
     assert(typeof i === 'number');
     assert(!Number.isNaN(i));
-    if ((o.tags || []).some((t) => t === 'wall' || t === 'ceiling') && ['building', 'vehicle', 'nature'].includes(kindOf(o) ?? ''))
+    if ((o.tags ?? []).some((t) => t === 'wall' || t === 'ceiling') && ['building', 'vehicle', 'nature'].includes(kindOf(o) ?? ''))
       E('cutaway_outdoor', `objects[${i}].tags`, `${o.id} is a ${kindOf(o)} with a wall or ceiling tag, so the cutaway hides it. The cutaway is for room walls and ceilings from build_room only.`);
   });
 }
@@ -1157,7 +1159,7 @@ function checkFocus(v: V): void {
 
 export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationError[] {
   assert(typeof raw === 'object');
-  const cat = catalogue || loadCatalogue();
+  const cat = catalogue ?? loadCatalogue();
   const errs: ValidationError[] = [];
   const E: V['E'] = (code, path, message) => { 
     assert(typeof code === 'string');
@@ -1167,7 +1169,7 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
     assert(path.length < 1e7);
     assert(message.length < 1e7);
     errs.push({ code, path, message }); };
-  if (!raw || typeof raw !== 'object') { E('schema', '', 'Scene is not an object.'); return errs; }
+  if (!isRecord(raw)) { E('schema', '', 'Scene is not an object.'); return errs; }
   if (raw.toybox !== FORMAT) E('schema', 'toybox', `toybox must be ${FORMAT}.`);
   const scene = sceneOf(raw, E);
   const v: V = { scene, cat, errs, E, models: new Map(cat.models.map((m): [string, Model] => [m.id, m])), ids: new Set(), maxT: 0,
@@ -1181,7 +1183,7 @@ export function validate(raw: Scene, catalogue?: Catalogue | null): ValidationEr
 // Every check: validate, blocked views and motion. The validate tool, export_scene and the eval report use it.
 export function checkScene(scene: Scene, catalogue?: Catalogue | null): ValidationError[] {
   assert(typeof scene === 'object');
-  const cat = catalogue || loadCatalogue();
+  const cat = catalogue ?? loadCatalogue();
   return [...validate(scene, cat), ...blockedViews(scene, cat), ...motionErrors(scene, cat)];
 }
 

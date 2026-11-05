@@ -12,7 +12,7 @@ export type Bbox = [number, number, number, number];
 export interface Building { id: string; height: number; levels?: number; poly: Vec2[]; ll?: Vec2[] }
 // Any footprint that toMapBlock and writeOdbl take: parsed from Overpass (ll set) or already local (scene file).
 export type MapBuilding = OsmBuilding & { ll?: Vec2[] };
-export interface OverpassElement { type?: string; id?: number | string; tags?: Record<string, string>; geometry?: { lat: number; lon: number }[] }
+export interface OverpassElement { type?: string; id?: number | string; tags?: Record<string, string> | undefined; geometry?: { lat: number; lon: number }[] }
 export interface OverpassResult { elements?: OverpassElement[] }
 export type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 export interface OdblFile {
@@ -45,7 +45,7 @@ export function project(lat: number, lon: number, origin: LatLon): Vec2 {
 export function buildingHeight(tags: Record<string, string> = {}): { height: number; levels: number | undefined } {
   assert(typeof LEVEL_HEIGHT === 'number');
   assert(typeof DEFAULT_HEIGHT === 'number');
-  const h = parseFloat(String(tags.height ?? '').replace(',', '.'));
+  const h = parseFloat((tags.height ?? '').replace(',', '.'));
   if (Number.isFinite(h) && h > 0) return { height: h, levels: parseInt(tags['building:levels'] ?? '', 10) || undefined };
   const lv = parseFloat(tags['building:levels'] ?? '');
   if (Number.isFinite(lv) && lv > 0) return { height: Math.round(lv * LEVEL_HEIGHT * 10) / 10, levels: Math.round(lv) };
@@ -58,14 +58,14 @@ export function parseOverpass(json: OverpassResult, origin: LatLon): Building[] 
   assert(typeof json === 'object');
   assert(typeof origin === 'object');
   const out: Building[] = [];
-  for (const el of json.elements || []) {
+  for (const el of json.elements ?? []) {
     if (el.type !== 'way' || !el.tags?.building || !el.geometry?.length) continue;
     let ll = el.geometry.map((g): Vec2 => {
       assert(typeof g === 'object');
       return [g.lat, g.lon];
     });
     const first = ll[0], last = ll[ll.length - 1];
-    if (ll.length > 1 && first && last && first[0] === last[0] && first[1] === last[1]) ll = ll.slice(0, -1);
+    if (ll.length > 1 && first && first[0] === last?.[0] && first[1] === last[1]) ll = ll.slice(0, -1);
     if (ll.length < 3) continue;
     const { height, levels } = buildingHeight(el.tags);
     const b: Building = { id: `w${el.id}`, height, poly: ll.map(([la, lo]) => round2(project(la, lo, origin))), ll };
@@ -129,11 +129,11 @@ export function writeOdbl(path: string, buildings: MapBuilding[], origin: LatLon
       license: 'ODbL 1.0', licenseUrl: ODBL_URL, credit: ATTRIBUTION,
       notice: 'This file is a database derived from OpenStreetMap. You may share it only under the ODbL and with this credit. See https://www.openstreetmap.org/copyright',
     },
-    origin: origin || null,
+    origin: origin ?? null,
     ...(bearing ? { bearing } : {}),
-    osm: toMapBlock(buildings, origin || { lat: 0, lon: 0 }, bearing),
+    osm: toMapBlock(buildings, origin ?? { lat: 0, lon: 0 }, bearing),
   };
-  if (!origin) file.osm = { attribution: ATTRIBUTION, buildings: buildings.map(({ ll, ...b }) => b) };
+  if (!origin) file.osm = { attribution: ATTRIBUTION, buildings: buildings.map((b) => ({ id: b.id, ...(b.height === undefined ? {} : { height: b.height }), ...(b.levels === undefined ? {} : { levels: b.levels }), poly: b.poly })) };
   writeFileSync(path, JSON.stringify(file, null, 1) + '\n');
   return file;
 }
