@@ -1,0 +1,4 @@
+# The pinned Power of 10 checker: one full commit of github.com/yujieteo/power10-check and its version.
+commit = "89746d1c8ef421ce56b67209923d25c483ee9c3c"
+version = "0.2.0"
+source = "https://github.com/yujieteo/power10-check.git"

@@ -92,7 +92,9 @@ test('mrt scene: a narrated Singapore platform boarding story', () => {
   // the commuter walks in through the open doors and stands clear inside the car
   const mainAt = must(s.tracks.find((t) => t.object === 'main' && t.channel === 'at'));
   const last = must(mainAt.keys.at(-1)).v;
-  assert.ok(Array.isArray(last) && must(last[2]) < -2.2, `main ends inside the car at z ${JSON.stringify(last)}`);
+  // the pinned checker's TypeScript parser reads `must(x) < -2.2` inside this call as a syntax error, so compare the other way round
+  const mainZ = Array.isArray(last) ? must(last[2]) : Number.NaN;
+  assert.ok(-2.2 > mainZ, `main ends inside the car at z ${JSON.stringify(last)}`);
   // the platform door leaves move on a word of the narration
   const leaf = must(s.tracks.find((t) => t.object === 'psd-3-leaf-l' && t.channel === 'at'));
   assert.ok(leaf.keys.some((k) => k.cue), 'the door leaf follows a cue');

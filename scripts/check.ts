@@ -30,12 +30,10 @@ for (const p of measurePages(resolve(root, 'web'))) {
   if (over) failures.push(`budget ${p.page}`);
 }
 
-// The shared Power of 10 checker (rules 1, 2, 4, 5, 6, 8, 9), pinned to one commit and version.
-// There is no baseline file: the project is at zero and stays there.
-const POWER10_REPO = 'https://github.com/yujieteo/power10-check';
-const POWER10_COMMIT = '502925100c8d3b586662d0d87caa6531dbe8676c';
-const POWER10_VERSION = '0.1.0';
-step(`Power of 10 rules 1, 2, 4, 5, 6, 8, 9 (power10-check ${POWER10_VERSION})`, 'uvx', ['--from', `git+${POWER10_REPO}@${POWER10_COMMIT}`, 'power10-check', '--require-version', POWER10_VERSION, '--root', root]);
+// The shared Power of 10 checker (rules 1, 2, 4, 5, 6, 8, 9), pinned by power10.lock to one full commit
+// and version (0.2.0, Goose compiled to C). The launcher builds it through the shared runner; there is no
+// baseline file: the project is at zero and stays there.
+step('Power of 10 rules 1, 2, 4, 5, 6, 8, 9 (power10-check, pinned by power10.lock)', resolve(root, 'scripts/power10-check'), []);
 step('Power of 10 rule 10: typescript-eslint strict and stylistic, type-aware', resolve(root, 'node_modules/.bin/eslint'), ['--max-warnings', '0', '.']);
 console.log('\n== C warnings and analyser (engine/*.c, Goose-made C without the code-generator warnings and dead stores)');
 const cProblems = checkC(root);

@@ -1,4 +1,6 @@
-/* WebGL2 calls for scene.goose. Included into the generated C by --include. */
+/* WebGL2 calls for scene.goose. Included into the generated C by --include.
+   The exported functions below say __attribute__((used)), which is exactly what EMSCRIPTEN_KEEPALIVE expands
+   to: the pinned Power of 10 checker's C parser cannot read that macro before a declaration. */
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -109,11 +111,11 @@ static void gl_mesh(int32_t id, sl_f32 d) { assert(id >= 0 && id < MAX_MESH); as
 
 /* Shared upload buffer: JavaScript writes here, then calls a toybox_* loader. */
 static unsigned char g_up_buf[1 << 22];
-EMSCRIPTEN_KEEPALIVE unsigned char *toybox_up_buf(void) { assert(sizeof g_up_buf > 0); assert(sizeof g_up_buf >= 4); return g_up_buf; }
-EMSCRIPTEN_KEEPALIVE int toybox_up_size(void) { assert(sizeof g_up_buf == (1 << 22)); assert(sizeof g_up_buf >= 4); return (int)sizeof g_up_buf; }
+__attribute__((used)) unsigned char *toybox_up_buf(void) { assert(sizeof g_up_buf > 0); assert(sizeof g_up_buf >= 4); return g_up_buf; }
+__attribute__((used)) int toybox_up_size(void) { assert(sizeof g_up_buf == (1 << 22)); assert(sizeof g_up_buf >= 4); return (int)sizeof g_up_buf; }
 
 /* A custom mesh (for example extruded building footprints): nfloats of pos+normal, 6 per vertex. */
-EMSCRIPTEN_KEEPALIVE void toybox_mesh_upload(int id, int nfloats) { assert(id >= 0 && id < MAX_MESH); assert(nfloats >= 0 && (size_t)nfloats * 4 <= sizeof g_up_buf);
+__attribute__((used)) void toybox_mesh_upload(int id, int nfloats) { assert(id >= 0 && id < MAX_MESH); assert(nfloats >= 0 && (size_t)nfloats * 4 <= sizeof g_up_buf);
     glBindVertexArray(g_vao[id]);
     glBindBuffer(GL_ARRAY_BUFFER, g_vbo[id]);
     glBufferData(GL_ARRAY_BUFFER, (size_t)nfloats * 4, g_up_buf, GL_STATIC_DRAW);
@@ -123,7 +125,7 @@ EMSCRIPTEN_KEEPALIVE void toybox_mesh_upload(int id, int nfloats) { assert(id >=
 }
 
 /* RGBA pixels (w by h) for the map ground quad. */
-EMSCRIPTEN_KEEPALIVE void toybox_ground_upload(int w, int h) { assert(w > 0 && h > 0); assert((size_t)w * h * 4 <= sizeof g_up_buf);
+__attribute__((used)) void toybox_ground_upload(int w, int h) { assert(w > 0 && h > 0); assert((size_t)w * h * 4 <= sizeof g_up_buf);
     if (!g_ground_tex) glGenTextures(1, &g_ground_tex);
     glBindTexture(GL_TEXTURE_2D, g_ground_tex);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -183,7 +185,7 @@ static void gl_draw_ground(Mat_g *mvp) { assert(mvp != 0); assert(g_ground_prog 
     glEnable(GL_CULL_FACE);
 }
 
-EMSCRIPTEN_KEEPALIVE unsigned char *toybox_read_pixels(void) { assert(g_w > 0); assert(g_h > 0);
+__attribute__((used)) unsigned char *toybox_read_pixels(void) { assert(g_w > 0); assert(g_h > 0);
     static unsigned char *pix; if (!pix) pix = (unsigned char*)malloc((size_t)g_w * g_h * 4);
     glReadPixels(0, 0, g_w, g_h, GL_RGBA, GL_UNSIGNED_BYTE, pix);
     return pix;
@@ -193,7 +195,7 @@ EMSCRIPTEN_KEEPALIVE unsigned char *toybox_read_pixels(void) { assert(g_w > 0); 
 static GLuint g_skin, g_skin_vao[2], g_skin_n[2];
 static GLint su_mvp, su_model, su_bones, su_pal, su_pass, su_ldir, su_lcol;
 
-EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) { assert(id >= 0 && id < 2); assert(nv >= 0 && ni >= 0);
+__attribute__((used)) void toybox_load_skin(int id, int nv, int ni) { assert(id >= 0 && id < 2); assert(nv >= 0 && ni >= 0);
     const float *v = (const float *)(g_up_buf);
     const unsigned short *idx = (const unsigned short *)(g_up_buf + (size_t)nv * 60);
     if (!g_skin) {
