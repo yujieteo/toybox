@@ -41,6 +41,8 @@ function gooseFunctions(file: string, text: string): Fn[] {
   const found: Fn[] = [];
   const header = /^(?:export\s+)?fn\s+(\w+)/gm;
   for (let m = header.exec(code); m !== null; m = header.exec(code)) {
+    const name = m[1];
+    if (name === undefined) continue;
     const open = code.indexOf("{", m.index);
     let depth = 0;
     let end = open;
@@ -49,8 +51,8 @@ function gooseFunctions(file: string, text: string): Fn[] {
       else if (code[end] === "}" && --depth === 0) break;
     }
     const line = (at: number): number => code.slice(0, at).split("\n").length;
-    const calls = new Set([...code.slice(open, end).matchAll(/(?<![.\w])(\w+)\s*\(/g)].map((c) => c[1] as string));
-    found.push({ file, name: m[1] as string, start: line(m.index), lines: line(end) - line(m.index) + 1, calls });
+    const calls = new Set([...code.slice(open, end).matchAll(/(?<![.\w])(\w+)\s*\(/g)].flatMap((c) => (c[1] === undefined ? [] : [c[1]])));
+    found.push({ file, name, start: line(m.index), lines: line(end) - line(m.index) + 1, calls });
   }
   return found;
 }
