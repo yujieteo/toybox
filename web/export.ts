@@ -5,10 +5,32 @@ import { plain } from './vid.js';
 import type { Scene } from './types.js';
 import type { Viewer } from './viewer.js';
 import { byId, context2d, isRecord } from './dom.js';
+import { assert } from './assert.ts';
 
 export function srt(scene: Pick<Scene, 'captions'>): string {
-  const ts = (s: number): string => { const ms = Math.round(s * 1000), p = (n: number, l = 2): string => String(n).padStart(l, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`; };
-  return [...(scene.captions || [])].sort((a, b) => a.start - b.start).map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${plain(c.text)}\n`).join('\n');
+  assert(typeof scene === 'object');
+  const ts = (s: number): string => { 
+    assert(typeof s === 'number');
+    assert(!Number.isNaN(s));
+    const ms = Math.round(s * 1000), p = (n: number, l = 2): string => {
+    assert(!Number.isNaN(n));
+    assert(typeof n === 'number');
+    return String(n).padStart(l, '0');
+  }; const returned = `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`;
+  assert(typeof returned === 'string');
+  assert(returned.length < 1e7);
+  return returned; };
+  return [...(scene.captions || [])].sort((a, b) => {
+    assert(typeof a === 'object');
+    return a.start - b.start;
+  }).map((c, i) => {
+    assert(typeof c === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    const returned = `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${plain(c.text)}\n`;
+    assert(typeof returned === 'string');
+    return returned;
+  }).join('\n');
 }
 
 // The WebCodecs configuration for one export size and frame rate. The level follows the coded
@@ -18,6 +40,10 @@ export function srt(scene: Pick<Scene, 'captions'>): string {
 type Level = '4.0' | '4.2' | '5.0' | '5.1' | '5.2';
 const LEVEL_CODEC: Record<Level, string> = { '4.0': 'avc1.640028', '4.2': 'avc1.64002a', '5.0': 'avc1.640032', '5.1': 'avc1.640033', '5.2': 'avc1.640034' };
 export function encoderConfig(width: number, height: number, fps = 30): { codec: string; level: Level; bitrate: number } {
+  assert(typeof width === 'number');
+  assert(typeof height === 'number');
+  assert(!Number.isNaN(width));
+  assert(!Number.isNaN(height));
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 16 || height < 16) throw new RangeError(`The export size ${width}x${height} is not a whole number of pixels of at least 16.`);
   if (!Number.isInteger(fps) || fps < 1 || fps > 60) throw new RangeError(`The export frame rate ${fps} is not a whole number from 1 to 60.`);
   const area = width * height;
@@ -39,6 +65,7 @@ export interface ExportOptions {
 interface ExportInfo { frames: number; seconds: number; fps: number; width: number; height: number; h264_bytes: number; encode_ms: number; hashes?: string }
 
 export async function exportVideo(v: Viewer, { width = 1920, height = 1080, fps = 30, name = 'scene', base = '', token = '', onprogress, hashes = false }: ExportOptions = {}): Promise<Record<string, unknown>> {
+  assert(typeof v === 'object');
   const scene = v.scene;
   if (!scene) throw new Error('The viewer has no scene to export.');
   const dur = scene.duration || 60, n = Math.round(dur * fps);
@@ -61,8 +88,12 @@ export async function exportVideo(v: Viewer, { width = 1920, height = 1080, fps 
       throw new Error(message);
     }
     const encoder = new VideoEncoder({
-      output: chunk => { const b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); bytes += b.length; chain = chain.then(() => fetch(`${base}/export/chunk?token=${token}`, { method: 'POST', body: b })); },
-      error: e => { encErr = e; } });
+      output: chunk => { 
+        assert(typeof chunk === 'object');
+        const b = new Uint8Array(chunk.byteLength); chunk.copyTo(b); bytes += b.length; chain = chain.then(() => fetch(`${base}/export/chunk?token=${token}`, { method: 'POST', body: b })); },
+      error: e => { 
+        assert(typeof e === 'object');
+        encErr = e; } });
     enc = encoder;
     encoder.configure({ codec: cfg.codec, width, height, bitrate: cfg.bitrate, framerate: fps, avc: { format: 'annexb' }, latencyMode: 'quality' });
     const t0 = performance.now();

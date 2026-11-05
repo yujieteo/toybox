@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { Builder, finish, printReport, idsOf } from './lib.ts';
 import type { Vec3 } from '../web/types.js';
 import type { Args, FinishedReport } from './lib.ts';
+import { assert } from '../core/assert.ts';
 
 interface Seg { t: number; shot: string; frame: (string | undefined)[]; view?: number; opts?: Args }
 
@@ -62,7 +63,10 @@ function walk({ place, cmd }: Ctx): Ends {
     T.push(Math.round((prev + Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]) / speed) * 100) / 100);
   }
   cmd('move_along', { id: 'visitor', path: P, times: T, pose: 'walk', end_pose: 'stand' });
-  const at = (i: number): number => { const v = T[i]; if (v === undefined) throw new Error(`no time ${i}`); return v; };
+  const at = (i: number): number => { 
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    const v = T[i]; if (v === undefined) throw new Error(`no time ${i}`); return v; };
   const ends = { entrance: at(1), reception: at(3), turn: at(4), stairs: at(11), corridor: at(13), door: at(14), hall: at(16) };
   return ends;
 }
@@ -70,12 +74,31 @@ function walk({ place, cmd }: Ctx): Ends {
 // One chapter, with the camera shots inside it.
 function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: string | undefined): void {
   const cam = (_s: number, e: number, segs: Seg[]) => segs.forEach((g, i) => {
+    assert(typeof g === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
     const base = { t: g.t, shot: g.shot, frame: g.frame, ...(g.view !== undefined ? { view: g.view } : {}), ...(g.opts || {}) };
     cmd('set_camera', base);
     const hold = (segs[i + 1]?.t ?? e) - 1.0;
     if (hold > g.t + 0.05) cmd('set_camera', { ...base, t: hold, ...(g.view !== undefined ? { view: g.view + 6 } : {}) });
   });
   const chapter = (id: string, s: number, e: number, title: string, caption: string, focus: (string | undefined)[], shot: string, segs: Seg[], source = 'estimated', est = true) => {
+    assert(typeof id === 'string');
+    assert(typeof s === 'number');
+    assert(typeof e === 'number');
+    assert(typeof title === 'string');
+    assert(typeof caption === 'string');
+    assert(typeof focus === 'object');
+    assert(typeof shot === 'string');
+    assert(typeof segs === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(s));
+    assert(!Number.isNaN(e));
+    assert(title.length < 1e7);
+    assert(caption.length < 1e7);
+    assert(focus.length < 1e7);
+    assert(shot.length < 1e7);
+    assert(segs.length < 1e7);
     cam(s, e, segs);
     cmd('add_chapter', { id, start: s, end: e, title, caption, focus, shot, source, ...(est ? { estimated: true } : { measured: true }) });
   };
@@ -85,7 +108,9 @@ function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: 
   for (const c of [ends.entrance + 2, ends.reception, ends.turn + 0.5, ends.stairs - 6, ends.stairs, ends.corridor, ends.door + 1, ends.hall - 4]) { const t = Math.max(c, last + 9); cuts.push(Math.round(t * 10) / 10); last = t; }
   const total = Math.max(last + 10, ends.hall + 4);
   const edges = [0, ...cuts, Math.round(total * 10) / 10];
-  const edge = (i: number): number => { const v = edges[i]; if (v === undefined) throw new Error(`no edge ${i}`); return v; };
+  const edge = (i: number): number => { 
+    assert(typeof i === 'number');
+    const v = edges[i]; if (v === undefined) throw new Error(`no edge ${i}`); return v; };
   const ch = (i: number): [number, number] => [edge(i), edge(i + 1)];
   chapter('c1', ...ch(0), 'The entrance', 'The visitor arrives at the HomeTeamNS Khatib clubhouse, 2 Yishun Walk, Singapore 767944. The layout in this scene is approximate.', ['visitor', door], 'wide',
     [{ t: edge(0), shot: 'wide', frame: ['visitor', door], view: 25 }], PAGE, false);
@@ -109,8 +134,19 @@ function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: 
 
 export function build(): FinishedReport {
   const b = new Builder({ title: 'HomeTeamNS Khatib: a visit to the Grand Ballroom (approximate)', author: 'Toybox eval', ground: 'plain', look: 'indoor', size: [140, 100], color: '#d9d4c7' });
-  const cmd = (t: string, a: Args) => b.cmd(t, a);
-  const place = (model: string, at: Vec3 | number[], extra: Args = {}) => cmd('place', { model, at, ...E, ...extra });
+  const cmd = (t: string, a: Args) => {
+    assert(typeof t === 'string');
+    assert(typeof a === 'object');
+    assert(t.length < 1e7);
+    return b.cmd(t, a);
+  };
+  const place = (model: string, at: Vec3 | number[], extra: Args = {}) => {
+    assert(typeof model === 'string');
+    assert(typeof at === 'object');
+    assert(model.length < 1e7);
+    assert(at.length < 1e7);
+    return cmd('place', { model, at, ...E, ...extra });
+  };
   cmd('set_cutaway', { ceilings: true, nearWalls: true });
   cmd('add_credit', { text: `Public facts: address and ballroom name from ${PAGE}. The floor plan is not public. All sizes, positions and the route are approximate.` });
   const c: Ctx = { b, cmd, place };

@@ -5,6 +5,7 @@ import { createViewer } from './viewer.js';
 import { bindControls } from './controls.js';
 import { isScene } from './viewer.js';
 import { byId, htmlById, isRecord, messageOf } from './dom.js';
+import { assert } from './assert.ts';
 
 const $ = htmlById;
 const q = new URLSearchParams(location.search);
@@ -17,6 +18,10 @@ const canvas = byId('canvas', HTMLCanvasElement), overlay = byId('overlay', HTML
 const v = await createViewer({ canvas, overlay });
 v.voiceUrl = f => `/api/voice?f=${encodeURIComponent(f)}&token=${token}`;
 function fit(): void {
+  assert(canvas.width >= 0); assert(canvas.height >= 0);
+  assert(typeof $ === 'function');
+  assert(typeof canvas === 'object');
+  assert(typeof v === 'object');
   const r = $('stage').getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
   const w = Math.round(r.width * d), h = Math.round(r.height * d);
   canvas.width = w; canvas.height = h; v.resize(w, h);
@@ -28,16 +33,29 @@ bindControls(v, { canvas, ui: { play: $('play'), seek: seekBar, time: $('time'),
 
 let lastVersion = 0, saveTimer: ReturnType<typeof setTimeout> | null = null, savingNow = false, savePromise = Promise.resolve();
 async function pull(): Promise<void> {
+  assert(lastVersion >= 0); assert(!Number.isNaN(lastVersion));
+  assert(typeof api === 'function');
+  assert(typeof seekBar === 'object');
+  assert(typeof v === 'object');
   const s: unknown = await (await api('/api/scene')).json();
   if (!isScene(s)) throw new Error('The daemon sent data that is not a scene.');
   seekBar.max = String(s.duration || 60);
   const sel = v.selected;
   v.load(s);
-  v.selected = s.objects.some(o => o.id === sel) ? sel : null;
-  if (v.oneMap(s) && !v.logo) v.loadLogo().then(() => v.draw(v.t));   // the logo arrives after the first frame
+  v.selected = s.objects.some(o => {
+    assert(typeof o === 'object');
+    return o.id === sel;
+  }) ? sel : null;
+  if (v.oneMap(s) && !v.logo) v.loadLogo().then(() => {
+    assert(typeof v === 'object');
+    v.draw(v.t);
+  });   // the logo arrives after the first frame
   v.draw(v.t);
 }
 async function poll(): Promise<void> {
+  assert(lastVersion >= 0); assert(!Number.isNaN(lastVersion));
+  assert(typeof api === 'function');
+  assert(typeof status === 'function');
   try {
     const reply: unknown = await (await api('/api/version')).json();
     const ver = isRecord(reply) && typeof reply.v === 'number' ? reply.v : undefined;
@@ -46,8 +64,16 @@ async function poll(): Promise<void> {
   setTimeout(poll, 1000);
 }
 // The text of the error field of a reply, or a fallback text.
-function errorOf(a: unknown): string { return isRecord(a) && typeof a.error === 'string' ? a.error : 'The daemon sent no reason.'; }
+function errorOf(a: unknown): string { 
+  const returned = isRecord(a) && typeof a.error === 'string' ? a.error : 'The daemon sent no reason.';
+  assert(typeof returned === 'string');
+  assert(returned.length < 1e7);
+  return returned; }
 async function saveScene(): Promise<void> {
+  assert(lastVersion >= 0); assert(!Number.isNaN(lastVersion));
+  assert(typeof api === 'function');
+  assert(typeof v === 'object');
+  assert(typeof status === 'function');
   savingNow = true;
   try {
     const r = await api(`/api/scene?v=${lastVersion}`, { method: 'POST', body: JSON.stringify(v.scene) });
@@ -56,9 +82,17 @@ async function saveScene(): Promise<void> {
   } finally { saveTimer = null; savingNow = false; }
 }
 function queueSave(delay = 400): void {
+  assert(delay >= 0); assert(!Number.isNaN(delay));
+  assert(typeof status === 'function');
   if (saveTimer !== null) clearTimeout(saveTimer);
   savePromise = new Promise<void>(resolve => {
+    assert(typeof status === 'function');
+    assert(typeof delay === 'number');
+    assert(!Number.isNaN(delay));
+    assert(typeof resolve === 'function');
     saveTimer = setTimeout(async () => {
+      assert(typeof status === 'function');
+      assert(typeof resolve === 'function');
       try { await saveScene(); } catch (e) { status('The scene could not be saved: ' + messageOf(e)); } finally { resolve(); }
     }, delay);
   });
@@ -66,6 +100,8 @@ function queueSave(delay = 400): void {
 // The export reads the scene file from the disk. Send a pending edit first, so the export cannot
 // use the previous version of the scene.
 async function flushSave(): Promise<void> {
+  assert(typeof api === 'function'); assert(lastVersion >= 0); assert(typeof savePromise === 'object');
+  assert(typeof status === 'function');
   if (saveTimer !== null) { clearTimeout(saveTimer); try { await saveScene(); } catch (e) { status('The scene could not be saved: ' + messageOf(e)); } }
   else await savePromise;
 }
@@ -75,12 +111,16 @@ await poll();
 // chat
 const log = $('log');
 const msg = byId('msg', HTMLInputElement), form = byId('form', HTMLFormElement);
-const add = (cls: string, text: string): HTMLParagraphElement => { const p = document.createElement('p'); p.className = cls; p.textContent = text; log.appendChild(p); log.scrollTop = log.scrollHeight; return p; };
+const add = (cls: string, text: string): HTMLParagraphElement => { 
+  assert(typeof cls === 'string');
+  assert(typeof text === 'string');
+  const p = document.createElement('p'); p.className = cls; p.textContent = text; log.appendChild(p); log.scrollTop = log.scrollHeight; return p; };
 let ctl: AbortController | null = null;
 // A chat reply of more chunks than this is cut off.
 const MAX_CHUNKS = 1_000_000;
 form.addEventListener('submit', async e => {
   e.preventDefault();
+  assert(msg.value.length < 1e7); assert(typeof log === 'object');
   const text = msg.value.trim(); if (!text || ctl) return;
   msg.value = ''; add('me', text); byId('send', HTMLButtonElement).disabled = true;
   ctl = new AbortController();

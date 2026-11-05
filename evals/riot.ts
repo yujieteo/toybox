@@ -6,18 +6,33 @@ import { join } from 'node:path';
 import { Builder, rng, finish, printReport, OUT_DIR } from './lib.ts';
 import type { Args, FinishedReport } from './lib.ts';
 import type { Vec3, Track } from '../web/types.js';
+import { assert } from '../core/assert.ts';
 
 type P2 = [number, number];
 type Frame = (string | undefined)[];
 interface Seg { t: number; shot: string; frame: Frame; view?: number; opts?: Args }
 // a coordinate of a path point ([x, z] or [x, y, z]); 0 when the point is shorter
-const c = (p: readonly number[], i: number): number => p[i] ?? 0;
-const lastOf = (a: readonly number[]): number => { const v = a.at(-1); if (v === undefined) throw new Error('empty list'); return v; };
+const c = (p: readonly number[], i: number): number => {
+  assert(typeof p === 'object');
+  assert(typeof i === 'number');
+  assert(p.length < 1e7);
+  assert(!Number.isNaN(i));
+  const returned = p[i] ?? 0;
+  assert(typeof returned === 'number');
+  return returned;
+};
+const lastOf = (a: readonly number[]): number => { 
+  assert(typeof a === 'object');
+  assert(a.length < 1e7);
+  const v = a.at(-1); if (v === undefined) throw new Error('empty list'); return v; };
 
 const WIKI = 'https://en.wikipedia.org/wiki/2013_Little_India_riot';
 const L = { estimated: true, source: 'estimated: street layout and positions are not in a public source' };
 const R = rng(2013);
-const pick = (a: string[]): string => { const v = a[Math.floor(R() * a.length)]; if (v === undefined) throw new Error('empty list'); return v; };
+const pick = (a: string[]): string => { 
+  assert(typeof a === 'object');
+  assert(a.length < 1e7);
+  const v = a[Math.floor(R() * a.length)]; if (v === undefined) throw new Error('empty list'); return v; };
 const SHIRTS = ['#c8553d', '#3f6e9a', '#d9b44a', '#6f9a6a', '#a99bb8', '#e8dcc0', '#5f9ea0', '#b8765f', '#8c8c86'];
 const PANTS = ['#3a3f47', '#4a5568', '#6b5b4b', '#2f4a6b', '#55595f'];
 
@@ -35,12 +50,39 @@ interface Kit {
 
 // The helpers that every chapter uses to place people and vehicles and to move them.
 function makeKit(b: Builder): Kit {
+  assert(typeof L === 'object');
+  assert(typeof pick === 'function');
+  assert(typeof b === 'object');
   const place = (model: string, at: number[], extra: Args = {}) => b.cmd('place', { model, at, ...L, ...extra });
-  const person = (id: string, variant: number, at: number[], extra: Args = {}) => place('person', at, { id, variant, colors: { shirt: pick(SHIRTS), pants: pick(PANTS) }, ...extra });
-  const dist = (p: number[], q: number[]) => Math.hypot(c(q, 0) - c(p, 0), (q[1] ?? 0) - (p[1] ?? 0), c(q, 2) - c(p, 2));
+  const person = (id: string, variant: number, at: number[], extra: Args = {}) => {
+    assert(typeof id === 'string');
+    assert(typeof variant === 'number');
+    assert(typeof at === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(variant));
+    assert(at.length < 1e7);
+    return place('person', at, { id, variant, colors: { shirt: pick(SHIRTS), pants: pick(PANTS) }, ...extra });
+  };
+  const dist = (p: number[], q: number[]) => {
+    assert(typeof p === 'object');
+    assert(typeof q === 'object');
+    assert(p.length < 1e7);
+    assert(q.length < 1e7);
+    const returned = Math.hypot(c(q, 0) - c(p, 0), (q[1] ?? 0) - (p[1] ?? 0), c(q, 2) - c(p, 2));
+    assert(typeof returned === 'number');
+    return returned;
+  };
   const v3 = (p: number[]): Vec3 => (p.length === 2 ? [c(p, 0), 0, c(p, 1)] : [c(p, 0), c(p, 1), c(p, 2)]);
   // path points are [x, z]; leg() builds absolute times from a speed
   const leg = (id: string, pts: number[][], t0: number, speed: number, extra: Args = {}): number[] => {
+    assert(typeof id === 'string');
+    assert(typeof pts === 'object');
+    assert(typeof t0 === 'number');
+    assert(typeof speed === 'number');
+    assert(id.length < 1e7);
+    assert(pts.length < 1e7);
+    assert(!Number.isNaN(t0));
+    assert(!Number.isNaN(speed));
     const P = pts.map(v3);
     const times = [t0];
     for (let i = 1; i < P.length; i++) {
@@ -51,7 +93,16 @@ function makeKit(b: Builder): Kit {
     b.cmd('move_along', { id, path: P, times, ...extra });
     return times;
   };
-  const timed = (id: string, pts: number[][], times: number[], extra: Args = {}): number => { b.cmd('move_along', { id, path: pts.map(v3), times, ...extra }); return lastOf(times); };
+  const timed = (id: string, pts: number[][], times: number[], extra: Args = {}): number => { 
+    assert(typeof id === 'string');
+    assert(typeof pts === 'object');
+    assert(typeof times === 'object');
+    assert(id.length < 1e7);
+    assert(pts.length < 1e7);
+    assert(times.length < 1e7);
+    b.cmd('move_along', { id, path: pts.map(v3), times, ...extra }); const returned = lastOf(times);
+  assert(typeof returned === 'number');
+  return returned; };
   const swap = (id: string, t: number, to: boolean) => b.cmd('animate', { id, channel: 'scale', keys: to ? [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] : [{ t: 0, v: [1, 1, 1], ease: 'step' }, { t, v: [0.001, 0.001, 0.001], ease: 'step' }] });
   const appear = (id: string, t: number) => b.cmd('animate', { id, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] });
   return { b, place, person, dist, leg, timed, swap, appear };
@@ -134,7 +185,9 @@ function gather({ person, leg }: Kit): string[] {
   // Each person has its own place, 0.6 m or more from the next. Nobody stands on the paths of the
   // paramedics. Everybody walks in from the west along the line of its own place, and the person with the
   // place furthest east arrives first, so no path crosses a person who already stands there.
-  const segDist = ([px, pz]: P2, [ax, az]: P2, [bx, bz]: P2) => { const dx = bx - ax, dz = bz - az, u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(px - ax - u * dx, pz - az - u * dz); };
+  const segDist = ([px, pz]: P2, [ax, az]: P2, [bx, bz]: P2) => { const dx = bx - ax, dz = bz - az, u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz))); const returned = Math.hypot(px - ax - u * dx, pz - az - u * dz);
+  assert(typeof returned === 'number');
+  return returned; };
   const paraPaths: [P2, P2][] = [[[-0.65, 2.0], [0.6, -3]], [[0.6, -3], [1.2, -13.8]], [[-0.65, 3.6], [1.4, -3]], [[1.4, -3], [3.2, -13.8]]];
   const spots: P2[] = [];
   while (spots.length < 60) {
@@ -142,9 +195,17 @@ function gather({ person, leg }: Kit): string[] {
     if (spots.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.6) || paraPaths.some(([a, z]) => segDist(p, a, z) < 0.7)) continue;
     spots.push(p);
   }
-  spots.sort((p, q) => q[0] - p[0]);
+  spots.sort((p, q) => {
+    assert(typeof q === 'object');
+    assert(typeof p === 'object');
+    return q[0] - p[0];
+  });
   const crowd: string[] = [];
   spots.forEach((tgt, i) => {
+    assert(typeof tgt === 'object');
+    assert(typeof i === 'number');
+    assert(tgt.length < 1e7);
+    assert(!Number.isNaN(i));
     const id = `cr-${i + 1}`, wave = Math.floor(i / 20), k = i % 20;
     const arrive = (([49, 72, 78][wave] ?? 0) + k * ([0.5, 0.25, 0.25][wave] ?? 0)), from: P2 = [-70 - i * 0.5, tgt[1]];
     person(id, Math.floor(R() * 24), [from[0], 0, from[1]], { yaw: 90 });
@@ -158,6 +219,8 @@ function gather({ person, leg }: Kit): string[] {
 // Chapters 6 and 7: SCDF arrives and the crowd reacts.
 function scdf({ b, place, person, timed, appear }: Kit, crowd: string[]): void {
   // ---------- chapter 6: SCDF arrives (21:39). The paramedics step out on the free side of the ambulance.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   place('ambulance-scdf', [-2, 0, 78], { id: 'amb', yaw: 180 });
   timed('amb', [[-2, 78], [-2, 3]], [55, 62]);
   person('para1', 14, [-0.65, 0, 2.0], { colors: { shirt: '#b5483c', pants: '#3a3f47' } }); person('para2', 20, [-0.65, 0, 3.6], { colors: { shirt: '#b5483c', pants: '#3a3f47' } });
@@ -178,6 +241,16 @@ function police({ place, leg, timed, appear }: Kit): string[] {
   // They walk on the east pavement to the bus door. The other four form a line between the crowd and the vehicles.
   const cops: string[] = [];
   const cop = (i: number, door: P2, t: number, pts: P2[], speed: number) => {
+    assert(typeof i === 'number');
+    assert(typeof door === 'object');
+    assert(typeof t === 'number');
+    assert(typeof pts === 'object');
+    assert(typeof speed === 'number');
+    assert(!Number.isNaN(i));
+    assert(door.length < 1e7);
+    assert(!Number.isNaN(t));
+    assert(pts.length < 1e7);
+    assert(!Number.isNaN(speed));
     const id = `pol-${i + 1}`;
     place('person', [door[0], 0, door[1]], { id, variant: 18 + i, outfit: i < 2 ? 'police-shield' : 'police', yaw: 90 });
     appear(id, t);
@@ -195,6 +268,8 @@ function police({ place, leg, timed, appear }: Kit): string[] {
 // Chapters 9 and 10: the bus crew leaves, the vehicles are overturned and burnt.
 function chapters9and10({ b, place, person, leg, swap, appear }: Kit, crowd: string[]): void {
   // ---------- chapter 9: the bus driver and timekeeper leave under police shield (22:08). They walk in a file on the east pavement.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   person('driver', 17, [3.8, 0, -18.4], { colors: { shirt: '#e8dcc0', pants: '#3a3f47' } }); person('timekeeper', 8, [3.8, 0, -19.2]);
   for (const id of ['driver', 'timekeeper']) appear(id, 103);
   const file: [string, P2, number, number][] = [['pol-1', [4.5, -17.4], -3.0, 104], ['driver', [3.8, -18.4], -3.9, 104], ['timekeeper', [3.8, -19.2], -4.8, 104], ['pol-2', [4.5, -19.7], -5.7, 105.5]];
@@ -207,7 +282,10 @@ function chapters9and10({ b, place, person, leg, swap, appear }: Kit, crowd: str
     place(model, [p[0], 0, p[1]], { id: `${id}-after`, yaw: 180, scale: [0.001, 0.001, 0.001] });
     swap(`${id}-after`, t, true); swap(id, t, false);
   }
-  vehicles.slice(1).forEach(([, , p, t], i) => { place('flame', [p[0] + 0.3, 0.4, p[1]], { id: `fl-${i + 1}`, scale: [0.001, 0.001, 0.001] }); b.cmd('animate', { id: `fl-${i + 1}`, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t: t + 0.5, v: [2, 2, 2], ease: 'step' }, { t: 144, v: [0.001, 0.001, 0.001], ease: 'step' }] }); });
+  vehicles.slice(1).forEach(([, , p, t], i) => { 
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    place('flame', [p[0] + 0.3, 0.4, p[1]], { id: `fl-${i + 1}`, scale: [0.001, 0.001, 0.001] }); b.cmd('animate', { id: `fl-${i + 1}`, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t: t + 0.5, v: [2, 2, 2], ease: 'step' }, { t: 144, v: [0.001, 0.001, 0.001], ease: 'step' }] }); });
   place('car-police-overturned', [-6, 0, 12], { id: 'pc3-after', yaw: 60, scale: [0.001, 0.001, 0.001] }); swap('pc3-after', 111, true);
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 112 + (i % 6) * 0.5, pose: ['cheer', 'point', 'wave'][i % 3] }));
 }
@@ -216,6 +294,8 @@ function chapters9and10({ b, place, person, leg, swap, appear }: Kit, crowd: str
 function socArrives({ b, place, leg, appear, dist }: Kit, crowd: string[]): string[] {
   // ---------- chapter 11: SOC arrives (22:50). Riot officers walk in from the south and form a shield line south of the burnt vehicles.
   // A long shield needs a walk, not a run. The real troops were larger; the number, the route and the line are estimated.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   const soc: string[] = [];
   for (let i = 0; i < 10; i++) {
     const id = `soc-${i + 1}`, x = -5.4 + i * 1.2, far: P2 = [x * 0.5, 105], end: P2 = [x, 22];
@@ -232,7 +312,11 @@ function socArrives({ b, place, leg, appear, dist }: Kit, crowd: string[]): stri
 // Chapters 12 to 14: the crowd disperses, the next morning and the Committee of Inquiry.
 function epilogue({ b, place, person, leg }: Kit, crowd: string[]): void {
   // ---------- chapter 12: the crowd disperses (23:30). Everybody runs west at the same time and speed, so nobody meets.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   crowd.forEach((id) => {
+    assert(typeof id === 'string');
+    assert(id.length < 1e7);
     const track: Track | undefined = b.scene.tracks.find((t) => t.object === id && t.channel === 'at');
     const here = track?.keys.at(-1)?.v;
     if (!Array.isArray(here)) throw new Error(`${id} has no position`);
@@ -244,6 +328,8 @@ function epilogue({ b, place, person, leg }: Kit, crowd: string[]): void {
   // Each cleaner walks along its own line to the side of one wreck.
   const cleaners: [string, number, number][] = [['clean-1', 12, 17], ['clean-2', 15, 8.5], ['clean-3', 19, 3]];
   cleaners.forEach(([id, v, z], i) => {
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
     person(id, v, [-24, 0, z], { colors: { shirt: '#d98a3d', pants: '#3a3f47' }, yaw: 90 });
     leg(id, [[-24, z], [-3.8, z]], 142 + i * 0.7, 1.8, { pose: 'walk', end_pose: 'bend' });
   });
@@ -278,6 +364,19 @@ function camerasAndChapters({ b }: Kit, crowd: string[], cops: string[], soc: st
     if (hold > s.t + 0.05) b.cmd('set_camera', args(hold, view === undefined ? undefined : view + (s.shot === 'orbit' ? 45 : 6)));
   });
   const chapter = (id: string, start: number, end: number, title: string, clock: string, caption: string, focus: Frame, shot: string, source: string, est: boolean, segs: Seg[]) => {
+    assert(typeof id === 'string');
+    assert(typeof start === 'number');
+    assert(typeof end === 'number');
+    assert(typeof title === 'string');
+    assert(typeof clock === 'string');
+    assert(typeof caption === 'string');
+    assert(typeof focus === 'object');
+    assert(typeof shot === 'string');
+    assert(typeof source === 'string');
+    assert(typeof est === 'boolean');
+    assert(typeof segs === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(start));
     cam(start, end, segs);
     b.cmd('add_chapter', { id, start, end, title, clock, caption, focus, shot, source, ...(est ? { estimated: true } : { measured: true }) });
   };

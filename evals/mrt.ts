@@ -12,6 +12,7 @@ import type { Args, FinishedReport } from './lib.ts';
 import type { Cue } from '../web/types.js';
 import type { Sentence } from './narrated.ts';
 import { cueTime } from '../core/narration.ts';
+import { assert } from '../core/assert.ts';
 
 export const DEMO_DIR = fileURLToPath(new URL('../web/scenes/mrt/', import.meta.url));
 
@@ -61,6 +62,8 @@ interface Ctx { b: Builder; cmd: (t: string, a: Args) => unknown; at: (cue: Cue)
 // The outline: only facts that a public page gives, the narration and its voice. Returns the length of the scene.
 function outline({ b, cmd }: Ctx): number {
   // ---------- the outline: only facts that a public page gives
+  assert(typeof WIKI_MRT === 'string');
+  assert(typeof WIKI_FARES === 'string');
   cmd('add_fact', { id: 'paid-area', text: 'Stations are divided into two areas, paid and unpaid, which collect fares by restricting entry only through the fare gates (access control gates).', source: WIKI_MRT });
   cmd('add_fact', { id: 'tap', text: 'Fares are charged based on commuters "tapping in" at the start and "tapping out" at the destination; the failure to tap out generally results in full or flat fare(s).', source: WIKI_FARES });
   cmd('add_fact', { id: 'psd-first', text: 'The Singapore MRT was the first rapid transit system in Asia to incorporate glass platform screen doors, in its underground stations in 1987.', source: WIKI_SAFETY });
@@ -86,7 +89,13 @@ function outline({ b, cmd }: Ctx): number {
 
 // The platform: x is along the platform, z points south from the platform edge (z = -2).
 function platform({ cmd }: Ctx): void {
-  const place = (model: string, p: number[], extra: Args = {}) => cmd('place', { model, at: p, ...E, ...extra });
+  const place = (model: string, p: number[], extra: Args = {}) => {
+    assert(typeof model === 'string');
+    assert(typeof p === 'object');
+    assert(model.length < 1e7);
+    assert(p.length < 1e7);
+    return cmd('place', { model, at: p, ...E, ...extra });
+  };
   // the floor the visitor walks on (tag floor: a surface, not a wall)
   place('floor-tile', [-13, 0, 2.25], { id: 'platform-w', scale: [13, 1, 4.25], tags: ['floor'], colors: { floor: '#cdc6b6' } });
   place('floor-tile', [13, 0, 2.25], { id: 'platform-e', scale: [13, 1, 4.25], tags: ['floor'], colors: { floor: '#cdc6b6' } });
@@ -99,6 +108,10 @@ function platform({ cmd }: Ctx): void {
   // full-height platform screen doors: five bays, a leaf on each side of each door
   const BAYS = [-14.4, -7.2, 0, 7.2, 14.4];
   BAYS.forEach((x, i) => {
+    assert(typeof x === 'number');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(x));
+    assert(!Number.isNaN(i));
     const bay = `psd-${i + 1}`;
     place('psd-bay', [x, 0, -2], { id: bay, tags: ['floor'], ...EP });
     for (const side of [-1, 1]) place('psd-leaf', [x + side * 0.38, 0, -1.85], { id: `${bay}-leaf-${side < 0 ? 'l' : 'r'}`, tags: ['floor'], ...EP });
@@ -123,7 +136,15 @@ function platform({ cmd }: Ctx): void {
 
 // The commuter who boards, and the crowd around the door (variants are fixed).
 function people({ cmd }: Ctx): void {
-  const person = (id: string, variant: number, p: [number, number], extra: Args = {}) => cmd('place', { model: 'person', at: [p[0], 0.02, p[1]], id, variant, ...PERSON, ...extra });
+  const person = (id: string, variant: number, p: [number, number], extra: Args = {}) => {
+    assert(typeof id === 'string');
+    assert(typeof variant === 'number');
+    assert(typeof p === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(variant));
+    assert(p.length < 1e7);
+    return cmd('place', { model: 'person', at: [p[0], 0.02, p[1]], id, variant, ...PERSON, ...extra });
+  };
   person('main', 8, [0, 11.8], { yaw: 180, colors: { shirt: '#3f6e9a', pants: '#3a3f47' } });
   person('waiter-a', 2, [-2.4, -0.2], { yaw: 180, pose: 'stand', colors: { shirt: '#c8553d', pants: '#3a3f47' } });
   person('waiter-b', 5, [3.4, -0.6], { yaw: 170, pose: 'stand', colors: { shirt: '#6f9a6a', pants: '#4a5568' } });
@@ -186,14 +207,29 @@ function trainAndDoors({ cmd }: Ctx): void {
 }
 
 // The time at which the narration reaches a step, and the time it ends.
-function chapterStart({ at }: Ctx, i: number): number { return at([stepAt(i).from]); }
-function chapterEnd({ at }: Ctx, len: number, i: number): number { const to = stepAt(i).to; return to === null ? len : at([to]); }
-function stepAt(i: number): Step { const v = STEPS[i]; if (!v) throw new Error(`no step ${i}`); return v; }
+function chapterStart({ at }: Ctx, i: number): number { 
+  assert(typeof i === 'number');
+  assert(!Number.isNaN(i));
+  return at([stepAt(i).from]); }
+function chapterEnd({ at }: Ctx, len: number, i: number): number { 
+  assert(typeof len === 'number');
+  assert(typeof i === 'number');
+  assert(!Number.isNaN(len));
+  assert(!Number.isNaN(i));
+  const to = stepAt(i).to; const returned = to === null ? len : at([to]);
+assert(typeof returned === 'number');
+return returned; }
+function stepAt(i: number): Step { 
+  assert(typeof i === 'number');
+  assert(!Number.isNaN(i));
+  const v = STEPS[i]; if (!v) throw new Error(`no step ${i}`); return v; }
 
 // Chapters: one step of boarding for each chapter, and one beat of the narration for
 // each sentence. The page lists every chapter as a step of "How to board", so the facts about the
 // screen doors share the one step: the screen-door chapter spans sentences 3 and 4.
 function chapters({ cmd }: Ctx, LEN: number): void {
+  assert(typeof LEN === 'number');
+  assert(!Number.isNaN(LEN));
   STEPS.forEach((s) => cmd('add_chapter', {
     id: s.id, cue: [s.from], ...(s.to === null ? { end: LEN } : { end_cue: [s.to] }),
     title: s.title, clock: '08:12', focus: s.focus, shot: s.shot,
@@ -204,10 +240,31 @@ function chapters({ cmd }: Ctx, LEN: number): void {
 // The camera keys. A key with cut true holds the old shot and cuts; the hold key of the same shot
 // lets the camera drift with the people inside the chapter.
 function cameras(c: Ctx, len: number): void {
+  assert(typeof c === 'object');
+  assert(typeof len === 'number');
+  assert(!Number.isNaN(len));
   const { cmd, at } = c;
   const LEN = len;
-  const start = (i: number): number => chapterStart(c, i), end = (i: number): number => chapterEnd(c, LEN, i);
+  const start = (i: number): number => {
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    const returned = chapterStart(c, i);
+    assert(typeof returned === 'number');
+    return returned;
+  }, end = (i: number): number => {
+    assert(!Number.isNaN(i));
+    assert(typeof i === 'number');
+    return chapterEnd(c, LEN, i);
+  };
   const cam = (i: number, t0: number, shot: string, frame: string[], opts: Args = {}) => {
+    assert(typeof i === 'number');
+    assert(typeof t0 === 'number');
+    assert(typeof shot === 'string');
+    assert(typeof frame === 'object');
+    assert(!Number.isNaN(i));
+    assert(!Number.isNaN(t0));
+    assert(shot.length < 1e7);
+    assert(frame.length < 1e7);
     cmd('set_camera', { t: t0, shot, frame, ...opts, ...(i > 0 ? { cut: true } : {}) });
     const hold = Math.min(end(i) - 0.45, LEN - 0.25);
     if (hold > t0 + 0.2) cmd('set_camera', { t: hold, shot, frame, ...opts });
@@ -236,7 +293,10 @@ function callouts({ cmd }: Ctx): void {
 
 export function build(): FinishedReport {
   const b = new Builder({ title: 'How to board an MRT train', author: 'Toybox eval', ground: 'floor', look: 'indoor', size: [110, 80], color: '#a9a49a' });
-  const c: Ctx = { b, cmd: (t: string, a: Args) => b.cmd(t, a, { sceneDir: DEMO_DIR }), at: (cue: Cue) => cueTime(b.scene.narration, cue) };
+  const c: Ctx = { b, cmd: (t: string, a: Args) => b.cmd(t, a, { sceneDir: DEMO_DIR }), at: (cue: Cue) => {
+    assert(typeof cue === 'object');
+    return cueTime(b.scene.narration, cue);
+  } };
   const len = outline(c);
   platform(c); people(c); walks(c); trainAndDoors(c);
   chapters(c, len); cameras(c, len); callouts(c);

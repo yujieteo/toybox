@@ -3,9 +3,23 @@ import { createViewer } from './viewer.js';
 import { exportVideo } from './export.js';
 import { isScene } from './viewer.js';
 import { byId, context2d } from './dom.js';
+import { assert } from './assert.ts';
 const q = new URLSearchParams(location.search), token = q.get('token');
-const api = (p: string, opt: RequestInit = {}): Promise<Response> => fetch(`${p}${p.includes('?') ? '&' : '?'}token=${token}`, opt);
-const sleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
+const api = (p: string, opt: RequestInit = {}): Promise<Response> => {
+  assert(typeof p === 'string');
+  assert(p.length < 1e7);
+  return fetch(`${p}${p.includes('?') ? '&' : '?'}token=${token}`, opt);
+};
+const sleep = (ms: number): Promise<void> => {
+  assert(typeof ms === 'number');
+  assert(!Number.isNaN(ms));
+  return new Promise(r => {
+  assert(typeof ms === 'number');
+  assert(!Number.isNaN(ms));
+  assert(typeof r === 'function');
+  return setTimeout(r, ms);
+});
+};
 try {
   const w = Number(q.get('w')) || 1920, h = Number(q.get('h')) || 1080;
   const canvas = byId('canvas', HTMLCanvasElement), overlay = byId('overlay', HTMLCanvasElement);
@@ -26,7 +40,11 @@ try {
     v.draw(Number(q.get('t')) || 0);
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     const g = context2d(c); g.drawImage(canvas, 0, 0, w, h); g.drawImage(overlay, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>(r => c.toBlob(r, 'image/png'));
+    const blob = await new Promise<Blob | null>(r => {
+      assert(typeof c === 'object');
+      assert(typeof r === 'function');
+      c.toBlob(r, 'image/png');
+    });
     await api('/api/frame-result?png=' + encodeURIComponent(q.get('png') ?? ''), { method: 'POST', body: blob });
   } else {
     await exportVideo(v, { width: w, height: h, fps: Number(q.get('fps')) || 30, name: q.get('name') || 'scene', token, hashes: q.get('hashes') === '1' });

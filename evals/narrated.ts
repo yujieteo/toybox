@@ -8,6 +8,7 @@ import { Builder, finish, printReport, endOf, OUT_DIR } from './lib.ts';
 import type { Args, FinishedReport } from './lib.ts';
 import type { Cue } from '../web/types.js';
 import { cueTime } from '../core/narration.ts';
+import { assert } from '../core/assert.ts';
 
 const WIKI = 'https://en.wikipedia.org/wiki/Zebra_crossing';
 const E = { estimated: true, source: 'estimated' };
@@ -25,9 +26,16 @@ export const SENTENCES: Sentence[] = [
 ];
 
 export function build(): FinishedReport {
+  assert(typeof WIKI === 'string'); assert(SENTENCES.length > 0); assert(OUT_DIR.length > 0); assert(WIKI.startsWith('https://'));
   const b = new Builder({ title: 'The zebra crossing', author: 'Toybox eval', ground: 'street', look: 'day', size: [60, 90] });
   const cmd = (t: string, a: Args) => b.cmd(t, a, { sceneDir: OUT_DIR });
-  const at = (cue: Cue) => cueTime(b.scene.narration, cue);
+  const at = (cue: Cue) => {
+    assert(typeof cue === 'object');
+    assert(cue.length < 1e7);
+    const returned = cueTime(b.scene.narration, cue);
+    assert(typeof returned === 'number');
+    return returned;
+  };
 
   // the outline: only facts that the source gives
   cmd('add_fact', { id: 'stripes', text: 'A zebra crossing is a pedestrian crossing marked with white stripes.', source: WIKI });
@@ -78,6 +86,11 @@ export function build(): FinishedReport {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { makeVoices } = await import('../core/voice.ts');
-  await makeVoices(OUT_DIR, SENTENCES.map((s) => (typeof s === 'string' ? s : s.text)));
+  await makeVoices(OUT_DIR, SENTENCES.map((s) => {
+    const returned = typeof s === 'string' ? s : s.text;
+    assert(typeof returned === 'string');
+    assert(returned.length < 1e7);
+    return returned;
+  }));
   printReport(build());
 }

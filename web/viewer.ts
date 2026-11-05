@@ -8,6 +8,7 @@ import { isCatalogue } from './format.js';
 
 // ---------------------------------------------------------------- types
 import type { Vec2, Vec3, Scene, SceneObject, Model, Outfit, Catalogue, Motion, OsmBuilding, SceneMap, TrackValue } from './types.js';
+import { assert } from './assert.ts';
 export type { Vec2, Vec3, Scene, SceneObject, Model, Outfit, Catalogue, Motion };
 // NEED-TYPE: Callout.at, Callout.estimated, Chapter.estimated, Model.mesh, Model.groups (the viewer reads them through guards below).
 
@@ -16,13 +17,18 @@ export function isScene(x: unknown): x is Scene {
   return isRecord(x) && Array.isArray(x.objects);
 }
 // Fields that the scene format allows but web/types.ts does not name yet.
-function flag(x: object, key: string): boolean { return isRecord(x) && x[key] === true; }
+function flag(x: object, key: string): boolean { 
+  assert(typeof key === 'string');
+  assert(key.length < 1e7);
+  return isRecord(x) && x[key] === true; }
 function vec3Of(x: unknown): Vec3 | undefined {
   if (!Array.isArray(x) || x.length !== 3) return undefined;
   const [a, b, c] = x;
   return typeof a === 'number' && typeof b === 'number' && typeof c === 'number' ? [a, b, c] : undefined;
 }
-function numberOf(v: TrackValue): number { return typeof v === 'number' ? v : 0; }
+function numberOf(v: TrackValue): number { const returned = typeof v === 'number' ? v : 0;
+assert(typeof returned === 'number');
+return returned; }
 interface Group { color: string; slot?: string }
 function meshOf(m: Model): string | undefined { return typeof m.mesh === 'string' ? m.mesh : undefined; }
 function groupsOf(m: Model): Group[] {
@@ -116,6 +122,10 @@ export interface Viewer {
 
 // The element at index i of a list, or an error when there is none (a bad index is a defect, not data).
 function nth<T>(list: readonly T[], i: number): T {
+  assert(typeof list === 'object');
+  assert(typeof i === 'number');
+  assert(list.length < 1e7);
+  assert(!Number.isNaN(i));
   const x = list[i];
   if (x === undefined) throw new RangeError(`viewer: no item at index ${i}`);
   return x;
@@ -144,13 +154,22 @@ export function hexRGB(h?: string): Vec3 {
 // A sign label shows in every chapter, but a sign that a chapter lists in focus shows only in the
 // chapters that list it.
 export function signLabelShown(scene: Pick<Scene, 'chapters'>, id: string, t: number): boolean {
+  assert(typeof scene === 'object');
+  assert(typeof id === 'string');
+  assert(typeof t === 'number');
+  assert(id.length < 1e7);
+  assert(!Number.isNaN(t));
   const cs = scene.chapters || [];
   if (!cs.some(c => (c.focus || []).includes(id))) return true;
   const c = cs.find(k => k.start <= t && t < k.end) || cs.find(k => k.start <= t && t <= k.end);
   return !!c && (c.focus || []).includes(id);
 }
 function loadScript(src: string): Promise<void> {
+  assert(typeof src === 'string');
+  assert(src.length < 1e7);
   return new Promise((ok, fail) => {
+    assert(typeof ok === 'function');
+    assert(typeof fail === 'function');
     const s = document.createElement('script');
     s.src = src; s.onload = () => ok(); s.onerror = () => fail(new Error('cannot load ' + src));
     document.head.appendChild(s);
@@ -173,6 +192,9 @@ const FONT = '"DM Sans", system-ui, sans-serif';
 const up = (c: Ctx): number => c.M._toybox_up_buf();
 
 async function loadPeople(M: Engine, assetsUrl: string): Promise<void> {
+  assert(typeof M === 'object');
+  assert(typeof assetsUrl === 'string');
+  assert(assetsUrl.length < 1e7);
   const sk: unknown = await (await fetch(`${assetsUrl}/people/skel.json`)).json();
   if (!isSkeleton(sk)) throw new Error('The skeleton file has no bones.');
   sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
@@ -190,11 +212,18 @@ async function loadPeople(M: Engine, assetsUrl: string): Promise<void> {
 // (0 to 3 are the primitives, 8 to 10 the map buildings, 512 is MAX_MESH in engine/gl_shim.h).
 // File format: see tools/assets/import.ts.
 async function loadMeshes(M: Engine, assetsUrl: string, catalogue: Catalogue): Promise<Map<string, number[]>> {
+  assert(typeof M === 'object');
+  assert(typeof assetsUrl === 'string');
+  assert(typeof catalogue === 'object');
+  assert(assetsUrl.length < 1e7);
   const meshIds = new Map<string, number[]>();
   const meshModels = catalogue.models.filter(m => meshOf(m));
   const files = await Promise.all(meshModels.map(async m => (await fetch(`${assetsUrl}/${meshOf(m)}`)).arrayBuffer()));
   let next = 16;
   meshModels.forEach((m, i) => {
+    assert(typeof m === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
     const buf = nth(files, i), head = new DataView(buf), g = head.getUint32(4, true), s = head.getFloat32(8, true);
     if (head.getUint32(0, true) !== 0x314d4254 || next + g > 512) return;
     const ids: number[] = [];
@@ -232,6 +261,10 @@ export async function createViewer(opts: ViewerOptions): Promise<Viewer> {
 
 // The public object. Its methods run on the shared state, which exists once createViewer is done.
 function makeViewer(ctx: () => Ctx, M: Engine, catalogue: Catalogue, models: Map<string, Model>): Viewer {
+  assert(typeof ctx === 'function');
+  assert(typeof M === 'object');
+  assert(typeof catalogue === 'object');
+  assert(typeof models === 'object');
   const bind = <A extends unknown[], R>(f: (c: Ctx, ...a: A) => R) => (...a: A): R => f(ctx(), ...a);
   return {
     M, catalogue, models, scene: null, t: 0, playing: false, selected: null,
@@ -254,6 +287,11 @@ function makeViewer(ctx: () => Ctx, M: Engine, catalogue: Catalogue, models: Map
 const cur = (c: Ctx): Scene => { if (!c.v.scene) throw new Error('viewer: no scene is loaded'); return c.v.scene; };
 
 function resize(c: Ctx, w: number, h: number): void {
+  assert(typeof c === 'object');
+  assert(typeof w === 'number');
+  assert(typeof h === 'number');
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(h));
   c.w = w; c.h = h; c.M._scene_resize(w, h);
   if (c.overlay) { c.overlay.width = w; c.overlay.height = h; }
 }
@@ -262,12 +300,47 @@ function resize(c: Ctx, w: number, h: number): void {
 const flagsOf = (o: SceneObject): number => (o.hidden ? FLAG.hidden : 0) | ((o.tags || []).includes('ceiling') ? FLAG.ceiling : 0) | ((o.tags || []).includes('wall') ? FLAG.wall : 0);
 function add(c: Ctx, prim: number, mesh: number, parent: number, flags: number, variant: number, pose: number, flip: boolean | undefined,
   at: Vec3, yaw: number, rot: Vec3, sc: Vec3, c1: Vec3, c2: Vec3, shadow: number): number {
-  return c.M._obj_add(prim, mesh, parent, flags, variant, pose, flip ? 1 : 0, at[0], at[1], at[2], yaw, rot[0], rot[1], rot[2],
+  assert(typeof c === 'object');
+  assert(typeof prim === 'number');
+  assert(typeof mesh === 'number');
+  assert(typeof parent === 'number');
+  assert(typeof flags === 'number');
+  assert(typeof variant === 'number');
+  assert(typeof pose === 'number');
+  assert(typeof at === 'object');
+  assert(typeof yaw === 'number');
+  assert(typeof rot === 'object');
+  assert(typeof sc === 'object');
+  assert(typeof c1 === 'object');
+  assert(typeof c2 === 'object');
+  assert(typeof shadow === 'number');
+  assert(!Number.isNaN(prim));
+  assert(!Number.isNaN(mesh));
+  assert(!Number.isNaN(parent));
+  assert(!Number.isNaN(flags));
+  assert(!Number.isNaN(variant));
+  assert(!Number.isNaN(pose));
+  assert(at.length < 1e7);
+  assert(!Number.isNaN(yaw));
+  assert(rot.length < 1e7);
+  assert(sc.length < 1e7);
+  assert(c1.length < 1e7);
+  assert(c2.length < 1e7);
+  assert(!Number.isNaN(shadow));
+  const returned = c.M._obj_add(prim, mesh, parent, flags, variant, pose, flip ? 1 : 0, at[0], at[1], at[2], yaw, rot[0], rot[1], rot[2],
     sc[0], sc[1], sc[2], c1[0], c1[1], c1[2], c2[0], c2[1], c2[2], shadow);
+  assert(typeof returned === 'number');
+  return returned;
 }
-function sizeOf(c: Ctx, o: { model: string }): Vec3 { return o.model === 'person' ? PERSON_SIZE : c.models.get(o.model)?.size || [1, 1, 1]; }
+function sizeOf(c: Ctx, o: { model: string }): Vec3 { 
+  assert(typeof c === 'object');
+  assert(typeof o === 'object');
+  return o.model === 'person' ? PERSON_SIZE : c.models.get(o.model)?.size || [1, 1, 1]; }
 
 function loadScene(c: Ctx, scene: Scene, keepTime: boolean): void {
+  assert(typeof c === 'object');
+  assert(typeof scene === 'object');
+  assert(typeof keepTime === 'boolean');
   const { M, v } = c;
   v.scene = scene;
   if (!keepTime) v.t = 0;
@@ -291,6 +364,8 @@ function loadScene(c: Ctx, scene: Scene, keepTime: boolean): void {
 }
 
 function addObjects(c: Ctx, scene: Scene): void {
+  assert(typeof c === 'object');
+  assert(typeof scene === 'object');
   const done = new Set();
   for (const first of scene.objects) {
     const chain: SceneObject[] = [];
@@ -302,6 +377,9 @@ function addObjects(c: Ctx, scene: Scene): void {
   }
 }
 function addOne(c: Ctx, scene: Scene, o: SceneObject): void {
+  assert(typeof c === 'object');
+  assert(typeof scene === 'object');
+  assert(typeof o === 'object');
   const po = o.parent ? scene.objects.find(x => x.id === o.parent) : undefined;
   const parent = po ? c.v.rootIds.get(po.id) ?? -1 : -1;
   if (o.model === 'person') { addPerson(c, o, parent); return; }
@@ -313,6 +391,10 @@ function addOne(c: Ctx, scene: Scene, o: SceneObject): void {
   const root = add(c, 6, 0, parent, flags, 0, 0, o.flip, at, o.yaw || 0, [0, 0, 0], sc, [0, 0, 0], [0, 0, 0], shadow);
   c.v.rootIds.set(o.id, root);
   if (meshOf(m)) (c.meshIds.get(m.id) || []).forEach((id, k) => {
+    assert(typeof id === 'number');
+    assert(typeof k === 'number');
+    assert(!Number.isNaN(id));
+    assert(!Number.isNaN(k));
     const gr = nth(groupsOf(m), k);
     add(c, 5, id, root, flags, 0, 0, false, [0, 0, 0], 0, [0, 0, 0], [1, 1, 1], hexRGB((o.colors && gr.slot && o.colors[gr.slot]) || gr.color), [0, 0, 0], 0);
   });
@@ -323,6 +405,10 @@ function addOne(c: Ctx, scene: Scene, o: SceneObject): void {
   }
 }
 function addPerson(c: Ctx, o: SceneObject, parent: number): void {
+  assert(typeof c === 'object');
+  assert(typeof o === 'object');
+  assert(typeof parent === 'number');
+  assert(!Number.isNaN(parent));
   const flags = flagsOf(o), n = o.variant || 0;
   const fit = o.outfit ? c.outfits.get(o.outfit) : undefined;
   const col = { ...(fit && fit.colors), ...o.colors };
@@ -335,6 +421,8 @@ function addPerson(c: Ctx, o: SceneObject, parent: number): void {
   }
 }
 function buildPosed(c: Ctx, scene: Scene): void {
+  assert(typeof c === 'object');
+  assert(typeof scene === 'object');
   c.v.posed = [];
   for (const o of scene.objects) {
     const motions = (scene.motions || []).filter(m => m.object === o.id), id = c.v.rootIds.get(o.id);
@@ -345,6 +433,8 @@ function buildPosed(c: Ctx, scene: Scene): void {
   }
 }
 function buildClips(c: Ctx, scene: Scene): void {
+  assert(typeof c === 'object');
+  assert(typeof scene === 'object');
   const voiceUrl = c.v.voiceUrl;
   c.v.clips = [];
   if (voiceUrl) for (const n of scene.narration || []) {
@@ -356,6 +446,7 @@ function buildClips(c: Ctx, scene: Scene): void {
   }
 }
 function loadTracks(c: Ctx, scene: Scene): void {
+  assert(typeof c === 'object');
   const M = c.M;
   for (const tr of scene.tracks || []) {
     const id = c.v.rootIds.get(tr.object);
@@ -385,8 +476,16 @@ function ear(poly: Vec2[]): Vec3[] {  // simple ear clipping, poly = [[x,z],...]
   const n = poly.length, idx = [...Array(n).keys()], tris: Vec3[] = [];
   if (polyArea(poly) < 0) idx.reverse();
   const cross = (a: number, b: number, c: number): number => {
+    assert(typeof a === 'number');
+    assert(typeof b === 'number');
+    assert(typeof c === 'number');
+    assert(!Number.isNaN(a));
+    assert(!Number.isNaN(b));
+    assert(!Number.isNaN(c));
     const pa = nth(poly, a), pb = nth(poly, b), pc = nth(poly, c);
-    return (pb[0] - pa[0]) * (pc[1] - pa[1]) - (pb[1] - pa[1]) * (pc[0] - pa[0]);
+    const returned = (pb[0] - pa[0]) * (pc[1] - pa[1]) - (pb[1] - pa[1]) * (pc[0] - pa[0]);
+    assert(typeof returned === 'number');
+    return returned;
   };
   const inside = (p: number, a: number, b: number, c: number): boolean => cross(a, b, p) >= 0 && cross(b, c, p) >= 0 && cross(c, a, p) >= 0;
   let guard = 0;
@@ -404,6 +503,9 @@ function ear(poly: Vec2[]): Vec3[] {  // simple ear clipping, poly = [[x,z],...]
   return tris;
 }
 function extrude(b: OsmBuilding, out: number[]): void {
+  assert(typeof b === 'object');
+  assert(typeof out === 'object');
+  assert(out.length < 1e7);
   const p = b.poly.slice();
   if (p.length > 1) { const first = nth(p, 0), end = nth(p, p.length - 1); if (first[0] === end[0] && first[1] === end[1]) p.pop(); }
   if (p.length < 3) return;
@@ -432,10 +534,17 @@ function buildMap(c: Ctx, scene: Scene): Promise<void> {
   return v.tilesReady;
 }
 function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
+  assert(typeof c === 'object');
+  assert(typeof buildings === 'object');
+  assert(buildings.length < 1e7);
   const palette: Vec3[] = [[0.86, 0.80, 0.70], [0.78, 0.80, 0.82], [0.84, 0.68, 0.58]];
   const groups: number[][] = [[], [], []];
   buildings.forEach((b, i) => extrude(b, nth(groups, i % 3)));
   groups.forEach((g, gi) => {
+    assert(typeof g === 'object');
+    assert(typeof gi === 'number');
+    assert(g.length < 1e7);
+    assert(!Number.isNaN(gi));
     if (!g.length || g.length * 4 > c.M._toybox_up_size()) return;
     c.M.HEAPF32.set(new Float32Array(g), up(c) >> 2);
     const mesh = 8 + gi;
@@ -446,13 +555,33 @@ function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
 }
 function oneMap(scene: Scene): boolean { return !!(scene.map && scene.map.origin && scene.backdrop?.ground === 'map'); }
 const mercator = (lat: number, lon: number, z: number): Vec2 => {
+  assert(typeof lat === 'number');
+  assert(typeof lon === 'number');
+  assert(typeof z === 'number');
+  assert(!Number.isNaN(lat));
+  assert(!Number.isNaN(lon));
+  assert(!Number.isNaN(z));
   const n = 2 ** z, x = (lon + 180) / 360 * n, s = Math.sin(lat * Math.PI / 180);
   return [x, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n];
 };
 // Draws the 3 by 3 tiles around (cx, cy) on g. Resolves true when at least one tile loaded.
 async function fetchTiles(g: CanvasRenderingContext2D, style: string, z: number, cx: number, cy: number, R: number): Promise<boolean> {
+  assert(typeof g === 'object');
+  assert(typeof style === 'string');
+  assert(typeof z === 'number');
+  assert(typeof cx === 'number');
+  assert(typeof cy === 'number');
+  assert(typeof R === 'number');
+  assert(style.length < 1e7);
+  assert(!Number.isNaN(z));
+  assert(!Number.isNaN(cx));
+  assert(!Number.isNaN(cy));
+  assert(!Number.isNaN(R));
   let any = false;
   await Promise.all([...Array(2 * R + 1).keys()].flatMap(i => [...Array(2 * R + 1).keys()].map(j => new Promise<void>(done => {
+    assert(typeof done === 'function');
+    assert(typeof g === 'object');
+    assert(typeof i === 'number');
     const im = new Image(); im.crossOrigin = 'anonymous';
     im.onload = () => { g.drawImage(im, i * 256, j * 256); any = true; done(); };
     im.onerror = () => done();
@@ -461,6 +590,11 @@ async function fetchTiles(g: CanvasRenderingContext2D, style: string, z: number,
   return any;
 }
 async function loadTiles(c: Ctx, map: SceneMap, o: { lat: number; lon: number }, generation: number): Promise<void> {
+  assert(typeof c === 'object');
+  assert(typeof map === 'object');
+  assert(typeof o === 'object');
+  assert(typeof generation === 'number');
+  assert(!Number.isNaN(generation));
   const om = map.onemap || {}, z = om.zoom || 18, style = om.style || 'Default';
   const [fx, fy] = mercator(o.lat, o.lon, z), cx = Math.floor(fx), cy = Math.floor(fy), R = 1;
   const mPerTile = 156543.03392 * Math.cos(o.lat * Math.PI / 180) / 2 ** z * 256;
@@ -490,8 +624,19 @@ function loadLogo(c: Ctx): Promise<void> {
 }
 
 // ---- drawing
-function project(c: Ctx, x: number, y: number, z: number): Vec2 | null { return c.M._project(x, y, z) ? [c.M._proj_x(), c.M._proj_y()] : null; }
+function project(c: Ctx, x: number, y: number, z: number): Vec2 | null { 
+  assert(typeof c === 'object');
+  assert(typeof x === 'number');
+  assert(typeof y === 'number');
+  assert(typeof z === 'number');
+  assert(!Number.isNaN(x));
+  assert(!Number.isNaN(y));
+  assert(!Number.isNaN(z));
+  return c.M._project(x, y, z) ? [c.M._proj_x(), c.M._proj_y()] : null; }
 function draw(c: Ctx, t: number): void {
+  assert(typeof c === 'object');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(t));
   const { M, v } = c;
   v.t = t;
   if (v.userCam) { const o = v.orbit; M._cam_user(1, o.yaw, o.pitch, o.dist, o.tx, o.ty, o.tz); } else M._cam_user(0, 0, 0, 0, 0, 0, 0);
@@ -507,12 +652,30 @@ function draw(c: Ctx, t: number): void {
 
 // Text with small raised and lowered parts (engine/vid.goose). s is the font size, weight the font weight.
 function textW(ctx: CanvasRenderingContext2D, text: string, s: number, weight: number): number {
+  assert(typeof ctx === 'object');
+  assert(typeof text === 'string');
+  assert(typeof s === 'number');
+  assert(typeof weight === 'number');
+  assert(text.length < 1e7);
+  assert(!Number.isNaN(s));
+  assert(!Number.isNaN(weight));
   let w = 0;
   for (const p of marks(text)) { ctx.font = `${weight} ${p.shift ? s * 0.7 : s}px ${FONT}`; w += ctx.measureText(p.text).width; }
   ctx.font = `${weight} ${s}px ${FONT}`;
   return w;
 }
 function fillText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, s: number, weight: number): void {
+  assert(typeof ctx === 'object');
+  assert(typeof text === 'string');
+  assert(typeof x === 'number');
+  assert(typeof y === 'number');
+  assert(typeof s === 'number');
+  assert(typeof weight === 'number');
+  assert(text.length < 1e7);
+  assert(!Number.isNaN(x));
+  assert(!Number.isNaN(y));
+  assert(!Number.isNaN(s));
+  assert(!Number.isNaN(weight));
   const align = ctx.textAlign, w = textW(ctx, text, s, weight);
   let px = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
   ctx.textAlign = 'left';
@@ -524,6 +687,15 @@ function fillText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   ctx.font = `${weight} ${s}px ${FONT}`; ctx.textAlign = align;
 }
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, s: number, weight: number): string[] {
+  assert(typeof ctx === 'object');
+  assert(typeof text === 'string');
+  assert(typeof maxW === 'number');
+  assert(typeof s === 'number');
+  assert(typeof weight === 'number');
+  assert(text.length < 1e7);
+  assert(!Number.isNaN(maxW));
+  assert(!Number.isNaN(s));
+  assert(!Number.isNaN(weight));
   const words = text.split(/\s+(?![^{]*\})/), lines: string[] = []; let line = '';
   for (const w of words) {
     const test = line ? line + ' ' + w : w;
@@ -533,19 +705,49 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, s: numb
   return lines;
 }
 function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string): void {
+  assert(typeof ctx === 'object');
+  assert(typeof x === 'number');
+  assert(typeof y === 'number');
+  assert(typeof w === 'number');
+  assert(typeof h === 'number');
+  assert(typeof r === 'number');
+  assert(typeof fill === 'string');
+  assert(!Number.isNaN(x));
+  assert(!Number.isNaN(y));
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(h));
+  assert(!Number.isNaN(r));
+  assert(fill.length < 1e7);
   ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
 }
 // The "approximate" tag on an estimated chapter, callout or sign. x, y is its top left corner.
 function approx(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): number {
+  assert(typeof ctx === 'object');
+  assert(typeof x === 'number');
+  assert(typeof y === 'number');
+  assert(typeof s === 'number');
+  assert(!Number.isNaN(x));
+  assert(!Number.isNaN(y));
+  assert(!Number.isNaN(s));
   ctx.font = `600 ${s}px ${FONT}`;
   const tw = ctx.measureText('approximate').width;
   pill(ctx, x, y, tw + s, s * 1.5, s * 0.3, '#f2c14e');
   ctx.fillStyle = '#1c1b18'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('approximate', x + s * 0.5, y + s * 0.75);
-  return tw + s;
+  const returned = tw + s;
+  assert(typeof returned === 'number');
+  return returned;
 }
 // The text at least 4 percent of the frame height; white on a dark box (contrast above 4.5 to 1).
 function drawOverlay(c: Ctx, ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
+  assert(typeof c === 'object');
+  assert(typeof ctx === 'object');
+  assert(typeof w === 'number');
+  assert(typeof h === 'number');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(h));
+  assert(!Number.isNaN(t));
   const sc = c.v.scene; if (!sc) return;
   drawSigns(c, ctx, sc, h, t);
   drawCallouts(c, ctx, sc, w, h, t);
@@ -559,6 +761,13 @@ function drawOverlay(c: Ctx, ctx: CanvasRenderingContext2D, w: number, h: number
   }
 }
 function drawSigns(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: number): void {
+  assert(typeof c === 'object');
+  assert(typeof ctx === 'object');
+  assert(typeof sc === 'object');
+  assert(typeof h === 'number');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(h));
+  assert(!Number.isNaN(t));
   const { M, v } = c;
   for (const o of sc.objects) {
     const m = c.models.get(o.model);
@@ -576,6 +785,15 @@ function drawSigns(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, h: number, 
   }
 }
 function drawCallouts(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number, t: number): void {
+  assert(typeof c === 'object');
+  assert(typeof ctx === 'object');
+  assert(typeof sc === 'object');
+  assert(typeof w === 'number');
+  assert(typeof h === 'number');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(h));
+  assert(!Number.isNaN(t));
   const { M, v } = c;
   for (const k of sc.callouts || []) {
     if (t < k.start || t >= k.end) continue;
@@ -597,6 +815,12 @@ function drawCallouts(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
 }
 // The chapter title and clock.
 function drawChapter(ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: number): void {
+  assert(typeof ctx === 'object');
+  assert(typeof sc === 'object');
+  assert(typeof h === 'number');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(h));
+  assert(!Number.isNaN(t));
   const ch = (sc.chapters || []).find(c => t >= c.start && t < c.end);
   if (!ch || !(ch.clock || ch.title)) return;
   const s = Math.round(h * 0.042);
@@ -609,6 +833,15 @@ function drawChapter(ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: num
 }
 const hasOsm = (sc: Scene): boolean => !!(sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length);
 function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number, t: number): void {
+  assert(typeof c === 'object');
+  assert(typeof ctx === 'object');
+  assert(typeof sc === 'object');
+  assert(typeof w === 'number');
+  assert(typeof h === 'number');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(h));
+  assert(!Number.isNaN(t));
   const caps = (sc.captions || []).filter(k => t >= k.start && t < k.end);
   if (!caps.length) return;
   const fs = Math.round(h * 0.045);
@@ -621,6 +854,13 @@ function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
   lines.forEach((l, i) => fillText(ctx, l, w / 2, y + fs * 0.25 + i * lh, fs, 500));
 }
 function drawCredits(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number): void {
+  assert(typeof c === 'object');
+  assert(typeof ctx === 'object');
+  assert(typeof sc === 'object');
+  assert(typeof w === 'number');
+  assert(typeof h === 'number');
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(h));
   const credits = [...(sc.credits || [])];
   if (hasOsm(sc)) credits.push(OSM_CREDIT);
   if (c.v.mapImage) credits.push(ONEMAP_CREDIT);
@@ -638,10 +878,17 @@ function drawCredits(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number
 
 // ---- camera control
 function storyCam(c: Ctx, t: number): { target: Vec3; fov: number } {   // the story camera target and fov at time t, as the engine samples them
+  assert(typeof c === 'object');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(t));
   const ks = cur(c).camera || [];
   if (!ks.length) return { target: [0, 1, 0], fov: 50 };
   let a = 0;
-  ks.forEach((k, i) => { if (k.t <= t) a = i; });
+  ks.forEach((k, i) => { 
+    assert(typeof k === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    if (k.t <= t) a = i; });
   const b = Math.min(a + 1, ks.length - 1), A = nth(ks, a), B = nth(ks, b);
   let u = b === a ? 0 : Math.max(0, Math.min(1, (t - A.t) / (B.t - A.t)));
   u = A.ease === 'step' ? 0 : A.ease === 'linear' ? u : u * u * (3 - 2 * u);
@@ -659,9 +906,24 @@ function ensureUserCam(c: Ctx): void {
   v.orbit = { yaw: Math.atan2(dx, dz), pitch: Math.asin(Math.max(-1, Math.min(1, dy / d))), dist: d, tx: tg[0], ty: tg[1], tz: tg[2] };
   v.userCam = true;
 }
-function orbitBy(c: Ctx, dyaw: number, dpitch: number): void { ensureUserCam(c); const o = c.v.orbit; o.yaw -= dyaw; o.pitch = Math.max(-0.2, Math.min(1.5, o.pitch + dpitch)); c.v.draw(c.v.t); }
-function zoomBy(c: Ctx, f: number): void { ensureUserCam(c); const o = c.v.orbit; o.dist = Math.max(1.5, Math.min(300, o.dist * f)); c.v.draw(c.v.t); }
+function orbitBy(c: Ctx, dyaw: number, dpitch: number): void { 
+  assert(typeof c === 'object');
+  assert(typeof dyaw === 'number');
+  assert(typeof dpitch === 'number');
+  assert(!Number.isNaN(dyaw));
+  assert(!Number.isNaN(dpitch));
+  ensureUserCam(c); const o = c.v.orbit; o.yaw -= dyaw; o.pitch = Math.max(-0.2, Math.min(1.5, o.pitch + dpitch)); c.v.draw(c.v.t); }
+function zoomBy(c: Ctx, f: number): void { 
+  assert(typeof c === 'object');
+  assert(typeof f === 'number');
+  assert(!Number.isNaN(f));
+  ensureUserCam(c); const o = c.v.orbit; o.dist = Math.max(1.5, Math.min(300, o.dist * f)); c.v.draw(c.v.t); }
 function panBy(c: Ctx, dx: number, dy: number): void {
+  assert(typeof c === 'object');
+  assert(typeof dx === 'number');
+  assert(typeof dy === 'number');
+  assert(!Number.isNaN(dx));
+  assert(!Number.isNaN(dy));
   ensureUserCam(c); const o = c.v.orbit, k = o.dist * 0.0012;
   o.tx -= (Math.cos(o.yaw) * dx + Math.sin(o.yaw) * dy * Math.sin(o.pitch)) * k;
   o.tz -= (-Math.sin(o.yaw) * dx + Math.cos(o.yaw) * dy * Math.sin(o.pitch)) * k;
@@ -684,6 +946,9 @@ function bbox(c: Ctx, o: SceneObject): Vec3[] | null {
   return pts;
 }
 function screenBox(c: Ctx, id: string): { x0: number; y0: number; x1: number; y1: number } | null {
+  assert(typeof c === 'object');
+  assert(typeof id === 'string');
+  assert(id.length < 1e7);
   const o = cur(c).objects.find(x => x.id === id); if (!o) return null;
   const pts = bbox(c, o); if (!pts) return null;
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
@@ -691,6 +956,11 @@ function screenBox(c: Ctx, id: string): { x0: number; y0: number; x1: number; y1
   return n ? { x0, y0, x1, y1 } : null;
 }
 function pick(c: Ctx, px: number, py: number): string | null {   // px, py in canvas pixels
+  assert(typeof c === 'object');
+  assert(typeof px === 'number');
+  assert(typeof py === 'number');
+  assert(!Number.isNaN(px));
+  assert(!Number.isNaN(py));
   let best: string | null = null, area = 1e18;
   for (const o of cur(c).objects) {
     if (o.parent || (o.tags || []).includes('floor') || (o.tags || []).includes('ceiling')) continue;
@@ -701,6 +971,11 @@ function pick(c: Ctx, px: number, py: number): string | null {   // px, py in ca
 }
 function select(c: Ctx, id: string | null): void { c.v.selected = id; c.v.draw(c.v.t); if (c.v.onchange) c.v.onchange('select'); }
 function groundPoint(c: Ctx, px: number, py: number): Vec3 | null {   // ray through the pixel, hit on the plane y = 0
+  assert(typeof c === 'object');
+  assert(typeof px === 'number');
+  assert(typeof py === 'number');
+  assert(!Number.isNaN(px));
+  assert(!Number.isNaN(py));
   const { M, v } = c;
   const e: Vec3 = [M._cam_x(), M._cam_y(), M._cam_z()];
   const cam = storyCam(c, v.t), t: Vec3 = v.userCam ? [v.orbit.tx, v.orbit.ty, v.orbit.tz] : cam.target;
@@ -726,11 +1001,17 @@ function undoEdit(c: Ctx): void {
 }
 const objOf = (c: Ctx, id: string | null): SceneObject | undefined => cur(c).objects.find(o => o.id === id);
 const moveObj = (c: Ctx, o: SceneObject, dx: number, dz: number): void => {
+  assert(typeof c === 'object');
+  assert(typeof o === 'object');
+  assert(typeof dx === 'number');
   const [ax, ay, az] = atOf(o);
   o.at = [ax + dx, ay, az + dz];
   for (const tr of cur(c).tracks || []) if (tr.object === o.id && tr.channel === 'at') for (const k of tr.keys) { const w = vec3Of(k.v); if (w) k.v = [w[0] + dx, w[1], w[2] + dz]; }
 };
 function edit(c: Ctx, op: EditOp, arg?: Vec2 | number): void {
+  assert(typeof c === 'object');
+  assert(typeof op === 'string');
+  assert(op.length < 1e7);
   const o = objOf(c, c.v.selected); if (!o) return;
   const scn = cur(c);
   snapshot(c);
@@ -749,6 +1030,9 @@ function edit(c: Ctx, op: EditOp, arg?: Vec2 | number): void {
   if (c.v.onedit) c.v.onedit();
 }
 function duplicate(c: Ctx, scn: Scene, o: SceneObject): void {
+  assert(typeof c === 'object');
+  assert(typeof scn === 'object');
+  assert(typeof o === 'object');
   const copy = structuredClone(o); let n = 2; while (objOf(c, `${o.id}-${n}`)) n++;
   const [ax, ay, az] = atOf(o);
   copy.id = `${o.id}-${n}`; copy.at = [ax + 1, ay, az + 1];
@@ -757,6 +1041,11 @@ function duplicate(c: Ctx, scn: Scene, o: SceneObject): void {
 // A drag: one undo step at the start, one engine rebuild for each frame, one save at the end.
 function beginDrag(c: Ctx): void { if (objOf(c, c.v.selected)) snapshot(c); }
 function moveSelectedTo(c: Ctx, gx: number, gz: number): void {
+  assert(typeof c === 'object');
+  assert(typeof gx === 'number');
+  assert(typeof gz === 'number');
+  assert(!Number.isNaN(gx));
+  assert(!Number.isNaN(gz));
   const o = objOf(c, c.v.selected); if (!o) return;
   const at = atOf(o);
   moveObj(c, o, gx - at[0], gz - at[2]);
@@ -796,7 +1085,11 @@ function play(c: Ctx): void {
   requestAnimationFrame(n => tick(c, n));
 }
 function pause(c: Ctx): void { c.v.playing = false; hush(c); if (c.v.onchange) c.v.onchange('pause'); }
-function seek(c: Ctx, t: number): void { hush(c); c.v.draw(Math.max(0, Math.min(t, cur(c).duration || 60))); }
+function seek(c: Ctx, t: number): void { 
+  assert(typeof c === 'object');
+  assert(typeof t === 'number');
+  assert(!Number.isNaN(t));
+  hush(c); c.v.draw(Math.max(0, Math.min(t, cur(c).duration || 60))); }
 function download(c: Ctx): void {
   const blob = new Blob([JSON.stringify(c.v.scene, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (cur(c).title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() + '.toybox.json'; a.click();

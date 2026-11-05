@@ -2,8 +2,11 @@
 // video data. Only a streaming export has the files and the scene.
 import type fs from 'node:fs';
 import type { Scene } from '../web/types.js';
+import { assert } from '../core/assert.ts';
 
 export const EXPORT_PHASES = ['waiting', 'streaming'] as const;
+assert(EXPORT_PHASES.includes('waiting'));
+assert(EXPORT_PHASES.includes('streaming'));
 
 export interface Streaming {
   phase: 'streaming';

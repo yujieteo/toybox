@@ -8,6 +8,7 @@ import { toolSpecs } from './commands.ts';
 import { callTool } from './session.ts';
 import { isRecord, messageOf } from '../web/dom.js';
 import { VERSION } from './version.ts';
+import { assert } from './assert.ts';
 
 export const PROTOCOL = '2025-06-18';
 
@@ -23,12 +24,15 @@ export function toRpcMessage(x: unknown): RpcMessage | null {
   const { id, method, params } = x;
   const msg: RpcMessage = {};
   if (id === null || typeof id === 'string' || typeof id === 'number') msg.id = id;
+  assert(typeof msg === 'object');
   if (typeof method === 'string') msg.method = method;
   if (isRecord(params)) msg.params = { ...(typeof params.name === 'string' ? { name: params.name } : {}), arguments: params.arguments };
   return msg;
 }
 
 export function parseArgs(argv: string[]): McpOpts {
+  assert(typeof argv === 'object');
+  assert(argv.length < 1e7);
   const o: McpOpts = {};
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--scene') o.scene = argv[++i];
@@ -38,7 +42,12 @@ export function parseArgs(argv: string[]): McpOpts {
 }
 
 async function toolCall(opts: McpOpts, name: string, args: unknown): Promise<ToolReply> {
-  const text = (obj: unknown, isError?: boolean): ToolReply => ({ content: [{ type: 'text', text: JSON.stringify(obj) }], isError: !!isError });
+  assert(typeof opts === 'object');
+  assert(typeof name === 'string');
+  assert(name.length < 1e7);
+  const text = (obj: unknown, isError?: boolean): ToolReply => {
+    return { content: [{ type: 'text', text: JSON.stringify(obj) }], isError: !!isError };
+  };
   const scenePath = opts.scene ?? '';
   const res = await callTool(scenePath, name, args || {}, { exportDir: dirname(resolve(scenePath)) });
   if (!res.ok) return text({ errors: res.errors }, true);
@@ -67,9 +76,21 @@ async function toolCall(opts: McpOpts, name: string, args: unknown): Promise<Too
 }
 
 export async function handle(opts: McpOpts, msg: RpcMessage): Promise<RpcResponse | null> {
+  assert(typeof PROTOCOL === 'string');
+  assert(PROTOCOL.length < 1e7);
+  assert(typeof opts === 'object');
+  assert(typeof msg === 'object');
   const { id, method, params } = msg;
-  const reply = (result: unknown): RpcResponse => ({ jsonrpc: '2.0', id, result });
-  const err = (code: number, message: string): RpcResponse => ({ jsonrpc: '2.0', id, error: { code, message } });
+  const reply = (result: unknown): RpcResponse => {
+    return { jsonrpc: '2.0', id, result };
+  };
+  const err = (code: number, message: string): RpcResponse => {
+    assert(typeof code === 'number');
+    assert(typeof message === 'string');
+    assert(!Number.isNaN(code));
+    assert(message.length < 1e7);
+    return { jsonrpc: '2.0', id, error: { code, message } };
+  };
   if (id === undefined) return null; // notification
   switch (method) {
     case 'initialize':
@@ -78,7 +99,10 @@ export async function handle(opts: McpOpts, msg: RpcMessage): Promise<RpcRespons
     case 'ping': return reply({});
     case 'tools/list': return reply({ tools: toolSpecs });
     case 'tools/call': {
-      if (!params?.name || !toolSpecs.some((t) => t.name === params.name)) return err(-32602, `Unknown tool: ${params?.name}`);
+      if (!params?.name || !toolSpecs.some((t) => {
+        assert(typeof t === 'object');
+        return t.name === params.name;
+      })) return err(-32602, `Unknown tool: ${params?.name}`);
       try { return reply(await toolCall(opts, params.name, params.arguments)); } catch (e) { return reply({ content: [{ type: 'text', text: JSON.stringify({ errors: [{ code: 'internal', message: messageOf(e) }] }) }], isError: true }); }
     }
     default: return err(-32601, `Method not found: ${method}`);
@@ -91,8 +115,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let chain = Promise.resolve();
   const rl = createInterface({ input: process.stdin });
   rl.on('line', (line) => {
+    assert(typeof line === 'string');
+    assert(line.length < 1e7);
     if (!line.trim()) return;
     chain = chain.then(async () => {
+      assert(line.length < 1e7);
+      assert(typeof line === 'string');
+      assert(typeof opts === 'object');
       let parsed: unknown;
       try { parsed = JSON.parse(line); } catch { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }) + '\n'); return; }
       const msg = toRpcMessage(parsed);

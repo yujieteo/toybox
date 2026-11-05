@@ -1,3 +1,4 @@
+import { assert } from './assert.ts';
 // The vid utilities: the motion words, the raised and lowered text and the narration times.
 // The code is Goose (engine/vid.goose), compiled to web/vid.wasm. This file only loads the
 // WebAssembly, in the browser and in Node, and gives numbers and texts to it.
@@ -19,16 +20,29 @@ interface VidExports {
 }
 const isFn = (v: unknown): v is (...a: number[]) => number => typeof v === 'function';
 const fnOf = (ex: WebAssembly.Exports, name: string): ((...a: number[]) => number) => {
+  assert(typeof ex === 'object');
+  assert(typeof name === 'string');
+  assert(name.length < 1e7);
   const f = ex[name];
   if (!isFn(f)) throw new Error(`vid.wasm has no function ${name}`);
   return f;
 };
 const exportsOf = (ex: WebAssembly.Exports): VidExports => {
+  assert(typeof ex === 'object');
   const f = (name: string) => fnOf(ex, name);
   return {
     _initialize: () => { f('_initialize')(); }, vid_init: () => { f('vid_init')(); },
-    clear: () => { f('clear')(); }, put: (v) => { f('put')(v); }, out_len: f('out_len'), out: f('out'),
-    moves: () => { f('moves')(); }, seed_of: f('seed_of'), pose: (t, seed, alive) => { f('pose')(t, seed, alive); },
+    clear: () => { f('clear')(); }, put: (v) => { 
+      assert(typeof v === 'number');
+      f('put')(v); }, out_len: f('out_len'), out: f('out'),
+    moves: () => { f('moves')(); }, seed_of: f('seed_of'), pose: (t, seed, alive) => { 
+      assert(typeof t === 'number');
+      assert(typeof seed === 'number');
+      assert(typeof alive === 'number');
+      assert(!Number.isNaN(t));
+      assert(!Number.isNaN(seed));
+      assert(!Number.isNaN(alive));
+      f('pose')(t, seed, alive); },
     marks: () => { f('marks')(); }, plain: () => { f('plain')(); },
     lead: f('lead'), gap: f('gap'), tail: f('tail'), stand_in: f('stand_in'), stand_in_seconds: f('stand_in_seconds'),
     timeline: f('timeline'), find: f('find'), cue_time: f('cue_time'),
@@ -47,6 +61,11 @@ W.vid_init();
 // for each code unit, for marks) in 1 MB.
 export const MAX_TEXT = 65536;
 function put(text: string): void {
+  assert(typeof MAX_TEXT === 'number');
+  assert(typeof W === 'object');
+  assert(!Number.isNaN(MAX_TEXT));
+  assert(typeof text === 'string');
+  assert(text.length < 1e7);
   if (text.length > MAX_TEXT) throw new RangeError(`vid: a text has ${text.length} code units, the limit is ${MAX_TEXT}`);
   W.clear(); for (let i = 0; i < text.length; i++) W.put(text.charCodeAt(i));
 }
@@ -61,17 +80,39 @@ export const MOVES = textOf(result()).split(' ');
 const KEYS = ['s', 'sx', 'sz', 'dx', 'z', 'up', 'tilt', 'eye', 'gaze', 'ex', 'ez', 'spin'];
 const num = (v: number | undefined): number => (v === undefined ? NaN : Number(v));   // NaN: the scene leaves the value out
 
-export function seedOf(id: string): number { put(id); return W.seed_of(); }
+export function seedOf(id: string): number { 
+  assert(typeof W === 'object');
+  assert(typeof id === 'string');
+  assert(id.length < 1e7);
+  put(id); const returned = W.seed_of();
+assert(typeof returned === 'number');
+return returned; }
 
 // The pose of an object at time t: its motions { move, t, d, h, x, y, deg }, plus its own life when
 // seed is a number (a character).
 export interface MotionWord { move: string; t?: number; d?: number; h?: number; x?: number; y?: number; deg?: number }
 export type Pose = Record<string, number>;
 export function poseAt(motions: MotionWord[], t: number, seed: number | null = null): Pose {
+  assert(typeof W === 'object');
+  assert(typeof MOVES === 'object');
+  assert(typeof num === 'function');
+  assert(MOVES.length < 1e7);
+  assert(KEYS.length < 1e7);
+  assert(typeof motions === 'object');
+  assert(typeof t === 'number');
+  assert(motions.length < 1e7);
+  assert(!Number.isNaN(t));
   W.clear();
   for (const m of motions) for (const v of [MOVES.indexOf(m.move), num(m.t), num(m.d), num(m.h), num(m.x), num(m.y), num(m.deg)]) W.put(v);
   W.pose(t, seed ?? 0, seed === null ? 0 : 1);
-  return Object.fromEntries(KEYS.map((k, i) => [k, W.out(i)]));
+  return Object.fromEntries(KEYS.map((k, i) => {
+    assert(typeof W === 'object');
+    assert(typeof k === 'string');
+    assert(typeof i === 'number');
+    assert(k.length < 1e7);
+    assert(!Number.isNaN(i));
+    return [k, W.out(i)];
+  }));
 }
 
 // ---------------------------------------------------------------- marks
@@ -80,12 +121,25 @@ export function poseAt(motions: MotionWord[], t: number, seed: number | null = n
 // The parts of a text: [{ text, shift }], shift 1 is raised, -1 is lowered, 0 is normal.
 export interface Mark { text: string; shift: number }
 export function marks(text: string): Mark[] {
+  assert(typeof W === 'object');
+  assert(typeof result === 'function');
+  assert(typeof text === 'string');
+  assert(text.length < 1e7);
   const s = String(text), r = (put(s), W.marks(), result()), parts: Mark[] = [];
   for (let k = 0; k < r.length; k += 3) parts.push({ text: s.slice(r[k + 1], r[k + 2]), shift: r[k] ?? 0 });
   return parts;
 }
 // The text for a place that has no raised text (an .srt file, a length count).
-export function plain(text: string): string { put(String(text)); W.plain(); return textOf(result()); }
+export function plain(text: string): string { 
+  assert(typeof W === 'object');
+  assert(typeof textOf === 'function');
+  assert(typeof result === 'function');
+  assert(typeof text === 'string');
+  assert(text.length < 1e7);
+  put(String(text)); W.plain(); const returned = textOf(result());
+assert(typeof returned === 'string');
+assert(returned.length < 1e7);
+return returned; }
 
 // ---------------------------------------------------------------- narration times
 export const LEAD = W.lead(), GAP = W.gap(), TAIL = W.tail(), STAND_IN = W.stand_in();
@@ -96,14 +150,39 @@ export const standIn = (text: string): number => W.stand_in_seconds(text.length)
 // The start and end of each sentence { seconds, pause }: [[start, end], ...], and the length.
 export interface Beat { seconds?: number; pause?: number }
 export function beats(narration: Beat[]): { times: [number, number][]; length: number } {
+  assert(typeof W === 'object');
+  assert(typeof result === 'function');
+  assert(typeof narration === 'object');
+  assert(narration.length < 1e7);
   W.clear();
   for (const n of narration) { W.put(n.seconds ?? NaN); W.put(n.pause || 0); }
   const length = W.timeline(), r = result();
-  return { times: narration.map((_, i): [number, number] => [r[2 * i] ?? NaN, r[2 * i + 1] ?? NaN]), length };
+  return { times: narration.map((_, i): [number, number] => {
+    assert(typeof r === 'object');
+    assert(r.length < 1e7);
+    assert(typeof _ === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    return [r[2 * i] ?? NaN, r[2 * i + 1] ?? NaN];
+  }), length };
 }
 
 // The index of word in text, or -1.
-export function find(text: string, word: string): number { put(text + word); return W.find(text.length); }
+export function find(text: string, word: string): number { 
+  assert(typeof W === 'object');
+  assert(typeof text === 'string');
+  assert(typeof word === 'string');
+  assert(text.length < 1e7);
+  assert(word.length < 1e7);
+  put(text + word); const returned = W.find(text.length);
+assert(typeof returned === 'number');
+return returned; }
 
 // The time of the word at index k of sentence n, plus offset seconds.
-export const cueAt = (n: { start: number; end: number; text: string }, k: number, offset: number): number => W.cue_time(n.start, n.end, k, n.text.length, offset);
+export const cueAt = (n: { start: number; end: number; text: string }, k: number, offset: number): number => {
+  assert(typeof n === 'object');
+  assert(typeof k === 'number');
+  assert(typeof offset === 'number');
+  assert(!Number.isNaN(k));
+  return W.cue_time(n.start, n.end, k, n.text.length, offset);
+};

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { Vec3, Prim, Part, Model, Outfit } from '../web/types.ts';
 import { modelBounds, partBounds } from './geom.ts';
+import { assert } from './assert.ts';
 
 const LICENSE = 'CC0 (Toybox kit)';
 const C = {
@@ -30,16 +31,39 @@ const v3 = ([a, b, c]: Vec3): Vec3 => [r(a), r(b), r(c)];
 // Bounds come back as plain number arrays: take the first three.
 const tri = (a: readonly number[]): Vec3 => [a[0] ?? 0, a[1] ?? 0, a[2] ?? 0];
 const part = (prim: Prim, pos: Vec3, size: Vec3, color: string, slot?: string | null, rot?: Vec3 | null): KitPart => {
+  assert(typeof prim === 'string');
+  assert(typeof pos === 'object');
+  assert(typeof size === 'object');
+  assert(typeof color === 'string');
+  assert(prim.length < 1e7);
+  assert(pos.length < 1e7);
+  assert(size.length < 1e7);
+  assert(color.length < 1e7);
   const p: KitPart = { prim, pos: v3(pos), size: v3(size), rot: rot || [0, 0, 0], color };
   if (slot) p.slot = slot;
   return p;
 };
-const box = (pos: Vec3, size: Vec3, color: string, slot?: string | null, rot?: Vec3 | null): KitPart => part('box', pos, size, color, slot, rot);
+const box = (pos: Vec3, size: Vec3, color: string, slot?: string | null, rot?: Vec3 | null): KitPart => {
+  assert(typeof size === 'object');
+  assert(typeof color === 'string');
+  assert(pos.length < 1e7);
+  assert(size.length < 1e7);
+  assert(typeof pos === 'object');
+  return part('box', pos, size, color, slot, rot);
+};
 const cyl = (pos: Vec3, size: Vec3, color: string, slot?: string | null, rot?: Vec3 | null): KitPart => part('cylinder', pos, size, color, slot, rot);
 const sph = (pos: Vec3, size: Vec3, color: string, slot?: string | null): KitPart => part('sphere', pos, size, color, slot);
 const wed = (pos: Vec3, size: Vec3, color: string, slot?: string | null, rot?: Vec3 | null): KitPart => part('wedge', pos, size, color, slot, rot);
 
 function wheels(xs: number[], zs: number[], d: number, w: number, y: number = d / 2): KitPart[] {
+  assert(typeof xs === 'object');
+  assert(typeof zs === 'object');
+  assert(typeof d === 'number');
+  assert(typeof w === 'number');
+  assert(xs.length < 1e7);
+  assert(zs.length < 1e7);
+  assert(!Number.isNaN(d));
+  assert(!Number.isNaN(w));
   const out: KitPart[] = [];
   for (const x of xs) for (const z of zs) out.push(cyl([x, y, z], [d, w, d], C.tyre, 'tyre', [0, 0, 90]));
   return out;
@@ -75,6 +99,11 @@ function bus({ len, w, h, body, stripe, roofColor, wheelZ }: BusOpts): KitPart[]
 }
 
 function ambulance(body: string, stripe: string, burnt: boolean): KitPart[] {
+  assert(typeof body === 'string');
+  assert(typeof stripe === 'string');
+  assert(typeof burnt === 'boolean');
+  assert(body.length < 1e7);
+  assert(stripe.length < 1e7);
   const w = 2.1, len = 5.8;
   return [
     box([0, 1.45, -0.5], [w, 1.75, len - 1.3], body, 'body'),
@@ -88,11 +117,25 @@ function ambulance(body: string, stripe: string, burnt: boolean): KitPart[] {
 }
 
 // Overturned and burnt variants (the format has yaw only, so these are separate models).
-function burnt(parts: KitPart[]): KitPart[] { return parts.map((p) => ({ ...p, color: p.slot === 'tyre' ? C.tyre : (p.slot === 'glass' ? '#2a2a2c' : C.char), slot: undefined })).map((p) => { if (!p.slot) delete p.slot; return p; }); }
-function overturned(parts: KitPart[]): KitPart[] { return parts.map((p): KitPart => ({ ...p, pos: [-p.pos[0], -p.pos[1], p.pos[2]], rot: [p.rot[0], p.rot[1], p.rot[2] + 180] })); }
+function burnt(parts: KitPart[]): KitPart[] { 
+  assert(typeof parts === 'object');
+  assert(parts.length < 1e7);
+  return parts.map((p) => ({ ...p, color: p.slot === 'tyre' ? C.tyre : (p.slot === 'glass' ? '#2a2a2c' : C.char), slot: undefined })).map((p) => { 
+  assert(typeof p === 'object');
+  if (!p.slot) delete p.slot; return p; }); }
+function overturned(parts: KitPart[]): KitPart[] { 
+  assert(typeof parts === 'object');
+  assert(parts.length < 1e7);
+  return parts.map((p): KitPart => ({ ...p, pos: [-p.pos[0], -p.pos[1], p.pos[2]], rot: [p.rot[0], p.rot[1], p.rot[2] + 180] })); }
 
 // ---- buildings
 function shophouse(storeys: number, color: string, trim: string): KitPart[] {
+  assert(typeof storeys === 'number');
+  assert(typeof color === 'string');
+  assert(typeof trim === 'string');
+  assert(!Number.isNaN(storeys));
+  assert(color.length < 1e7);
+  assert(trim.length < 1e7);
   const w = 5.5, d = 14, way = 1.5, gh = 3.4, sh = 2.9;
   const H = gh + (storeys - 1) * sh;
   const parts = [
@@ -155,9 +198,13 @@ function mrtTrain(): KitPart[] {
 
 // Finish: centre every model on x and z, put its lowest point at y=0, and set size from the parts.
 function finish(m: RawModel): Model {
+  assert(typeof m === 'object');
   const b = modelBounds(m.parts), bmin = tri(b.min), bmax = tri(b.max);
   const dx = -(bmin[0] + bmax[0]) / 2, dz = -(bmin[2] + bmax[2]) / 2, dy = -bmin[1];
-  const parts = m.parts.map((p): KitPart => { const q: KitPart = { ...p, pos: [r(p.pos[0] + dx), r(p.pos[1] + dy), r(p.pos[2] + dz)] }; if (!q.slot) delete q.slot; return q; });
+  const parts = m.parts.map((p): KitPart => { 
+    assert(typeof r === 'function');
+    assert(typeof p === 'object');
+    const q: KitPart = { ...p, pos: [r(p.pos[0] + dx), r(p.pos[1] + dy), r(p.pos[2] + dz)] }; if (!q.slot) delete q.slot; return q; });
   const nb = modelBounds(parts), nsize = tri(nb.size);
   const out: Model = { id: m.id, name: m.name, kind: m.kind, license: LICENSE, size: v3(nsize), parts };
   if (m.tags?.length) out.tags = m.tags;
@@ -172,8 +219,24 @@ function finish(m: RawModel): Model {
   return out;
 }
 const models: RawModel[] = [];
-function add(id: string, name: string, kind: string, parts: KitPart[], tags: string[] = []): number { return models.push({ id, name, kind, parts, tags }); }
-function roadTile(w: number, d: number, extras: KitPart[]): KitPart[] { return [box([0, 0.05, 0], [w, 0.1, d], C.asphalt, 'asphalt'), ...extras]; }
+function add(id: string, name: string, kind: string, parts: KitPart[], tags: string[] = []): number { 
+  assert(typeof id === 'string');
+  assert(typeof name === 'string');
+  assert(typeof kind === 'string');
+  assert(typeof parts === 'object');
+  assert(id.length < 1e7);
+  assert(name.length < 1e7);
+  assert(kind.length < 1e7);
+  assert(parts.length < 1e7);
+  return models.push({ id, name, kind, parts, tags }); }
+function roadTile(w: number, d: number, extras: KitPart[]): KitPart[] { 
+  assert(typeof w === 'number');
+  assert(typeof d === 'number');
+  assert(typeof extras === 'object');
+  assert(!Number.isNaN(w));
+  assert(!Number.isNaN(d));
+  assert(extras.length < 1e7);
+  return [box([0, 0.05, 0], [w, 0.1, d], C.asphalt, 'asphalt'), ...extras]; }
 const dashes: KitPart[] = []; for (let i = -4; i <= 4; i += 2) dashes.push(box([0, 0.105, i + 0.5], [0.12, 0.012, 1.0], C.line));
 
 // ---- outfits: colours and parts that a person wears. A part follows one bone of the body (names in
@@ -182,19 +245,53 @@ const SPF = 'https://en.wikipedia.org/wiki/Uniforms_of_the_Singapore_Police_Forc
 const RIOT = 'https://en.wikipedia.org/wiki/2013_Little_India_riot';
 const SOC_KIT = 'https://www.hometeamns.sg/frontline/ensuring-safety-security-of-singapore/';
 const SOC_DRILL = 'https://www.nas.gov.sg/archivesonline/photographs/record-details/d3115385-1161-11e3-83d5-0050568939ad';
-function gear(bone: string, prim: Prim, pos: Vec3, size: Vec3, color: string, rot?: Vec3 | null): OutfitPart { return ({ bone, ...part(prim, pos, size, color, null, rot) }); }
+function gear(bone: string, prim: Prim, pos: Vec3, size: Vec3, color: string, rot?: Vec3 | null): OutfitPart { 
+  assert(typeof bone === 'string');
+  assert(typeof prim === 'string');
+  assert(typeof pos === 'object');
+  assert(typeof size === 'object');
+  assert(typeof color === 'string');
+  assert(bone.length < 1e7);
+  assert(prim.length < 1e7);
+  assert(pos.length < 1e7);
+  assert(size.length < 1e7);
+  assert(color.length < 1e7);
+  return ({ bone, ...part(prim, pos, size, color, null, rot) }); }
 // A part held in the left hand. pos and rot give its place in the stand pose. The part follows the left
 // forearm, so the hand and the part move together. The stand pose turns the upper arm 35 degrees down
 // round the shoulder (engine/scene.goose, pose_angles), so the rest-pose place turns 35 degrees back.
 const SHOULDER_L: [number, number] = [0.17, 1.37], ARM_DOWN = 35;
 function held(prim: Prim, pos: Vec3, size: Vec3, color: string, rot: Vec3 = [0, 0, 0]): OutfitPart {
+  assert(typeof prim === 'string');
+  assert(typeof pos === 'object');
+  assert(typeof size === 'object');
+  assert(typeof color === 'string');
+  assert(prim.length < 1e7);
+  assert(pos.length < 1e7);
+  assert(size.length < 1e7);
+  assert(color.length < 1e7);
   const a = (ARM_DOWN * Math.PI) / 180, dx = pos[0] - SHOULDER_L[0], dy = pos[1] - SHOULDER_L[1];
   const rest: Vec3 = [SHOULDER_L[0] + dx * Math.cos(a) - dy * Math.sin(a), SHOULDER_L[1] + dx * Math.sin(a) + dy * Math.cos(a), pos[2]];
   return gear('lowerarm01.L', prim, rest, size, color, [rot[0], rot[1], rot[2] + ARM_DOWN]);
 }
-function helmet(color: string): OutfitPart { return gear('head', 'sphere', [0, 1.655, 0.01], [0.25, 0.23, 0.27], color); }
+function helmet(color: string): OutfitPart { 
+  assert(typeof color === 'string');
+  assert(color.length < 1e7);
+  return gear('head', 'sphere', [0, 1.655, 0.01], [0.25, 0.23, 0.27], color); }
 const outfits: Outfit[] = [];
-function outfit(id: string, name: string, colors: Outfit['colors'], parts: OutfitPart[], source: string, note: string): number { return outfits.push({ id, name, colors, parts, source, note }); }
+function outfit(id: string, name: string, colors: Outfit['colors'], parts: OutfitPart[], source: string, note: string): number { 
+  assert(typeof id === 'string');
+  assert(typeof name === 'string');
+  assert(typeof colors === 'object');
+  assert(typeof parts === 'object');
+  assert(typeof source === 'string');
+  assert(typeof note === 'string');
+  assert(id.length < 1e7);
+  assert(name.length < 1e7);
+  assert(parts.length < 1e7);
+  assert(source.length < 1e7);
+  assert(note.length < 1e7);
+  return outfits.push({ id, name, colors, parts, source, note }); }
 function addKit1(): void {
 
   // ---- vehicles
@@ -217,6 +314,7 @@ function addKit1(): void {
     box([0, 1.0, 0.55], [0.7, 0.05, 0.05], C.dark), box([0, 0.75, 0.6], [0.1, 0.5, 0.1], C.steel),
   ], ['motorbike']);
   const byId = (id: string): KitPart[] => {
+    assert(typeof id === 'string');
     const m = models.find((m) => m.id === id);
     if (!m) throw new Error(`no model ${id}`);
     return m.parts;
@@ -444,6 +542,8 @@ function isImported(v: unknown): v is ImportedModel {
     && 'name' in v && typeof v.name === 'string' && 'kind' in v && typeof v.kind === 'string';
 }
 function readImported(index: string): ImportedModel[] {
+  assert(typeof index === 'string');
+  assert(index.length < 1e7);
   if (!existsSync(index)) return [];
   const raw: unknown = JSON.parse(readFileSync(index, 'utf8'));
   if (!Array.isArray(raw) || !raw.every(isImported)) throw new Error(`${index}: not a list of models`);

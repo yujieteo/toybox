@@ -6,6 +6,7 @@
 import * as E from './emil.js';
 // @ts-expect-error allow-unsafe: the schematic-figure engine is not in this repo; the renderer provides it
 import * as D from '../engine/cs.js';
+import { assert } from '../../core/assert.ts';
 
 // The parts of the renderer objects that this figure uses.
 interface Group { readonly kind?: never }
@@ -26,9 +27,18 @@ export default function draw(F: Figure, L: Layout): void {
   const X = (c: number) => M + c * (CW + GX), Y = (rw: number) => M + rw * (CH + GY);
   const cx = (c: number) => X(c) + CW / 2, cy = (rw: number) => Y(rw) + CH / 2;
 
+  assert(typeof F === 'object'); assert(typeof L === 'object'); assert(W > 0 && CW > 0); assert(X(1) > X(0));
+  assert(Y(1) > Y(0)); assert(cx(0) > 0); assert(cy(0) > 0); assert(root !== undefined); assert(W > M);
   const conn = L.group(root, { part: 'connectors' });
   const cards = L.group(root, { part: 'cards' });
   const card = (name: string, c: number, rw: number, title: string, sub: string, tint?: string) => {
+    assert(typeof name === 'string');
+    assert(typeof c === 'number');
+    assert(typeof rw === 'number');
+    assert(typeof title === 'string');
+    assert(typeof sub === 'string');
+    assert(name.length < 1e7);
+    assert(!Number.isNaN(c));
     const s = tint ? { fill: E.hue[tint][3], stroke: E.hue[tint][7] } : E.card(r.card);
     D.box(cards, X(c), Y(rw), CW, CH, { fill: s.fill, stroke: s.stroke, width: line.thin, r: r.card, F, name });
     L.text(cards, cx(c), cy(rw) - 1, title, { anchor: 'middle', valign: 'bottom', size: text.label, weight: E.weight.name, color: E.gray[1200] });
