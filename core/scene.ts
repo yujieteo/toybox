@@ -150,13 +150,17 @@ function modelSize(o: SceneObject, cat: Catalogue): Vec3 | null {
 export function objectBounds(scene: Scene, catalogue: Catalogue | null | undefined, t?: number | null): Record<string, ObjectBounds> {
   const cat = catalogue || loadCatalogue();
   const byId = new Map((scene.objects || []).map((o): [string, SceneObject] => [o.id, o]));
-  const world = (o: SceneObject, depth = 0): ObjectState => {
-    const st = stateAt(scene, o, t);
-    const p = o.parent && depth < 8 ? byId.get(o.parent) : null;
-    if (!p) return st;
-    const ps = world(p, depth + 1);
-    const l = rotYaw([st.at[0] * ps.scale[0], st.at[1] * ps.scale[1], st.at[2] * ps.scale[2]], ps.yaw);
-    return { at: [ps.at[0] + l[0], ps.at[1] + l[1], ps.at[2] + l[2]], yaw: ps.yaw + st.yaw, scale: [st.scale[0] * ps.scale[0], st.scale[1] * ps.scale[1], st.scale[2] * ps.scale[2]] };
+  const world = (o: SceneObject): ObjectState => {
+    const chain = [o]; // the object, then its parents up to 8 levels
+    for (let p = o.parent ? byId.get(o.parent) : null; p && chain.length <= 8; p = p.parent ? byId.get(p.parent) : null) chain.push(p);
+    const states = chain.map((c) => stateAt(scene, c, t));
+    let ps = states[states.length - 1] ?? stateAt(scene, o, t);
+    for (let i = states.length - 2; i >= 0; i--) {
+      const st = states[i] ?? ps;
+      const l = rotYaw([st.at[0] * ps.scale[0], st.at[1] * ps.scale[1], st.at[2] * ps.scale[2]], ps.yaw);
+      ps = { at: [ps.at[0] + l[0], ps.at[1] + l[1], ps.at[2] + l[2]], yaw: ps.yaw + st.yaw, scale: [st.scale[0] * ps.scale[0], st.scale[1] * ps.scale[1], st.scale[2] * ps.scale[2]] };
+    }
+    return ps;
   };
   const out: Record<string, ObjectBounds> = {};
   for (const o of scene.objects || []) {

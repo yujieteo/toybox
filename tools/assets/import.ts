@@ -267,7 +267,7 @@ function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tr
     return per((i) => Math.round(Math.min(1, Math.max(0, f[i] ?? 1)) * t[i]));
   };
   const tris: Tri[] = [];
-  const visit = (ni: number, parent: Mat4): void => {
+  const visit = (ni: number, parent: Mat4): [number, Mat4][] => {
     const node = at(json.nodes, ni, 'nodes'), m = mul(parent, mat4(node));
     if (node.mesh !== undefined) {
       const { det, n: nm } = normalMat(m);
@@ -293,10 +293,11 @@ function readGltf(json: Gltf, bins: Buffer[], file: (uri: string) => Buffer): Tr
         }
       }
     }
-    for (const c of node.children || []) visit(c, m);
+    return (node.children || []).map((c): [number, Mat4] => [c, m]);
   };
   const I4: Mat4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  for (const ni of at(json.scenes, json.scene || 0, 'scenes').nodes) visit(ni, I4);
+  const pending = at(json.scenes, json.scene || 0, 'scenes').nodes.map((ni): [number, Mat4] => [ni, I4]).reverse();
+  for (let job = pending.pop(); job !== undefined; job = pending.pop()) pending.push(...visit(job[0], job[1]).reverse());
   return tris;
 }
 

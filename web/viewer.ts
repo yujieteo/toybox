@@ -252,14 +252,17 @@ export async function createViewer(opts: ViewerOptions): Promise<Viewer> {
     M._set_backdrop(GROUND[bd.ground || 'grass'] ?? 0, (bd.size || [80, 80])[0], (bd.size || [80, 80])[1], bc[0], bc[1], bc[2]);
     M._set_cutaway(scene.cutaway && scene.cutaway.ceilings ? 1 : 0, scene.cutaway && scene.cutaway.nearWalls ? 1 : 0);
     const done = new Set();
-    const addObj = (o: SceneObject): void => {
-      if (done.has(o.id)) return;
-      done.add(o.id);
-      let parent = -1;
-      if (o.parent) {
-        const po = scene.objects.find(x => x.id === o.parent);
-        if (po) { addObj(po); parent = v.rootIds.get(po.id) ?? -1; }
+    const addObj = (first: SceneObject): void => {
+      const chain: SceneObject[] = [];
+      for (let o: SceneObject | undefined = first; o && !done.has(o.id); o = o.parent ? scene.objects.find(x => x.id === o?.parent) : undefined) {
+        done.add(o.id);
+        chain.push(o);
       }
+      for (const o of chain.reverse()) addOne(o); // parents first
+    };
+    const addOne = (o: SceneObject): void => {
+      const po = o.parent ? scene.objects.find(x => x.id === o.parent) : undefined;
+      const parent = po ? v.rootIds.get(po.id) ?? -1 : -1;
       const at = atOf(o), sc = scaleOf(o);
       const flags = flagsOf(o);
       const structural = (o.tags || []).some(t => t === 'wall' || t === 'floor' || t === 'ceiling');
