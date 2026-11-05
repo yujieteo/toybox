@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findEscapes } from './escapes.ts';
@@ -38,6 +39,12 @@ console.log('\n== C warnings and analyser (engine/*.c, Goose-made C without the 
 const cProblems = checkC(root);
 for (const p of cProblems) console.log(p);
 if (cProblems.length > 0) failures.push('C warnings and analyser');
+
+const SHELLCHECK_FROM = 'shellcheck-py==0.11.0.1'; // ships shellcheck 0.11.0
+const shellFirstLine = /^#!\s*\S*\/(?:env\s+(?:-\S+\s+)*)?(?:sh|bash|ksh)\b/;
+const allTracked = spawnSync('git', ['-C', root, 'ls-files'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+const shellFiles = allTracked.filter((f) => f.endsWith('.sh') || shellFirstLine.test(readFileSync(resolve(root, f), 'latin1').split('\n', 1)[0] ?? ''));
+step('shellcheck 0.11.0, every optional rule', 'uvx', ['--from', SHELLCHECK_FROM, 'shellcheck', '-o', 'all', ...shellFiles]);
 
 step('dead code (knip)', resolve(root, 'node_modules/.bin/knip'), []);
 const replayBase = process.env['TOYBOX_REPLAY_BASE'];
