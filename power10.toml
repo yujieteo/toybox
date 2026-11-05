@@ -1,0 +1,3 @@
+version = "0.1.0"
+# Goose-made C and its headers: the .goose source is checked instead (SCR-281 q15).
+exclude = ["engine/scene.c", "engine/scene.h", "engine/vid.c", "engine/vid.h"]
