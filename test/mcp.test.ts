@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
@@ -23,8 +24,8 @@ interface Client {
 }
 interface ErrData { errors: { code: string; message: string }[] }
 
-const MCP = new URL('../core/mcp.ts', import.meta.url).pathname;
-const CLI = new URL('../core/cli.ts', import.meta.url).pathname;
+const MCP = fileURLToPath(new URL('../core/mcp.ts', import.meta.url));
+const CLI = fileURLToPath(new URL('../core/cli.ts', import.meta.url));
 
 // The port of a server that listens.
 function port(srv: Server): number {

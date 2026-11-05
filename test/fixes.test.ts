@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -97,7 +98,7 @@ test('the MP4 export .srt is in time order and the same as the core .srt', () =>
 test('daemon: static files stay in their folders, host is checked, stale scene writes are refused', async (tc: TestContext) => {
   const dir = mkdtempSync(join(tmpdir(), 'tbsrv-')), scene = join(dir, 's.toybox.json');
   const port = 20000 + Math.floor(Math.random() * 20000);
-  const child = spawn(process.execPath, [new URL('../app/serve.ts', import.meta.url).pathname, '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../app/serve.ts', import.meta.url)), '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
   tc.after(() => child.kill());
   const token = await new Promise<string>((ok, no) => {
     let out = ''; child.stdout.on('data', (d: Buffer) => { out += d; const m = out.match(/token=(\w+)/); if (m && m[1]) ok(m[1]); });
@@ -118,7 +119,7 @@ test('daemon: static files stay in their folders, host is checked, stale scene w
 
 // a syntax error in a web module stops the viewer, so every render and export times out
 test('every web script parses', () => {
-  const dir = new URL('../web/', import.meta.url).pathname;
+  const dir = fileURLToPath(new URL('../web/', import.meta.url));
   const transpiler = new Bun.Transpiler({ loader: 'ts' });
   for (const f of ['app.ts', 'controls.ts', 'export.ts', 'headless.ts', 'viewer-app.ts', 'viewer.ts']) {
     assert.doesNotThrow(() => transpiler.transformSync(readFileSync(join(dir, f), 'utf8')), f);

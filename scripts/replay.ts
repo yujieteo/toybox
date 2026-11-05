@@ -15,8 +15,15 @@ interface Options {
   base: string;
 }
 
+// The default base is main, or origin/main in a clone that has only the branch checked out
+// (a fresh worktree clone has no local main).
+function defaultBase(): string {
+  const local = spawnSync('git', ['-C', root, 'rev-parse', '--verify', '--quiet', 'main^{commit}']);
+  return local.status === 0 ? 'main' : 'origin/main';
+}
+
 function parseArgs(argv: string[]): Options {
-  const opts: Options = { accept: false, capture: false, base: 'main' };
+  const opts: Options = { accept: false, capture: false, base: '' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--accept') opts.accept = true;
@@ -24,7 +31,8 @@ function parseArgs(argv: string[]): Options {
     else if (a === '--base') opts.base = argv[++i] ?? '';
     else throw new Error(`Unknown argument ${a}. Usage: bun scripts/replay.ts [--capture] [--base REF] [--accept]`);
   }
-  if (!opts.base) throw new Error('--base needs a ref');
+  if (opts.base === '' && argv.includes('--base')) throw new Error('--base needs a ref');
+  if (opts.base === '') opts.base = defaultBase();
   return opts;
 }
 

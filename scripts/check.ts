@@ -40,7 +40,8 @@ for (const p of cProblems) console.log(p);
 if (cProblems.length > 0) failures.push('C warnings and analyser');
 
 step('dead code (knip)', resolve(root, 'node_modules/.bin/knip'), []);
-step('tests and process replay against main', process.execPath, [resolve(root, 'scripts/replay.ts'), '--capture', '--base', process.env['TOYBOX_REPLAY_BASE'] ?? 'main']);
+const replayBase = process.env['TOYBOX_REPLAY_BASE'];
+step('tests and process replay against main', process.execPath, [resolve(root, 'scripts/replay.ts'), '--capture', ...(replayBase ? ['--base', replayBase] : [])]);
 
 if (failures.length > 0) {
   console.log(`\nFAILED: ${failures.join(', ')}`);

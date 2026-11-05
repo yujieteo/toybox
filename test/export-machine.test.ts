@@ -1,6 +1,7 @@
 // The export job machine (app/export.sm.md) and the daemon agree: the machine has the states of
 // ExportState, and the daemon does each row. A stand-in "Chrome" holds the job open.
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,7 +40,7 @@ test('the daemon does each row of the export machine', async (tc: TestContext) =
   writeFileSync(chrome, '#!/bin/sh\nexec sleep 60\n');
   chmodSync(chrome, 0o755);
   const port = 20000 + Math.floor(Math.random() * 20000);
-  const child = spawn(process.execPath, [new URL('../app/serve.ts', import.meta.url).pathname, '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, TOYBOX_CHROME: chrome } });
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../app/serve.ts', import.meta.url)), '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, TOYBOX_CHROME: chrome } });
   tc.after(() => child.kill());
   const token = await new Promise<string>((ok, no) => {
     let out = ''; child.stdout.on('data', (d: Buffer) => { out += d; const m = out.match(/token=(\w+)/); if (m && m[1]) ok(m[1]); });

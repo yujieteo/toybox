@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { build as riot } from '../evals/riot.ts';
@@ -24,7 +25,7 @@ for (const [name, build, chapters] of evals) {
 }
 
 test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on figures', () => {
-  const s = loadScene(new URL('../evals/out/riot.toybox.json', import.meta.url).pathname);
+  const s = loadScene(fileURLToPath(new URL('../evals/out/riot.toybox.json', import.meta.url)));
   assert.ok(s.duration >= 150 && s.duration <= 180, String(s.duration));
   assert.equal(s.backdrop.ground, 'street');
   const map = must(s.map), osm = must(map.osm);
@@ -51,13 +52,13 @@ test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on fig
 });
 
 test('hometeamns scene: every object is labelled as estimated', () => {
-  const s = loadScene(new URL('../evals/out/hometeamns.toybox.json', import.meta.url).pathname);
+  const s = loadScene(fileURLToPath(new URL('../evals/out/hometeamns.toybox.json', import.meta.url)));
   assert.ok(s.objects.every((o) => o.estimated === true && o.source === 'estimated'));
   assert.equal(s.objects.filter((o) => o.model === 'person').length, 1);
 });
 
 test('narrated scene: the voice sets the beats, and the motion words follow the words', () => {
-  const s = loadScene(new URL('../evals/out/narrated.toybox.json', import.meta.url).pathname);
+  const s = loadScene(fileURLToPath(new URL('../evals/out/narrated.toybox.json', import.meta.url)));
   const narration = must(s.narration), facts = must(s.facts);
   assert.ok(narration.every((n) => n.voice && existsSync(new URL(`../evals/out/${n.voice}`, import.meta.url))));
   assert.ok(facts.every((f) => /^https:\/\//.test(must(f.source))));
@@ -69,7 +70,7 @@ test('narrated scene: the voice sets the beats, and the motion words follow the 
 });
 
 test('mrt scene: a narrated Singapore platform boarding story', () => {
-  const s = loadScene(new URL('../web/scenes/mrt/mrt.toybox.json', import.meta.url).pathname);
+  const s = loadScene(fileURLToPath(new URL('../web/scenes/mrt/mrt.toybox.json', import.meta.url)));
   const narration = must(s.narration), facts = must(s.facts);
   assert.ok(s.duration >= 45 && s.duration <= 75, String(s.duration));
   assert.ok(s.chapters.length >= 8 && s.chapters.length <= 10);
