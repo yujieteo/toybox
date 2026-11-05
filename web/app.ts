@@ -105,7 +105,7 @@ async function flushSave(): Promise<void> {
   if (saveTimer !== null) { clearTimeout(saveTimer); try { await saveScene(); } catch (e) { status('The scene could not be saved: ' + messageOf(e)); } }
   else await savePromise;
 }
-v.onedit = () => queueSave(400);
+v.onedit = () => { queueSave(400); };
 await poll();
 
 // chat

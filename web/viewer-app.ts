@@ -42,7 +42,7 @@ function open(input: unknown, base: string | URL | null = null): void {   // bas
     seekBar.max = String(scene.duration || 60);
     v.undo = []; v.selected = null;
     v.load(scene, false);
-    if (v.oneMap(scene)) v.loadLogo().then(() => v.draw(v.t));
+    if (v.oneMap(scene)) v.loadLogo().then(() => { v.draw(v.t); });
   } catch (e) { $('err').textContent = messageOf(e); }
 }
 new ResizeObserver(fit).observe($('stage'));

@@ -34,8 +34,8 @@ test('riot scene: 2.5 to 3 minutes, map origin, street backdrop, no names on fig
   assert.ok(osm.buildings.length > 50, 'real OpenStreetMap footprints');
   const odbl = view<Odbl>(JSON.parse(readFileSync(new URL(`../evals/out/${must(osm.dataFile)}`, import.meta.url), 'utf8')));
   assert.equal(odbl.header.license, 'ODbL 1.0'); assert.equal(odbl.osm.buildings.length, osm.buildings.length);
-  assert.ok(!s.credits.some((c) => /OpenStreetMap/.test(c)), 'the viewer adds the OpenStreetMap credit by itself');
-  assert.ok(s.chapters.every((c) => /^https:\/\/en\.wikipedia\.org/.test(must(c.source)) || /^estimated/.test(must(c.source))));
+  assert.ok(!s.credits.some((c) => c.includes('OpenStreetMap')), 'the viewer adds the OpenStreetMap credit by itself');
+  assert.ok(s.chapters.every((c) => must(c.source).startsWith("https://en.wikipedia.org") || must(c.source).startsWith("estimated")));
   assert.ok(s.objects.filter((o) => o.model === 'person').every((o) => !o.label));
   assert.ok(s.captions.every((c) => !/victim/i.test(c.text)));
   // the Committee of Inquiry met in a building: its chapter has its own room, far from the street
@@ -62,7 +62,7 @@ test('narrated scene: the voice sets the beats, and the motion words follow the 
   const s = loadScene(fileURLToPath(new URL('../evals/out/narrated.toybox.json', import.meta.url)));
   const narration = must(s.narration), facts = must(s.facts);
   assert.ok(narration.every((n) => n.voice && existsSync(new URL(`../evals/out/${n.voice}`, import.meta.url))));
-  assert.ok(facts.every((f) => /^https:\/\//.test(must(f.source))));
+  assert.ok(facts.every((f) => must(f.source).startsWith("https://")));
   assert.ok(narration.flatMap((n) => n.facts || []).every((f) => facts.some((x) => x.id === f)));
   assert.deepEqual(s.captions.map((c) => c.text), narration.map((n) => n.text));
   const motions = must(s.motions);
@@ -80,7 +80,7 @@ test('mrt scene: a narrated Singapore platform boarding story', () => {
   assert.ok(s.chapters.length >= 8 && s.chapters.length <= 10);
   assert.ok(narration.length >= 8 && narration.length <= 12);
   assert.ok(narration.every((n) => n.voice && existsSync(new URL(`../web/scenes/mrt/${n.voice}`, import.meta.url))));
-  assert.ok(facts.every((f) => /^https:\/\//.test(must(f.source))));
+  assert.ok(facts.every((f) => must(f.source).startsWith("https://")));
   assert.ok(narration.flatMap((n) => n.facts || []).every((f) => facts.some((x) => x.id === f)));
   assert.deepEqual(s.captions.map((c) => c.text), narration.map((n) => n.text));
   const people = s.objects.filter((o) => o.model === 'person');

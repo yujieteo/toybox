@@ -71,7 +71,7 @@ test('OneMap tile addresses', () => {
 
 test('live Overpass call (skipped when the network fails)', { timeout: 30000 }, async (tc: TestContext) => {
   let b;
-  try { b = await fetchBuildings({ lat: 1.3068, lon: 103.8512, radius: 80, fetchImpl: (u, i) => fetch(u, { ...i, signal: AbortSignal.timeout(8000) }) }); } catch { return tc.skip('network unavailable'); }
+  try { b = await fetchBuildings({ lat: 1.3068, lon: 103.8512, radius: 80, fetchImpl: (u, i) => fetch(u, { ...i, signal: AbortSignal.timeout(8000) }) }); } catch { tc.skip('network unavailable'); return; }
   assert.ok(Array.isArray(b));
 });
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { CAPTURE_ENV } from '../core/capture.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const cache = join(process.env['XDG_CACHE_HOME'] ?? join(homedir(), '.cache'), 'toybox', 'replay');
+const cache = join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'toybox', 'replay');
 const LARGE_CHANGE = 0.2;
 
 interface Options {

@@ -50,7 +50,7 @@ export function checkC(root: string): string[] {
     const analyserOff = generated ? ['-Xanalyzer', '-analyzer-disable-checker=deadcode.DeadStores'] : [];
     const analysis = run('clang', ['--analyze', ...target, '-Xanalyzer', '-analyzer-output=text', '-o', '/dev/null', ...analyserOff, join(engine, file)]);
     for (const line of analysis.split('\n')) {
-      if (/: error: /.test(line)) problems.push(`${file}: analyser error: ${line}`);
+      if (line.includes(': error: ')) problems.push(`${file}: analyser error: ${line}`);
       const m = ANALYSER_LINE.exec(line);
       if (!m) continue;
       const key = `${file} ${m[2]} ${m[1]}`;

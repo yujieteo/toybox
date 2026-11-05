@@ -171,7 +171,7 @@ function loadScript(src: string): Promise<void> {
     assert(typeof ok === 'function');
     assert(typeof fail === 'function');
     const s = document.createElement('script');
-    s.src = src; s.onload = () => ok(); s.onerror = () => fail(new Error('cannot load ' + src));
+    s.src = src; s.onload = () => { ok(); }; s.onerror = () => { fail(new Error('cannot load ' + src)); };
     document.head.appendChild(s);
   });
 }
@@ -197,7 +197,7 @@ async function loadPeople(M: Engine, assetsUrl: string): Promise<void> {
   assert(assetsUrl.length < 1e7);
   const sk: unknown = await (await fetch(`${assetsUrl}/people/skel.json`)).json();
   if (!isSkeleton(sk)) throw new Error('The skeleton file has no bones.');
-  sk.bones.forEach((b, i) => M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]));
+  sk.bones.forEach((b, i) => { M._skel_set(i, b.parent, b.head[0], b.head[1], b.head[2]); });
   sk.bones.forEach((b, i) => BONES.set(b.name, i));
   const skins: [number, string][] = [[0, 'mesh_full.bin'], [1, 'mesh_lod.bin']];
   for (const [id, f] of skins) {
@@ -277,7 +277,7 @@ function makeViewer(ctx: () => Ctx, M: Engine, catalogue: Catalogue, models: Map
     clips: [],            // the voice of each sentence: { start, end, audio, on }
     tilesReady: Promise.resolve(),
     size: () => [ctx().w, ctx().h], resize: bind(resize), sizeOf: bind(sizeOf),
-    load: (s, keep = true) => loadScene(ctx(), s, keep), oneMap, loadLogo: bind(loadLogo),
+    load: (s, keep = true) => { loadScene(ctx(), s, keep); }, oneMap, loadLogo: bind(loadLogo),
     project: bind(project), draw: bind(draw), drawOverlay: bind(drawOverlay), camState: () => ({ eye: [M._cam_x(), M._cam_y(), M._cam_z()] }),
     orbitBy: bind(orbitBy), zoomBy: bind(zoomBy), panBy: bind(panBy), storyCamera: bind(storyCamera), pick: bind(pick), select: bind(select),
     groundPoint: bind(groundPoint), undoEdit: bind(undoEdit), edit: bind(edit), beginDrag: bind(beginDrag), moveSelectedTo: bind(moveSelectedTo),
@@ -349,14 +349,14 @@ function loadScene(c: Ctx, scene: Scene, keepTime: boolean): void {
   const bd: Partial<Scene['backdrop']> = scene.backdrop || {};
   const bc = hexRGB(bd.color || '#9fb88c');
   M._set_backdrop(GROUND[bd.ground || 'grass'] ?? 0, (bd.size || [80, 80])[0], (bd.size || [80, 80])[1], bc[0], bc[1], bc[2]);
-  M._set_cutaway(scene.cutaway && scene.cutaway.ceilings ? 1 : 0, scene.cutaway && scene.cutaway.nearWalls ? 1 : 0);
+  M._set_cutaway(scene.cutaway?.ceilings ? 1 : 0, scene.cutaway?.nearWalls ? 1 : 0);
   addObjects(c, scene);
   buildPosed(c, scene);
   hush(c);
   buildClips(c, scene);
   loadTracks(c, scene);
   for (const k of scene.camera || []) M._cam_add(k.t, k.eye[0], k.eye[1], k.eye[2], k.target[0], k.target[1], k.target[2], k.fov || 50, EASE[k.ease ?? ''] ?? 1);
-  const looks = scene.lighting && scene.lighting.length ? scene.lighting : [{ t: 0, look: bd.ground === 'floor' ? 'indoor' : 'day' }];
+  const looks = scene.lighting?.length ? scene.lighting : [{ t: 0, look: bd.ground === 'floor' ? 'indoor' : 'day' }];
   for (const l of looks) M._light_add(l.t, LOOKS[l.look] ?? 0);
   buildMap(c, scene);
   v.draw(v.t);
@@ -411,7 +411,7 @@ function addPerson(c: Ctx, o: SceneObject, parent: number): void {
   assert(!Number.isNaN(parent));
   const flags = flagsOf(o), n = o.variant || 0;
   const fit = o.outfit ? c.outfits.get(o.outfit) : undefined;
-  const col = { ...(fit && fit.colors), ...o.colors };
+  const col = { ...(fit?.colors), ...o.colors };
   const id = add(c, 4, 0, parent, flags, n, POSES[o.pose || 'stand'] ?? 0, o.flip, atOf(o), o.yaw || 0, [0, 0, 0], scaleOf(o),
     hexRGB(col.shirt || SHIRTS[n % SHIRTS.length]), hexRGB(col.pants || PANTS[n % PANTS.length]), 0.32);
   c.v.rootIds.set(o.id, id);
@@ -527,7 +527,7 @@ function buildMap(c: Ctx, scene: Scene): Promise<void> {
   v.mapImage = false;
   v.tilesReady = Promise.resolve();
   if (!map) return v.tilesReady;
-  if (map.osm && map.osm.buildings && map.osm.buildings.length) uploadBuildings(c, map.osm.buildings);
+  if (map.osm?.buildings?.length) uploadBuildings(c, map.osm.buildings);
   // The tiles load from the network. The promise lets the export wait for the map before the
   // first frame. The authoring page does not wait: the map appears when it arrives.
   if (map.origin && v.oneMap(scene)) v.tilesReady = loadTiles(c, map, map.origin, generation).catch(() => {});
@@ -539,7 +539,7 @@ function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
   assert(buildings.length < 1e7);
   const palette: Vec3[] = [[0.86, 0.80, 0.70], [0.78, 0.80, 0.82], [0.84, 0.68, 0.58]];
   const groups: number[][] = [[], [], []];
-  buildings.forEach((b, i) => extrude(b, nth(groups, i % 3)));
+  buildings.forEach((b, i) => { extrude(b, nth(groups, i % 3)); });
   groups.forEach((g, gi) => {
     assert(typeof g === 'object');
     assert(typeof gi === 'number');
@@ -553,7 +553,7 @@ function uploadBuildings(c: Ctx, buildings: OsmBuilding[]): void {
     c.v.rootIds.set('__osm' + gi, id);
   });
 }
-function oneMap(scene: Scene): boolean { return !!(scene.map && scene.map.origin && scene.backdrop?.ground === 'map'); }
+function oneMap(scene: Scene): boolean { return !!(scene.map?.origin && scene.backdrop?.ground === 'map'); }
 const mercator = (lat: number, lon: number, z: number): Vec2 => {
   assert(typeof lat === 'number');
   assert(typeof lon === 'number');
@@ -584,7 +584,7 @@ async function fetchTiles(g: CanvasRenderingContext2D, style: string, z: number,
     assert(typeof i === 'number');
     const im = new Image(); im.crossOrigin = 'anonymous';
     im.onload = () => { g.drawImage(im, i * 256, j * 256); any = true; done(); };
-    im.onerror = () => done();
+    im.onerror = () => { done(); };
     im.src = `https://www.onemap.gov.sg/maps/tiles/${style}/${z}/${cx - R + i}/${cy - R + j}.png`;
   }))));
   return any;
@@ -619,7 +619,7 @@ async function loadTiles(c: Ctx, map: SceneMap, o: { lat: number; lon: number },
 function loadLogo(c: Ctx): Promise<void> {
   return new Promise(done => {
     const im = new Image(); im.crossOrigin = 'anonymous';
-    im.onload = () => { c.v.logo = im; done(); }; im.onerror = () => done(); im.src = ONEMAP_LOGO;
+    im.onload = () => { c.v.logo = im; done(); }; im.onerror = () => { done(); }; im.src = ONEMAP_LOGO;
   });
 }
 
@@ -797,7 +797,7 @@ function drawCallouts(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
   const { M, v } = c;
   for (const k of sc.callouts || []) {
     if (t < k.start || t >= k.end) continue;
-    let pos = vec3Of(isRecord(k) ? k['at'] : undefined);
+    let pos = vec3Of(isRecord(k) ? k.at : undefined);
     if (k.object) { const id = v.rootIds.get(k.object); if (id === undefined) continue; const co = sc.objects.find(o => o.id === k.object); pos = [M._obj_wx(id), M._obj_wy(id) + ((co ? sizeOf(c, co)[1] : 1) || 1.7), M._obj_wz(id)]; }
     if (!pos) continue;
     const p = v.project(pos[0], pos[1], pos[2]); if (!p) continue;
@@ -809,7 +809,7 @@ function drawCallouts(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
     ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], y + bh); ctx.stroke();
     pill(ctx, x, y, bw, bh, s * 0.35, 'rgba(20,20,20,0.82)');
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    lines.forEach((l, i) => fillText(ctx, l, x + s * 0.5, y + s * 0.3 + i * lh, s, 500));
+    lines.forEach((l, i) => { fillText(ctx, l, x + s * 0.5, y + s * 0.3 + i * lh, s, 500); });
     if (flag(k, 'estimated') || sc.objects.find(o => o.id === k.object)?.estimated) approx(ctx, x, Math.max(2, y - s * 0.8), s * 0.55);
   }
 }
@@ -831,7 +831,7 @@ function drawChapter(ctx: CanvasRenderingContext2D, sc: Scene, h: number, t: num
   fillText(ctx, txt, h * 0.02 + s * 0.5, h * 0.02 + s * 0.8, s, 600);
   if (flag(ch, 'estimated')) approx(ctx, h * 0.02 + tw + s * 1.3, h * 0.02 + s * 0.2, s * 0.8);
 }
-const hasOsm = (sc: Scene): boolean => !!(sc.map && sc.map.osm && sc.map.osm.buildings && sc.map.osm.buildings.length);
+const hasOsm = (sc: Scene): boolean => !!(sc.map?.osm?.buildings?.length);
 function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number, t: number): void {
   assert(typeof c === 'object');
   assert(typeof ctx === 'object');
@@ -851,7 +851,7 @@ function drawCaptions(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: numbe
   const x = (w - bw) / 2, y = h - bh - h * 0.02 - nCred * h * 0.031 - h * 0.012;
   pill(ctx, x, y, bw, bh, fs * 0.35, 'rgba(20,20,20,0.82)');
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  lines.forEach((l, i) => fillText(ctx, l, w / 2, y + fs * 0.25 + i * lh, fs, 500));
+  lines.forEach((l, i) => { fillText(ctx, l, w / 2, y + fs * 0.25 + i * lh, fs, 500); });
 }
 function drawCredits(c: Ctx, ctx: CanvasRenderingContext2D, sc: Scene, w: number, h: number): void {
   assert(typeof c === 'object');
@@ -1075,14 +1075,14 @@ const tick = (c: Ctx, now: number): void => {
   }
   if (t >= dur) { t = dur; v.playing = false; hush(c); if (v.onchange) v.onchange('end'); }
   v.draw(t);
-  if (v.playing) requestAnimationFrame(n => tick(c, n));
+  if (v.playing) requestAnimationFrame(n => { tick(c, n); });
 };
 function play(c: Ctx): void {
   const v = c.v;
   if (v.playing) return;
   if (v.scene && v.t >= (v.scene.duration || 60)) v.t = 0;
   v.playing = true; c.last = performance.now(); if (v.onchange) v.onchange('play');
-  requestAnimationFrame(n => tick(c, n));
+  requestAnimationFrame(n => { tick(c, n); });
 }
 function pause(c: Ctx): void { c.v.playing = false; hush(c); if (c.v.onchange) c.v.onchange('pause'); }
 function seek(c: Ctx, t: number): void { 
@@ -1093,6 +1093,6 @@ function seek(c: Ctx, t: number): void {
 function download(c: Ctx): void {
   const blob = new Blob([JSON.stringify(c.v.scene, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (cur(c).title || 'scene').replace(/[^\w-]+/g, '-').toLowerCase() + '.toybox.json'; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setTimeout(() => { URL.revokeObjectURL(a.href); }, 1000);
 }
 function readPixels(c: Ctx): Uint8Array { const p = c.M._toybox_read_pixels(); return c.M.HEAPU8.subarray(p, p + c.w * c.h * 4); }

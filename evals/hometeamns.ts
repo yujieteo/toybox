@@ -73,7 +73,7 @@ function walk({ place, cmd }: Ctx): Ends {
 
 // One chapter, with the camera shots inside it.
 function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: string | undefined): void {
-  const cam = (_s: number, e: number, segs: Seg[]) => segs.forEach((g, i) => {
+  const cam = (_s: number, e: number, segs: Seg[]) => { segs.forEach((g, i) => {
     assert(typeof g === 'object');
     assert(typeof i === 'number');
     assert(!Number.isNaN(i));
@@ -81,7 +81,7 @@ function addChapters({ cmd }: Ctx, ends: Ends, door: string | undefined, bdoor: 
     cmd('set_camera', base);
     const hold = (segs[i + 1]?.t ?? e) - 1.0;
     if (hold > g.t + 0.05) cmd('set_camera', { ...base, t: hold, ...(g.view !== undefined ? { view: g.view + 6 } : {}) });
-  });
+  }); };
   const chapter = (id: string, s: number, e: number, title: string, caption: string, focus: (string | undefined)[], shot: string, segs: Seg[], source = 'estimated', est = true) => {
     assert(typeof id === 'string');
     assert(typeof s === 'number');

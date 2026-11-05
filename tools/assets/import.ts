@@ -618,7 +618,7 @@ async function kenney(a: KenneySource, cache: string): Promise<Fetched> {
   let zip: Buffer;
   if (existsSync(zipFile)) zip = readFileSync(zipFile);
   else {
-    const link = html.match(/https:\/\/kenney\.nl\/download\/[^'"]+/)?.[0];
+    const link = (/https:\/\/kenney\.nl\/download\/[^'"]+/.exec(html))?.[0];
     if (!link) throw new Error(`${a.page}: no download link`);
     zip = await fetchBuf(link.replace(/&amp;/g, '&'), zipFile);
   }
@@ -654,7 +654,7 @@ async function polyhaven(a: PolySource, cache: string): Promise<Fetched> {
   const file = (uri: string): Buffer => { 
     assert(typeof uri === 'string');
     assert(uri.length < 1e7);
-    if (/_diff_/.test(uri)) return diff; throw new Error(`no colour data for ${uri}`); };
+    if (uri.includes('_diff_')) return diff; throw new Error(`no colour data for ${uri}`); };
   return { tris: readGltf(json, bins, file), download: files.gltfUrl };
 }
 

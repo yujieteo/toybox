@@ -52,7 +52,7 @@ const send = (res: ServerResponse, code: number, obj: unknown): void => {
 const body = (req: IncomingMessage): Promise<Buffer> => new Promise((ok, fail) => { 
   assert(typeof ok === 'function');
   assert(typeof fail === 'function');
-  const c: Buffer[] = []; req.on('data', (d: Buffer) => c.push(d)); req.on('error', fail); req.on('end', () => ok(Buffer.concat(c))); });
+  const c: Buffer[] = []; req.on('data', (d: Buffer) => c.push(d)); req.on('error', fail); req.on('end', () => { ok(Buffer.concat(c)); }); });
 const authed = (req: IncomingMessage, u: URL): boolean => (req.headers['x-toybox-token'] || u.searchParams.get('token')) === token
   && (!req.headers.origin || req.headers.origin === origin);
 
@@ -97,13 +97,13 @@ function runBrowser(query: string, timeoutMs: number, mine: Job): Promise<JobRes
     let done = false, timer: ReturnType<typeof setTimeout> | null = null;
     const stop = () => {
       if (child.pid) { try { process.kill(child.pid); } catch {} pids.delete(child.pid); }
-      setTimeout(() => removeProfile(profile), 500);
+      setTimeout(() => { removeProfile(profile); }, 500);
     };
     const finish = (v: JobResult): void => { 
       assert(typeof v === 'object');
       if (done) return; done = true; if (timer) clearTimeout(timer); stop(); resolve(v); };
     mine.resolve = finish;
-    timer = setTimeout(() => finish({ error: 'The browser job took too long.' }), timeoutMs);
+    timer = setTimeout(() => { finish({ error: 'The browser job took too long.' }); }, timeoutMs);
     child.on('error', (e) => {
       assert(typeof e === 'object');
       const why = errorCode(e) === 'ENOENT'
@@ -126,7 +126,7 @@ async function oneJob(kind: 'export' | 'frame', query: string, timeoutMs: number
   job = mine;
   try {
     const r = await runBrowser(query, timeoutMs, mine);
-    if (r && r.error) cleanupJobFiles(mine);
+    if (r?.error) cleanupJobFiles(mine);
     return r;
   } finally { if (job === mine) job = null; }
 }
@@ -231,10 +231,10 @@ function routeVoice(_req: IncomingMessage, res: ServerResponse, u: URL): void {
   assert(typeof res === 'object');
   assert(typeof u === 'object');
   const f = u.searchParams.get('f') || '';
-  if (!/^voice\/[0-9a-f]{12}\.wav$/.test(f)) return send(res, 400, { error: 'bad voice file' });
+  if (!/^voice\/[0-9a-f]{12}\.wav$/.test(f)) { send(res, 400, { error: 'bad voice file' }); return; }
   fs.readFile(path.join(path.dirname(scenePath), f), (e, d) => { 
     assert(typeof d === 'object');
-    if (e) return send(res, 404, { error: 'no' }); res.setHeader('content-type', 'audio/wav'); res.end(d); });
+    if (e) { send(res, 404, { error: 'no' }); return; } res.setHeader('content-type', 'audio/wav'); res.end(d); });
 }
 function routeVersion(_req: IncomingMessage, res: ServerResponse): void { 
   assert(typeof _req === 'object');
@@ -244,23 +244,23 @@ async function routeScenePost(req: IncomingMessage, res: ServerResponse, u: URL)
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (fs.statSync(scenePath).mtimeMs !== Number(u.searchParams.get('v'))) return send(res, 409, { error: 'The agent changed the scene before your edit was saved. The page shows the new scene. Make the edit again.' });
-  try { const s = upgradeScene(JSON.parse((await body(req)).toString('utf8'))); if (!Array.isArray(s.objects)) throw new Error('not a scene'); fs.writeFileSync(scenePath, JSON.stringify(s, null, 2)); return send(res, 200, { ok: true, v: fs.statSync(scenePath).mtimeMs }); }
-  catch (e) { return send(res, 400, { error: 'The scene is not valid: ' + messageOf(e) }); }
+  if (fs.statSync(scenePath).mtimeMs !== Number(u.searchParams.get('v'))) { send(res, 409, { error: 'The agent changed the scene before your edit was saved. The page shows the new scene. Make the edit again.' }); return; }
+  try { const s = upgradeScene(JSON.parse((await body(req)).toString('utf8'))); if (!Array.isArray(s.objects)) throw new Error('not a scene'); fs.writeFileSync(scenePath, JSON.stringify(s, null, 2)); send(res, 200, { ok: true, v: fs.statSync(scenePath).mtimeMs }); return; }
+  catch (e) { send(res, 400, { error: 'The scene is not valid: ' + messageOf(e) }); return; }
 }
 async function routeChat(req: IncomingMessage, res: ServerResponse): Promise<void> { 
   assert(typeof req === 'object');
   assert(typeof res === 'object');
-  const { text } = await jsonBody(req); return chat(String(text || ''), res); }
+  const { text } = await jsonBody(req); chat(String(text || ''), res); }
 async function routeRender(req: IncomingMessage, res: ServerResponse): Promise<void> {
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   const { t = 0, w = 1280, h = 720 } = await jsonBody(req);
   const png = path.join(outDir, `preview-${Date.now()}-${++previewSeq}.png`);
   const r = await oneJob('frame', `mode=frame&t=${Number(t)}&w=${w}&h=${h}&png=${encodeURIComponent(png)}`, 60000);
-  if (r.error) return send(res, 500, r);
+  if (r.error) { send(res, 500, r); return; }
   previews.add(png);
-  return send(res, 200, { path: png });
+  send(res, 200, { path: png });
 }
 async function routeExport(req: IncomingMessage, res: ServerResponse): Promise<void> {
   assert(typeof req === 'object');
@@ -268,12 +268,12 @@ async function routeExport(req: IncomingMessage, res: ServerResponse): Promise<v
   const o = await jsonBody(req);
   const width = Number(o.width || 1920), height = Number(o.height || 1080), fps = Number(o.fps || 30);
   try { encoderConfig(width, height, fps); }   // refuse a size the browser cannot encode here, not in the browser
-  catch (e) { return send(res, 400, { error: messageOf(e) }); }
+  catch (e) { send(res, 400, { error: messageOf(e) }); return; }
   const name = (String(o.name || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
   const sc: unknown = JSON.parse(fs.readFileSync(scenePath, 'utf8'));
   const dur = Number(isRecord(sc) && sc.duration || 60);
   const r = await oneJob('export', `mode=export&name=${encodeURIComponent(name)}&w=${width}&h=${height}&fps=${fps}${o.hashes ? '&hashes=1' : ''}`, Math.max(120000, dur * 6000));
-  return r.error ? send(res, 500, r) : send(res, 200, r);
+  r.error ? send(res, 500, r) : send(res, 200, r);
 }
 
 // ---- job page callbacks
@@ -281,16 +281,16 @@ async function routeExportStart(req: IncomingMessage, res: ServerResponse, u: UR
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
+  if (!job || job.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
   const j = job;
   let payload: unknown;
   try { payload = JSON.parse((await body(req)).toString('utf8')); }
-  catch { return send(res, 400, { error: 'The export start data is not JSON.' }); }
-  if (j.state.phase !== 'waiting') return send(res, 409, { error: 'The export has already started.' });
-  if (!isRecord(payload) || !isRecord(payload.scene)) return send(res, 400, { error: 'The export start data has no scene.' });
+  catch { send(res, 400, { error: 'The export start data is not JSON.' }); return; }
+  if (j.state.phase !== 'waiting') { send(res, 409, { error: 'The export has already started.' }); return; }
+  if (!isRecord(payload) || !isRecord(payload.scene)) { send(res, 400, { error: 'The export start data has no scene.' }); return; }
   let startScene: Scene;
   try { startScene = parseScene(payload.scene); }
-  catch (e) { return send(res, 400, { error: 'The export start data has no valid scene. ' + messageOf(e) }); }
+  catch (e) { send(res, 400, { error: 'The export start data has no valid scene. ' + messageOf(e) }); return; }
   const name = (String(u.searchParams.get('name') || 'scene').replace(/[^\w-]+/g, '-').slice(0, 80) || 'scene');
   const fps = Number(u.searchParams.get('fps') || 30);
   const base = path.join(outDir, name);
@@ -302,25 +302,25 @@ async function routeExportStart(req: IncomingMessage, res: ServerResponse, u: UR
     st.writeError = messageOf(e); });
   fs.writeFileSync(base + '.srt', String(payload.srt || ''));
   fs.writeFileSync(base + '.toybox.json', JSON.stringify(startScene, null, 2));
-  return send(res, 200, { ok: true });
+  send(res, 200, { ok: true });
 }
 async function routeExportChunk(req: IncomingMessage, res: ServerResponse): Promise<void> {
   assert(typeof req === 'object');
   assert(typeof res === 'object');
-  if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
+  if (!job || job.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
   const j = job.state;
-  if (j.phase !== 'streaming') return send(res, 409, { error: 'The export has not started.' });
-  if (j.writeError) return send(res, 500, { error: 'The video data could not be written: ' + j.writeError });
+  if (j.phase !== 'streaming') { send(res, 409, { error: 'The export has not started.' }); return; }
+  if (j.writeError) { send(res, 500, { error: 'The video data could not be written: ' + j.writeError }); return; }
   const b = await body(req);
   const out = j.h264;
   j.chain = j.chain.then(() => new Promise<void>((ok, fail) => {
     assert(typeof ok === 'function');
     assert(typeof fail === 'function');
-    return out.write(b, (e) => (e ? fail(e) : ok()));
+    return out.write(b, (e) => { e ? fail(e) : ok(); });
   }));
   try { await j.chain; }
-  catch (e) { j.writeError = messageOf(e); j.chain = Promise.resolve(); return send(res, 500, { error: 'The video data could not be written: ' + j.writeError }); }
-  return send(res, 200, { ok: true });
+  catch (e) { j.writeError = messageOf(e); j.chain = Promise.resolve(); send(res, 500, { error: 'The video data could not be written: ' + j.writeError }); return; }
+  send(res, 200, { ok: true });
 }
 // The narration beats that have a voice file.
 function voiceBeats(scene: Scene): VoiceBeat[] {
@@ -372,9 +372,9 @@ async function routeExportEnd(_req: IncomingMessage, res: ServerResponse, u: URL
   assert(typeof _req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (!job || job.kind !== 'export') return send(res, 409, { error: 'No export job is running.' });
+  if (!job || job.kind !== 'export') { send(res, 409, { error: 'No export job is running.' }); return; }
   const mine = job, j = job.state;
-  if (j.phase !== 'streaming') return send(res, 409, { error: 'The export has not started.' });
+  if (j.phase !== 'streaming') { send(res, 409, { error: 'The export has not started.' }); return; }
   // Every terminal answer must resolve the job, or /api/export waits for the timeout.
   const finishError = (code: number, text: string, keep: boolean): void => {
     assert(typeof code === 'number');
@@ -391,12 +391,12 @@ async function routeExportEnd(_req: IncomingMessage, res: ServerResponse, u: URL
   await j.chain.catch(() => {});
   await new Promise<void>((ok) => { 
     assert(typeof ok === 'function');
-    h264.on('close', () => ok()); h264.on('error', () => ok()); h264.end(); });
-  if (j.writeError) return finishError(500, 'The video data could not be written: ' + j.writeError, false);
+    h264.on('close', () => { ok(); }); h264.on('error', () => { ok(); }); h264.end(); });
+  if (j.writeError) { finishError(500, 'The video data could not be written: ' + j.writeError, false); return; }
   const voice = voiceBeats(jscene);
   const failure = muxMp4(jbase, fps, Number(u.searchParams.get('frames') || 0), voice);
   // Keep the frames: a second try (after the fix to the tool or the PATH) must not need a full export again.
-  if (failure !== null) return finishError(500, failure, true);
+  if (failure !== null) { finishError(500, failure, true); return; }
   fs.rmSync(jbase + '.h264', { force: true });
   const odbl = keepExtras(jscene, voice);
   const info = Object.fromEntries(u.searchParams); delete info.token;
@@ -409,9 +409,9 @@ async function routeFrameResult(req: IncomingMessage, res: ServerResponse, u: UR
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   assert(typeof u === 'object');
-  if (!job || job.kind !== 'frame') return send(res, 409, { error: 'No picture job is running.' });
+  if (!job || job.kind !== 'frame') { send(res, 409, { error: 'No picture job is running.' }); return; }
   const png = u.searchParams.get('png');
-  if (!png || path.dirname(png) !== outDir) return send(res, 400, { error: 'bad path' });
+  if (!png || path.dirname(png) !== outDir) { send(res, 400, { error: 'bad path' }); return; }
   fs.writeFileSync(png, await body(req));
   previews.add(png);
   const done = job.resolve;
@@ -422,7 +422,7 @@ async function routeJobError(req: IncomingMessage, res: ServerResponse): Promise
   assert(typeof req === 'object');
   assert(typeof res === 'object');
   const m = String(await body(req));
-  const done = job && job.resolve;
+  const done = job?.resolve;
   send(res, 200, { ok: true });
   if (done) done({ error: m.slice(0, 500) });
 }
@@ -441,11 +441,11 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, u: URL, p: s
   assert(typeof u === 'object');
   assert(typeof p === 'string');
   assert(p.length < 1e7);
-  if (!authed(req, u)) return send(res, 403, { error: 'Bad token or origin.' });
+  if (!authed(req, u)) { send(res, 403, { error: 'Bad token or origin.' }); return; }
   const key = `${req.method} ${p}`;
   const route = Object.hasOwn(anyMethodRoutes, p) ? anyMethodRoutes[p] : Object.hasOwn(methodRoutes, key) ? methodRoutes[key] : undefined;
   if (route) return route(req, res, u);
-  return send(res, 404, { error: 'No such call.' });
+  send(res, 404, { error: 'No such call.' });
 }
 // A file of the web page, the engine or the assets.
 function handleStatic(res: ServerResponse, p: string): void {
@@ -454,7 +454,7 @@ function handleStatic(res: ServerResponse, p: string): void {
   assert(p.length < 1e7);
   const [base, rel]: [string, string] = p.startsWith('/engine/') ? [engineDir, p.slice(8)] : p.startsWith('/assets/') ? [path.join(root, 'assets'), p.slice(8)] : [path.join(root, 'web'), p === '/' ? 'app.html' : p.slice(1)];
   const f = path.resolve(base, rel), inside = path.relative(base, f);
-  if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) return send(res, 403, { error: 'no' });
+  if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) { send(res, 403, { error: 'no' }); return; }
   const tsSource = f.endsWith('.js') ? f.slice(0, -3) + '.ts' : '';
   if (tsSource && base === path.join(root, 'web') && fs.existsSync(tsSource)) {
     res.setHeader('content-type', types['.js'] ?? 'text/javascript');
@@ -463,15 +463,15 @@ function handleStatic(res: ServerResponse, p: string): void {
   }
   fs.readFile(f, (e, d) => { 
     assert(typeof d === 'object');
-    if (e) return send(res, 404, { error: 'no' }); res.setHeader('content-type', types[path.extname(f)] || 'application/octet-stream'); res.end(d); });
+    if (e) { send(res, 404, { error: 'no' }); return; } res.setHeader('content-type', types[path.extname(f)] || 'application/octet-stream'); res.end(d); });
 }
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   assert(typeof req === 'object');
   assert(typeof res === 'object');
-  if (req.headers.host !== `127.0.0.1:${port}`) return send(res, 403, { error: 'Bad host.' });
+  if (req.headers.host !== `127.0.0.1:${port}`) { send(res, 403, { error: 'Bad host.' }); return; }
   const u = new URL(req.url || '/', origin); const p = decodeURIComponent(u.pathname);
   if (p.startsWith('/api/') || p.startsWith('/export/') || p === '/result') return handleApi(req, res, u, p);
-  return handleStatic(res, p);
+  handleStatic(res, p);
 }
 
 const server = http.createServer((req, res) => { 

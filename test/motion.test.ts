@@ -26,7 +26,7 @@ test('two cars that drive through each other are a collision', () => {
   const r = must<{ collisions?: unknown[] }>(C.move_along(s, { id: 'b', path: [[-2.2, -20], [-2.2, 20]], times: [0, 4] }));
   assert.ok(r.collisions?.length, 'move_along reports the collision');
   const errs = motionErrors(s, cat);
-  assert.ok(errs.some((e) => e.code === 'collision' && /a and b pass into each other/.test(e.message)), JSON.stringify(errs));
+  assert.ok(errs.some((e) => e.code === 'collision' && e.message.includes('a and b pass into each other')), JSON.stringify(errs));
   assert.ok(must<{ errors: { code: string }[] }>(C.validate(s, {})).errors.some((e) => e.code === 'collision'));
 });
 
@@ -84,7 +84,7 @@ test('a pair that collides twice reports both time spans', () => {
   must(C.place(s, { model: 'person', at: [0, 0, -5], id: 'p', variant: 1 }));
   must(C.place(s, { model: 'person', at: [0, 0, 0], id: 'q', variant: 2 }));
   must(C.move_along(s, { id: 'p', path: [[0, -5], [0, 5], [0, -5]], times: [0, 5, 10] }));
-  const spans = motionErrors(s, cat).filter((e) => e.code === 'collision').map((e) => need(e.message.match(/from ([\d.]+) s/)?.[1]));
+  const spans = motionErrors(s, cat).filter((e) => e.code === 'collision').map((e) => need((/from ([\d.]+) s/.exec(e.message))?.[1]));
   assert.equal(spans.length, 2, JSON.stringify(spans));
   assert.ok(Number(spans[0]) < 5 && Number(spans[1]) > 5, JSON.stringify(spans));
 });

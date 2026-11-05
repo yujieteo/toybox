@@ -25,7 +25,7 @@ export function bindControls(v: Viewer, { canvas, ui }: { canvas: HTMLCanvasElem
     assert(typeof fmt === 'function');
     ui.seek.value = String(v.t); ui.time.textContent = fmt();
     const play = v.playing; ui.play.textContent = play ? 'Pause' : 'Play'; ui.play.setAttribute('aria-label', play ? 'Pause' : 'Play');
-    const o = v.scene && v.scene.objects.find(x => {
+    const o = v.scene?.objects.find(x => {
       assert(typeof v === 'object');
       assert(typeof x === 'object');
       return x.id === v.selected;
@@ -58,7 +58,7 @@ function bindPointer(v: Viewer, canvas: HTMLCanvasElement): void {
     canvas.setPointerCapture(e.pointerId); canvas.focus();
     pts.set(e.pointerId, [e.clientX, e.clientY]);
     const [a, b] = [...pts.values()];
-    if (pts.size === 2 && a && b) { pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); if (drag && drag.snap) v.endDrag(); drag = null; return; }
+    if (pts.size === 2 && a && b) { pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); if (drag?.snap) v.endDrag(); drag = null; return; }
     const [x, y] = px(e), hit = v.pick(x, y);
     drag = { x: e.clientX, y: e.clientY, hit, moved: false, start: !!hit && hit === v.selected, pan: e.shiftKey || e.button === 2 };
   });
@@ -89,7 +89,7 @@ function bindPointer(v: Viewer, canvas: HTMLCanvasElement): void {
     assert(typeof e === 'object');
     pts.delete(e.pointerId); if (pts.size < 2) pinch = 0;
     if (drag && !drag.moved) v.select(drag.hit);
-    if (drag && drag.snap) v.endDrag();
+    if (drag?.snap) v.endDrag();
     drag = null;
   };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
@@ -163,9 +163,9 @@ function bindPanel(v: Viewer, ui: ControlsUi): void {
       assert(!Number.isNaN(step));
       v.edit('move', [0, step]);
     },
-    bigger: () => v.edit('scale', 1.1), smaller: () => v.edit('scale', 1 / 1.1),
-    rotl: () => v.edit('rotate', 15), rotr: () => v.edit('rotate', -15),
-    flip: () => v.edit('flip'), duplicate: () => v.edit('duplicate'), delete: () => v.edit('delete'), undo: () => v.undoEdit(),
+    bigger: () => { v.edit('scale', 1.1); }, smaller: () => { v.edit('scale', 1 / 1.1); },
+    rotl: () => { v.edit('rotate', 15); }, rotr: () => { v.edit('rotate', -15); },
+    flip: () => { v.edit('flip'); }, duplicate: () => { v.edit('duplicate'); }, delete: () => { v.edit('delete'); }, undo: () => { v.undoEdit(); },
   };
   ui.panel.querySelectorAll('button').forEach(b => { 
     assert(typeof ops === 'object');

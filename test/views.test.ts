@@ -73,7 +73,7 @@ test('set_camera and validate agree when a framed object is not a chapter focus'
   must(C.place(s, { model: 'bus-private', at: [0, 0, 4], id: 'bus', yaw: 90 }));
   const r = must<CamResult>(C.set_camera(s, { t: 0, shot: 'medium', frame: ['p', 'bus'], view: 0, elevation: 5 }));
   assert.ok(need(r.blocked).some((b) => b.id === 'p' && b.by === 'bus'), JSON.stringify(r.blocked));
-  assert.ok(blockedViews(s).some((e) => /bus hides focus object p/.test(e.message)));
+  assert.ok(blockedViews(s).some((e) => e.message.includes('bus hides focus object p')));
   const { view, elevation } = need(r.clear_views[0]);
   const ok = must<CamResult>(C.set_camera(s, { t: 0, shot: 'medium', frame: ['p', 'bus'], view, elevation }));
   assert.equal(ok.blocked, undefined);
@@ -94,7 +94,7 @@ test('outfits: listed with sources, on known bones, and checked on place', () =>
   const s = newScene({});
   const { outfits } = must<{ outfits: Outfit[] }>(C.list_models(s, {}));
   assert.deepEqual(outfits.map((f) => f.id).sort(), ['police', 'police-shield', 'soc-riot']);
-  assert.ok(outfits.every((f) => /^https:\/\//.test(need(f.source))));
+  assert.ok(outfits.every((f) => need(f.source).startsWith("https://")));
   const skel = view<{ bones: { name: string }[] }>(JSON.parse(readFileSync(new URL('../assets/people/skel.json', import.meta.url), 'utf8')));
   const bones = new Set(skel.bones.map((b) => b.name));
   const cat = loadCatalogue();

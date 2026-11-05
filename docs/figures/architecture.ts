@@ -2,9 +2,7 @@
 // (upstream lgwrightlab/schematic-figure at 09d8b6e98d04b91de6e8b6632b3356b9fc237417).
 // To render it, put this file at figure/figure.js and the schematic-emil style.js at figure/emil.js in a project folder.
 // Then run: node <schematic-figure>/foundation/tools/render.ts --root <project> --fig figure/figure.js
-// @ts-expect-error allow-unsafe: the schematic-emil style is not in this repo; the renderer puts it next to this file
 import * as E from './emil.js';
-// @ts-expect-error allow-unsafe: the schematic-figure engine is not in this repo; the renderer provides it
 import * as D from '../engine/cs.js';
 import { assert } from '../../core/assert.ts';
 
@@ -28,10 +26,10 @@ export default function draw(F: Figure, L: Layout): void {
   const cx = (c: number) => X(c) + CW / 2, cy = (rw: number) => Y(rw) + CH / 2;
 
   assert(typeof F === 'object'); assert(typeof L === 'object'); assert(W > 0 && CW > 0); assert(X(1) > X(0));
-  assert(Y(1) > Y(0)); assert(cx(0) > 0); assert(cy(0) > 0); assert(root !== undefined); assert(W > M);
+  assert(Y(1) > Y(0)); assert(cx(0) > 0); assert(cy(0) > 0); assert(typeof root === 'object'); assert(W > M);
   const conn = L.group(root, { part: 'connectors' });
   const cards = L.group(root, { part: 'cards' });
-  const card = (name: string, c: number, rw: number, title: string, sub: string, tint?: string) => {
+  const card = (name: string, c: number, rw: number, title: string, sub: string, tint?: 'blue') => {
     assert(typeof name === 'string');
     assert(typeof c === 'number');
     assert(typeof rw === 'number');
@@ -54,7 +52,7 @@ export default function draw(F: Figure, L: Layout): void {
   card('static', 2, 2, 'Static viewer', 'web/viewer.html');
 
   const ink = E.gray[900], o = { F, stroke: ink, width: line.normal, outline: line.thin, outline0: line.thin, relate: true };
-  const lab = (x: number, y: number, s: string, anchor = 'middle') => L.text(conn, x, y, s, { anchor, valign: 'middle', size: text.small, color: E.gray[1100] });
+  const lab = (x: number, y: number, s: string, anchor = 'middle') => { L.text(conn, x, y, s, { anchor, valign: 'middle', size: text.small, color: E.gray[1100] }); };
   // row 1: the chat loop
   D.route(conn, ['chat.right', 'daemon.left'], { ...o, tail: 'fill', kind: 'http' });
   D.route(conn, ['daemon.right', 'agent.left'], { ...o, kind: 'starts' });

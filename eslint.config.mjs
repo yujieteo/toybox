@@ -8,6 +8,17 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   {
     languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
-    rules: {},
+    rules: {
+      // A number in a template is lossless text: style only.
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      // Changing || to ?? changes the result for '' and 0, and behaviour must not change, so
+      // string, number and boolean operands stay with ||. Nullable objects still must use ??.
+      '@typescript-eslint/prefer-nullish-coalescing': ['error', { ignorePrimitives: { string: true, number: true, boolean: true, bigint: true } }],
+    },
+  },
+  {
+    // node:test registers each test itself and runs it after the file loads: the returned promise needs no await.
+    files: ['test/**/*.ts'],
+    rules: { '@typescript-eslint/no-floating-promises': 'off' },
   },
 );

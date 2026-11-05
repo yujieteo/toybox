@@ -111,7 +111,7 @@ function renderSteps(steps: Step[], playFrom: (time: number) => void): { buttons
     now.hidden = true;
     now.setAttribute('aria-hidden', 'true');
     button.append(el('span', 'step-num', String(index + 1)), text, now);
-    button.addEventListener('click', () => playFrom(step.start));
+    button.addEventListener('click', () => { playFrom(step.start); });
     const item = document.createElement('li');
     item.append(button);
     buttons.push(button); nows.push(now);
@@ -266,7 +266,7 @@ async function start(): Promise<void> {
     if (scene.title) $('title').textContent = scene.title;
     seekBar.max = String(scene.duration || 60);
 
-    const fit = (): void => fitStage(v, stage, canvas);
+    const fit = (): void => { fitStage(v, stage, canvas); };
     new ResizeObserver(fit).observe(stage);
     fit();
 

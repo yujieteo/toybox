@@ -49,7 +49,7 @@ const shellFiles = allTracked.filter((f) => f.endsWith('.sh') || shellFirstLine.
 step('shellcheck 0.11.0, every optional rule', 'uvx', ['--from', SHELLCHECK_FROM, 'shellcheck', '-o', 'all', ...shellFiles]);
 
 step('dead code (knip)', resolve(root, 'node_modules/.bin/knip'), []);
-const replayBase = process.env['TOYBOX_REPLAY_BASE'];
+const replayBase = process.env.TOYBOX_REPLAY_BASE;
 step('tests and process replay against main', process.execPath, [resolve(root, 'scripts/replay.ts'), '--capture', ...(replayBase ? ['--base', replayBase] : [])]);
 
 if (failures.length > 0) {

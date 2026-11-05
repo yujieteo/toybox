@@ -17,4 +17,4 @@ export type ExportState = { phase: 'waiting' } | Streaming;
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const phasesMatch: Same<ExportState['phase'], (typeof EXPORT_PHASES)[number]> = true;
-void phasesMatch;
+phasesMatch;

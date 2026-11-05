@@ -293,7 +293,7 @@ function prism(id: string, poly: Poly, y0: number, y1: number): Prism {
   });
   return { id, poly, y0, y1, box: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)] };
 }
-export function occluders(scene: Scene, cat: Catalogue, bt: Record<string, ObjectBounds>, skip: Set<string> = new Set()): Prism[] {
+export function occluders(scene: Scene, cat: Catalogue, bt: Record<string, ObjectBounds>, skip = new Set<string>()): Prism[] {
   assert(typeof scene === 'object');
   assert(typeof cat === 'object');
   assert(typeof bt === 'object');
@@ -820,7 +820,7 @@ export function srt(scene: Scene): string {
 }
 
 // ---------- validation
-export const HARD_CODES: Set<string> = new Set(['schema', 'unknown_model', 'below_ground', 'overlap', 'time_backwards', 'caption_too_long', 'caption_too_short_on_screen',
+export const HARD_CODES = new Set<string>(['schema', 'unknown_model', 'below_ground', 'overlap', 'time_backwards', 'caption_too_long', 'caption_too_short_on_screen',
   'caption_overlap', 'shot_move_too_long', 'measured_no_source', 'estimate_not_flagged', 'duplicate_id', 'unknown_object', 'fact_no_source', 'unknown_fact', 'bad_cue']);
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);

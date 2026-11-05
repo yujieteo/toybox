@@ -111,7 +111,7 @@ test('imported models are CC0 with a source, a mesh file and an attribution entr
   const credits = attribution();
   for (const m of imported) {
     assert.equal(m.license, 'CC0', m.id);
-    assert.ok(/^https:\/\//.test(m.source), `${m.id} source`);
+    assert.ok(m.source.startsWith("https://"), `${m.id} source`);
     assert.ok(KINDS.includes(m.kind), m.id);
     const file = new URL(`../assets/${m.mesh}`, import.meta.url);
     assert.ok(existsSync(file), `${m.id} mesh file`);

@@ -108,8 +108,8 @@ test('daemon: static files stay in their folders, host is checked, stale scene w
   const child = spawn(process.execPath, [fileURLToPath(new URL('../app/serve.ts', import.meta.url)), '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
   tc.after(() => child.kill());
   const token = await new Promise<string>((ok, no) => {
-    let out = ''; child.stdout.on('data', (d: Buffer) => { out += d; const m = out.match(/token=(\w+)/); if (m && m[1]) ok(m[1]); });
-    child.on('exit', () => no(new Error('daemon stopped')));
+    let out = ''; child.stdout.on('data', (d: Buffer) => { out += d; const m = /token=(\w+)/.exec(out); if (m?.[1]) ok(m[1]); });
+    child.on('exit', () => { no(new Error('daemon stopped')); });
   });
   const base = `http://127.0.0.1:${port}`;
   assert.equal((await fetch(`${base}/viewer.html`)).status, 200);

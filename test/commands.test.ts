@@ -36,7 +36,7 @@ test('every tool has name, description and an object inputSchema', () => {
 
 test('list_models filters by query and kind', () => {
   const s = fresh();
-  assert.ok(done<{ models: ModelRow[] }>(C.list_models(s, { query: 'bus' })).models.every((m) => /bus/.test(`${m.id} ${m.name} ${m.tags}`.toLowerCase())));
+  assert.ok(done<{ models: ModelRow[] }>(C.list_models(s, { query: 'bus' })).models.every((m) => `${m.id} ${m.name} ${m.tags}`.toLowerCase().includes('bus')));
   assert.ok(done<{ count: number }>(C.list_models(s, { kind: 'vehicle' })).count >= 8);
   assert.ok(done<{ models: ModelRow[] }>(C.list_models(s, {})).models.some((m) => m.id === 'person'));
 });

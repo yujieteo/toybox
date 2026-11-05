@@ -261,7 +261,7 @@ function police({ place, leg, timed, appear }: Kit): string[] {
   cop(1, [-1.15, 9.0], 88.6, [[6.3, 2.6], [6.3, -18.4], [4.5, -19.7]], 2.5);
   cop(2, [-1.15, 10.4], 88.6, [[0.4, 10.4], [0.4, -1.5], [-4, -1]], 1.6);
   const officers: P2[] = [[14.6, -2], [16.0, 0], [17.4, 2]];
-  officers.forEach(([z, x], k) => cop(3 + k, [-0.95, z], 89.0, [[0.4, z], [0.4, -1.5], [x, -1]], 1.6));
+  officers.forEach(([z, x], k) => { cop(3 + k, [-0.95, z], 89.0, [[0.4, z], [0.4, -1.5], [x, -1]], 1.6); });
   return cops;
 }
 
@@ -356,13 +356,13 @@ function epilogue({ b, place, person, leg }: Kit, crowd: string[]): void {
 function camerasAndChapters({ b }: Kit, crowd: string[], cops: string[], soc: string[]): void {
   // ---------- camera and chapters
   const VIEW0: Record<string, number | undefined> = { wide: 20, medium: 20, close: 15, top: 0, orbit: 0 };
-  const cam = (_start: number, end: number, segs: Seg[]) => segs.forEach((s, i) => {
+  const cam = (_start: number, end: number, segs: Seg[]) => { segs.forEach((s, i) => {
     const view = s.view ?? VIEW0[s.shot];
     const args = (t: number, v: number | undefined) => ({ t, shot: s.shot, frame: s.frame, ...(v !== undefined ? { view: v } : {}), ...(s.opts || {}) });
     b.cmd('set_camera', args(s.t, view));
     const hold = (segs[i + 1]?.t ?? end) - 1.0;
     if (hold > s.t + 0.05) b.cmd('set_camera', args(hold, view === undefined ? undefined : view + (s.shot === 'orbit' ? 45 : 6)));
-  });
+  }); };
   const chapter = (id: string, start: number, end: number, title: string, clock: string, caption: string, focus: Frame, shot: string, source: string, est: boolean, segs: Seg[]) => {
     assert(typeof id === 'string');
     assert(typeof start === 'number');
