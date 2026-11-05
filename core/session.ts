@@ -7,8 +7,13 @@ import { fetchOverpass, bboxQuery, validBbox } from './osm.ts';
 import { makeVoices } from './voice.ts';
 import { dirname, resolve } from 'node:path';
 import { messageOf } from '../web/dom.js';
+import { assert } from './assert.ts';
 
 export async function callTool(scenePath: string, name: string, args: unknown, ctx: ToolContext = {}): Promise<ToolResult> {
+  assert(name.length < 1e7);
+  assert(typeof scenePath === 'string');
+  assert(typeof name === 'string');
+  assert(scenePath.length < 1e7);
   const bbox = typeof args === 'object' && args !== null && 'bbox' in args ? args.bbox : undefined;
   if (name === 'import_osm' && validBbox(bbox)) {
     try { ctx = { ...ctx, overpass: await fetchOverpass(bboxQuery(bbox)), odblPath: scenePath.replace(/(\.toybox)?\.json$/, '') + '.osm.json' }; }

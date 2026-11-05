@@ -22,6 +22,7 @@ interface Golden {
 
 const G = view<Golden>(JSON.parse(readFileSync(new URL('./fixtures/vid-golden.json', import.meta.url), 'utf8')));
 
+function tests1(): void {
 test('vid port: the motion words, the seeds and the poses are the same as vid.js', () => {
   assert.deepEqual(MOVES, G.moves);
   for (const [id, seed] of G.seeds) assert.equal(seedOf(id), seed, id);
@@ -66,3 +67,5 @@ test('vid port: the beats, the cue times and the stand-in times are the same as 
     assert.deepEqual(n.map((x: NarrationBeat) => standIn(x.text)), g.standIn);
   }
 });
+}
+tests1();

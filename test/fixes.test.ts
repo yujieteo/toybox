@@ -16,10 +16,11 @@ interface Footprint { poly: Vec2[] }
 interface OdblFile { header: { license: string }; bearing: number; osm: { buildings: unknown[] } }
 
 // The result of a successful command, as the type T.
-const done = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const done = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 const overpass = JSON.parse(readFileSync(new URL('../evals/fixtures/race-course-road-osm.json', import.meta.url), 'utf8'));
 const BBOX = [1.3077, 103.8501, 1.3101, 103.8524];
 
+function tests1(): void {
 test('set_pose without t sets the pose at time 0 when a later pose key exists', () => {
   const s = newScene({});
   done(C.place(s, { model: 'person', at: [0, 0], id: 'p', estimated: true }));
@@ -62,7 +63,10 @@ test('import_osm refuses a bad bbox and a missing Overpass answer', () => {
   done(C.import_osm(s, { bbox: BBOX }, { overpass }));
   assert.deepEqual(must(s.map).origin, { lat: 1.3089, lon: 103.85125 });
 });
+}
+tests1();
 
+function tests2(): void {
 test('import_osm writes no data file when the scene change is refused', () => {
   const dir = mkdtempSync(join(tmpdir(), 'tbref-')), odblPath = join(dir, 'x.osm.json');
   const s = newScene({});
@@ -94,15 +98,18 @@ test('the MP4 export .srt is in time order and the same as the core .srt', () =>
   assert.equal(webSrt(s), coreSrt(s));
   assert.match(webSrt(s), /^1\n00:00:01,000/);
 });
+}
+tests2();
 
+function tests3(): void {
 test('daemon: static files stay in their folders, host is checked, stale scene writes are refused', async (tc: TestContext) => {
   const dir = mkdtempSync(join(tmpdir(), 'tbsrv-')), scene = join(dir, 's.toybox.json');
   const port = 20000 + Math.floor(Math.random() * 20000);
   const child = spawn(process.execPath, [fileURLToPath(new URL('../app/serve.ts', import.meta.url)), '--scene', scene, '--port', String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
   tc.after(() => child.kill());
   const token = await new Promise<string>((ok, no) => {
-    let out = ''; child.stdout.on('data', (d: Buffer) => { out += d; const m = out.match(/token=(\w+)/); if (m && m[1]) ok(m[1]); });
-    child.on('exit', () => no(new Error('daemon stopped')));
+    let out = ''; child.stdout.on('data', (d: Buffer) => { out += d.toString(); const m = /token=(\w+)/.exec(out); if (m?.[1]) ok(m[1]); });
+    child.on('exit', () => { no(new Error('daemon stopped')); });
   });
   const base = `http://127.0.0.1:${port}`;
   assert.equal((await fetch(`${base}/viewer.html`)).status, 200);
@@ -125,3 +132,5 @@ test('every web script parses', () => {
     assert.doesNotThrow(() => transpiler.transformSync(readFileSync(join(dir, f), 'utf8')), f);
   }
 });
+}
+tests3();

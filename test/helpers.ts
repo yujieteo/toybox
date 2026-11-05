@@ -11,14 +11,16 @@ export function must<T>(v: T | undefined | null, what = 'value'): T {
 }
 
 // Reads outside data (a command result, a JSON file) as the type T. The JSON round trip is the one typed boundary.
-export function view<T>(v: unknown): T {
-  return JSON.parse(JSON.stringify(v)) as T; // allow-unsafe: a test reads data that it made or a fixture, the assertions check it
+export function view<T>(v: unknown, check?: (x: unknown) => x is T): T {
+  const copy: unknown = JSON.parse(JSON.stringify(v));
+  assert.ok(check === undefined || check(copy));
+  return copy as T; // allow-unsafe: a test reads data that it made or a fixture, the assertions check it
 }
 
 // The result of a successful command, read as T. It fails the test when the command failed.
-export function okResult<T>(r: unknown): T {
+export function okResult<T>(r: unknown, check?: (x: unknown) => x is T): T {
   assert.ok(isRecord(r) && r.ok === true, JSON.stringify(r));
-  return view<T>(r.result);
+  return view<T>(r.result, check);
 }
 
 // True when the command succeeded.

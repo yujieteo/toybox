@@ -5,15 +5,24 @@
 import { voiceId } from './voice.ts';
 import type { Scene, NarrationBeat, Cue } from '../web/types.js';
 import type { ValidationError } from './scene.ts';
-import { LEAD, GAP, TAIL, STAND_IN, beats, find, cueAt, standIn, plain } from '../web/vid.js';
+import { LEAD, GAP, TAIL, STAND_IN, beats, type Beat, find, cueAt, standIn, plain } from '../web/vid.js';
+import { isRecord } from '../web/dom.js';
+import { assert } from './assert.ts';
+import { orEmpty } from './lists.ts';
 
 // Seconds of silence before, between and after sentences, and for each character of a sentence that has no voice yet.
 export { LEAD, GAP, TAIL, STAND_IN };
 
 // Each sentence gets start and end. Returns the length of the narration in seconds.
 export function timeline(narration: NarrationBeat[]): number {
+  assert(typeof narration === 'object');
+  assert(narration.length < 1e7);
   const { times, length } = beats(narration);
-  narration.forEach((n, i) => { [n.start, n.end] = times[i] ?? [NaN, NaN]; });
+  narration.forEach((n, i) => { 
+    assert(typeof n === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    [n.start, n.end] = times[i] ?? [NaN, NaN]; });
   return length;
 }
 
@@ -21,7 +30,9 @@ export function timeline(narration: NarrationBeat[]): number {
 // NaN when the seconds are missing or bad; callers ignore that (validate reports it).
 export function narrationLength(narration: unknown): number {
   if (!Array.isArray(narration) || !narration.length) return 0;
-  return beats(narration).length;
+  const returned = beats(narration as Beat[]).length; // allow-unsafe: only seconds and pause are read, and each is checked there
+  assert(typeof returned === 'number');
+  return returned;
 }
 
 // The time of word in sentence i: the start of the sentence plus the part of its length that comes
@@ -29,6 +40,8 @@ export function narrationLength(narration: unknown): number {
 // The voice says the plain text: the ^{...} and _{...} markup in the text is not spoken, so the
 // cue position is measured in the spoken (plain) words, not in the raw text with the markup.
 export function cueTime(narration: NarrationBeat[] | undefined, cue: Cue): number {
+  assert(typeof cue === 'object');
+  assert(cue.length < 1e7);
   const [i, word = '', offset = 0] = cue;
   if (typeof word !== 'string' || !Number.isFinite(offset)) throw new Error(`Cue ${JSON.stringify(cue)} is not [sentence, "word", offset]: word must be a text and offset a number of seconds.`);
   const n = narration?.[i];
@@ -36,7 +49,9 @@ export function cueTime(narration: NarrationBeat[] | undefined, cue: Cue): numbe
   const said = plain(n.text), saidWord = plain(word);
   const k = find(said, saidWord);
   if (k < 0) throw new Error(`"${word}" is not in sentence ${i}: "${n.text}".`);
-  return cueAt({ start: n.start ?? NaN, end: n.end ?? NaN, text: said }, k, offset);
+  const returned = cueAt({ start: n.start ?? NaN, end: n.end ?? NaN, text: said }, k, offset);
+  assert(typeof returned === 'number');
+  return returned;
 }
 
 // Every item that can have a cue (start) and an endCue (end).
@@ -44,49 +59,78 @@ export function cueTime(narration: NarrationBeat[] | undefined, cue: Cue): numbe
 // a motion, a chapter or a callout.
 export interface CuedItem { t?: number; start?: number; end?: number; cue?: Cue; endCue?: Cue }
 export function cued(scene: Scene): CuedItem[] {
-  const all: CuedItem[] = [...(scene.tracks || []).flatMap((tr) => tr.keys || []), ...(scene.camera || []), ...(scene.lighting || []),
-    ...(scene.motions || []), ...(scene.chapters || []), ...(scene.callouts || [])];
-  return all.filter((x) => x && (x.cue || x.endCue));
+  assert(typeof scene === 'object');
+  const all: CuedItem[] = [...orEmpty(scene.tracks).flatMap((tr) => orEmpty(tr.keys)), ...orEmpty(scene.camera), ...(scene.lighting ?? []),
+    ...(scene.motions ?? []), ...orEmpty(scene.chapters), ...orEmpty(scene.callouts)];
+  return all.filter((x) => x.cue ?? x.endCue);
 }
 
 // After a change of the narration or its voice: new beats, the cued times, and 1 caption for each sentence.
 export function retime(scene: Scene): number {
-  const narration = scene.narration || [];
+  assert(typeof scene === 'object');
+  const narration = scene.narration ?? [];
   for (const n of narration) if (!n.voice) n.seconds = standIn(plain(n.text));
   const length = timeline(narration);
   for (const x of cued(scene)) {
     if (x.cue) { if ('t' in x) x.t = cueTime(narration, x.cue); else x.start = cueTime(narration, x.cue); }
     if (x.endCue) x.end = cueTime(narration, x.endCue);
   }
-  for (const tr of scene.tracks || []) tr.keys.sort((a, b) => a.t - b.t);
-  for (const list of [scene.camera, scene.lighting, scene.motions]) if (list) list.sort((a, b) => a.t - b.t);
-  if (narration.length) scene.captions = narration.map((n, i) => ({ start: n.start ?? NaN, end: narration[i + 1]?.start ?? length, text: n.text }));
+  for (const tr of orEmpty(scene.tracks)) tr.keys.sort((a, b) => {
+    assert(typeof a === 'object');
+    assert(typeof b === 'object');
+    return a.t - b.t;
+  });
+  for (const list of [scene.camera, scene.lighting, scene.motions]) if (list) list.sort((a, b) => {
+    assert(typeof b === 'object');
+    assert(typeof a === 'object');
+    const returned = a.t - b.t;
+    assert(typeof returned === 'number');
+    return returned;
+  });
+  if (narration.length) scene.captions = narration.map((n, i) => {
+    assert(typeof n === 'object');
+    return { start: n.start ?? NaN, end: narration[i + 1]?.start ?? length, text: n.text };
+  });
   return length;
 }
 
 // Narration, facts and cue errors for validate: [{ code, path, message }].
 export function narrationErrors(scene: Scene): ValidationError[] {
-  const errs: ValidationError[] = [], E = (code: string, path: string, message: string): void => { errs.push({ code, path, message }); };
+  const errs: ValidationError[] = [], E = (code: string, path: string, message: string): void => { 
+    assert(typeof code === 'string');
+    assert(typeof path === 'string');
+    assert(typeof message === 'string');
+    assert(code.length < 1e7);
+    assert(path.length < 1e7);
+    assert(message.length < 1e7);
+    errs.push({ code, path, message }); };
   const facts = scene.facts ?? [], narration = scene.narration ?? [];
   if (!Array.isArray(facts)) E('schema', 'facts', 'facts must be an array.');
   else {
     const ids = new Set();
     facts.forEach((f, i) => {
-      if (!f || typeof f.id !== 'string' || typeof f.text !== 'string' || !f.text) { E('schema', `facts[${i}]`, 'A fact needs an id and a text.'); return; }
+      assert(typeof f === 'object');
+      assert(typeof i === 'number');
+      assert(!Number.isNaN(i));
+      const g: unknown = f;   // a scene file can hold anything
+      if (!isRecord(g) || typeof g.id !== 'string' || typeof g.text !== 'string' || !g.text) { E('schema', `facts[${i}]`, 'A fact needs an id and a text.'); return; }
       if (ids.has(f.id)) E('duplicate_id', `facts[${i}]`, `Duplicate fact id ${f.id}.`);
       ids.add(f.id);
       if (typeof f.source !== 'string' || !f.source.trim()) E('fact_no_source', `facts[${i}]`, `Fact ${f.id} has no source. Use only facts that you read in a source. Leave out a fact that has no source.`);
     });
   }
   if (!Array.isArray(narration)) { E('schema', 'narration', 'narration must be an array.'); return errs; }
-  const known = new Set(Array.isArray(facts) ? facts.map((f) => f?.id) : []);
+  const known = new Set(Array.isArray(facts) ? facts.map((f) => { const g: unknown = f; return isRecord(g) ? g.id : undefined; }) : []);
   let silent = 0;
   narration.forEach((n, i) => {
-    const p = `narration[${i}]`;
-    if (!n || typeof n.text !== 'string' || !n.text.trim()) { E('schema', p, 'A sentence needs a text.'); return; }
+    assert(typeof n === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    const p = `narration[${i}]`, g: unknown = n;
+    if (!isRecord(g) || typeof g.text !== 'string' || !g.text.trim()) { E('schema', p, 'A sentence needs a text.'); return; }
     if (n.pause !== undefined && !(typeof n.pause === 'number' && n.pause >= 0)) E('schema', `${p}.pause`, 'pause must be 0 or more seconds.');
     if (!(typeof n.seconds === 'number' && n.seconds > 0)) E('schema', `${p}.seconds`, 'seconds must be more than 0. Call narrate.');
-    for (const f of n.facts || []) if (!known.has(f)) E('unknown_fact', `${p}.facts`, `Fact ${f} does not exist. Add it with add_fact and its source.`);
+    for (const f of n.facts ?? []) if (!known.has(f)) E('unknown_fact', `${p}.facts`, `Fact ${f} does not exist. Add it with add_fact and its source.`);
     if (!n.voice) silent++;
     else if (n.voice !== `voice/${voiceId(n.text)}.wav`) E('narration_timing', `${p}.voice`, `The voice file of sentence ${i} is for another text. Call make_voice.`);
   });

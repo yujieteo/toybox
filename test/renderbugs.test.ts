@@ -25,6 +25,7 @@ const bare = (): Scene => {
   return s;
 };
 
+function tests1(): void {
 test('duration is recomputed when the content gets shorter (make_voice after stand-in times)', () => {
   const s = newScene({});
   must(run(s, 'narrate', { sentences: ['A very long sentence with no voice file at all in the fixtures so it uses a long stand-in time.'] }));
@@ -68,7 +69,10 @@ test('duration is rounded up to the millisecond, so a successful command validat
   assert.equal(t.duration, ceilMs(motionEnd(need(need(t.motions)[0]))));
   assert.ok(!codes(t).includes('duration_too_short'), JSON.stringify(validate(t)));
 });
+}
+tests1();
 
+function tests2(): void {
 test('a trailing motion word is covered by the scene duration', () => {
   const hop = newScene({});
   must(run(hop, 'place', { model: 'narrator', at: [0, 0], id: 'n' }));
@@ -116,7 +120,10 @@ test('the voice speaks the plain text: the voice id and cues ignore the ^{} mark
   must(run(s, 'narrate', { sentences: [text] }));
   assert.equal(need(need(s.narration)[0]).seconds, Math.round(STAND_IN * said.length * 1000) / 1000);
 });
+}
+tests2();
 
+function tests3(): void {
 test('negative caption, chapter and callout times are refused and srt() never goes negative', () => {
   const s = bare();
   assert.equal(firstError(run(s, 'add_caption', { start: -2, end: 3, text: 'Hello there' })).code, 'schema');
@@ -139,3 +146,5 @@ test('add_chapter refuses a caption in a narrated scene instead of discarding it
   assert.equal(firstError(r).code, 'narrated');
   assert.equal(s.chapters.length, 0);
 });
+}
+tests3();

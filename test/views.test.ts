@@ -7,7 +7,7 @@ import type { Scene, Outfit } from '../web/types.ts';
 import { must as need, okResult, firstError, isOk, view } from './helpers.ts';
 
 // The result of a successful command, as the type T.
-const must = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const must = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 interface Blocked { id: string; by: string }
 interface Clear { view: string; elevation: number }
 interface CamResult { blocked?: Blocked[]; clear_views: Clear[] }
@@ -20,6 +20,7 @@ function street(): Scene {
   return s;
 }
 
+function tests1(): void {
 test('a building between the camera and the focus object is a blocked view', () => {
   const s = street();
   must(C.set_camera(s, { t: 0, shot: 'medium', eye: [0, 3, 20], target: [0, 1, 0] }));
@@ -62,14 +63,17 @@ test('set_camera reports a blocked view and gives clear views that work', () => 
   assert.equal(ok.blocked, undefined);
   assert.deepEqual(blockedViews(s), []);
 });
+}
+tests1();
 
+function tests2(): void {
 test('set_camera and validate agree when a framed object is not a chapter focus', () => {
   const s = street();
   must(C.remove(s, { id: 'house' }));
   must(C.place(s, { model: 'bus-private', at: [0, 0, 4], id: 'bus', yaw: 90 }));
   const r = must<CamResult>(C.set_camera(s, { t: 0, shot: 'medium', frame: ['p', 'bus'], view: 0, elevation: 5 }));
   assert.ok(need(r.blocked).some((b) => b.id === 'p' && b.by === 'bus'), JSON.stringify(r.blocked));
-  assert.ok(blockedViews(s).some((e) => /bus hides focus object p/.test(e.message)));
+  assert.ok(blockedViews(s).some((e) => e.message.includes('bus hides focus object p')));
   const { view, elevation } = need(r.clear_views[0]);
   const ok = must<CamResult>(C.set_camera(s, { t: 0, shot: 'medium', frame: ['p', 'bus'], view, elevation }));
   assert.equal(ok.blocked, undefined);
@@ -90,7 +94,7 @@ test('outfits: listed with sources, on known bones, and checked on place', () =>
   const s = newScene({});
   const { outfits } = must<{ outfits: Outfit[] }>(C.list_models(s, {}));
   assert.deepEqual(outfits.map((f) => f.id).sort(), ['police', 'police-shield', 'soc-riot']);
-  assert.ok(outfits.every((f) => /^https:\/\//.test(need(f.source))));
+  assert.ok(outfits.every((f) => need(f.source).startsWith("https://")));
   const skel = view<{ bones: { name: string }[] }>(JSON.parse(readFileSync(new URL('../assets/people/skel.json', import.meta.url), 'utf8')));
   const bones = new Set(skel.bones.map((b) => b.name));
   const cat = loadCatalogue();
@@ -106,3 +110,5 @@ test('outfits: listed with sources, on known bones, and checked on place', () =>
   const g = must<{ ids: string[] }>(C.place_group(s, { model: 'person', count: 3, at: [0, 0, 6], outfit: 'police', seed: 2 }));
   assert.ok(g.ids.every((id) => { const o = need(s.objects.find((x) => x.id === id)); return o.outfit === 'police' && !o.colors; }));
 });
+}
+tests2();

@@ -6,29 +6,83 @@ import { join } from 'node:path';
 import { Builder, rng, finish, printReport, OUT_DIR } from './lib.ts';
 import type { Args, FinishedReport } from './lib.ts';
 import type { Vec3, Track } from '../web/types.js';
+import { assert } from '../core/assert.ts';
 
 type P2 = [number, number];
 type Frame = (string | undefined)[];
 interface Seg { t: number; shot: string; frame: Frame; view?: number; opts?: Args }
 // a coordinate of a path point ([x, z] or [x, y, z]); 0 when the point is shorter
-const c = (p: readonly number[], i: number): number => p[i] ?? 0;
-const lastOf = (a: readonly number[]): number => { const v = a.at(-1); if (v === undefined) throw new Error('empty list'); return v; };
+const c = (p: readonly number[], i: number): number => {
+  assert(typeof p === 'object');
+  assert(typeof i === 'number');
+  assert(p.length < 1e7);
+  assert(!Number.isNaN(i));
+  const returned = p[i] ?? 0;
+  assert(typeof returned === 'number');
+  return returned;
+};
+const lastOf = (a: readonly number[]): number => { 
+  assert(typeof a === 'object');
+  assert(a.length < 1e7);
+  const v = a.at(-1); if (v === undefined) throw new Error('empty list'); return v; };
 
 const WIKI = 'https://en.wikipedia.org/wiki/2013_Little_India_riot';
 const L = { estimated: true, source: 'estimated: street layout and positions are not in a public source' };
 const R = rng(2013);
-const pick = (a: string[]): string => { const v = a[Math.floor(R() * a.length)]; if (v === undefined) throw new Error('empty list'); return v; };
+const pick = (a: string[]): string => { 
+  assert(typeof a === 'object');
+  assert(a.length < 1e7);
+  const v = a[Math.floor(R() * a.length)]; if (v === undefined) throw new Error('empty list'); return v; };
 const SHIRTS = ['#c8553d', '#3f6e9a', '#d9b44a', '#6f9a6a', '#a99bb8', '#e8dcc0', '#5f9ea0', '#b8765f', '#8c8c86'];
 const PANTS = ['#3a3f47', '#4a5568', '#6b5b4b', '#2f4a6b', '#55595f'];
 
-export function build(): FinishedReport {
-  const b = new Builder({ title: 'Little India, 8 December 2013', author: 'Toybox eval', ground: 'street', look: 'dusk', size: [160, 160], color: '#8f9a8a' });
+
+interface Kit {
+  b: Builder;
+  place: (model: string, at: number[], extra?: Args) => unknown;
+  person: (id: string, variant: number, at: number[], extra?: Args) => unknown;
+  dist: (p: number[], q: number[]) => number;
+  leg: (id: string, pts: number[][], t0: number, speed: number, extra?: Args) => number[];
+  timed: (id: string, pts: number[][], times: number[], extra?: Args) => number;
+  swap: (id: string, t: number, to: boolean) => unknown;
+  appear: (id: string, t: number) => unknown;
+}
+
+// The helpers that every chapter uses to place people and vehicles and to move them.
+function makeKit(b: Builder): Kit {
+  assert(typeof L === 'object');
+  assert(typeof pick === 'function');
+  assert(typeof b === 'object');
   const place = (model: string, at: number[], extra: Args = {}) => b.cmd('place', { model, at, ...L, ...extra });
-  const person = (id: string, variant: number, at: number[], extra: Args = {}) => place('person', at, { id, variant, colors: { shirt: pick(SHIRTS), pants: pick(PANTS) }, ...extra });
-  const dist = (p: number[], q: number[]) => Math.hypot(c(q, 0) - c(p, 0), (q[1] ?? 0) - (p[1] ?? 0), c(q, 2) - c(p, 2));
+  const person = (id: string, variant: number, at: number[], extra: Args = {}) => {
+    assert(typeof id === 'string');
+    assert(typeof variant === 'number');
+    assert(typeof at === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(variant));
+    assert(at.length < 1e7);
+    return place('person', at, { id, variant, colors: { shirt: pick(SHIRTS), pants: pick(PANTS) }, ...extra });
+  };
+  const dist = (p: number[], q: number[]) => {
+    assert(typeof p === 'object');
+    assert(typeof q === 'object');
+    assert(p.length < 1e7);
+    assert(q.length < 1e7);
+    const returned = Math.hypot(c(q, 0) - c(p, 0), (q[1] ?? 0) - (p[1] ?? 0), c(q, 2) - c(p, 2));
+    assert(typeof returned === 'number');
+    return returned;
+  };
   const v3 = (p: number[]): Vec3 => (p.length === 2 ? [c(p, 0), 0, c(p, 1)] : [c(p, 0), c(p, 1), c(p, 2)]);
   // path points are [x, z]; leg() builds absolute times from a speed
   const leg = (id: string, pts: number[][], t0: number, speed: number, extra: Args = {}): number[] => {
+    assert(typeof id === 'string');
+    assert(typeof pts === 'object');
+    assert(typeof t0 === 'number');
+    assert(typeof speed === 'number');
+    assert(id.length < 1e7);
+    assert(pts.length < 1e7);
+    assert(!Number.isNaN(t0));
+    assert(!Number.isNaN(speed));
     const P = pts.map(v3);
     const times = [t0];
     for (let i = 1; i < P.length; i++) {
@@ -39,8 +93,23 @@ export function build(): FinishedReport {
     b.cmd('move_along', { id, path: P, times, ...extra });
     return times;
   };
-  const timed = (id: string, pts: number[][], times: number[], extra: Args = {}): number => { b.cmd('move_along', { id, path: pts.map(v3), times, ...extra }); return lastOf(times); };
+  const timed = (id: string, pts: number[][], times: number[], extra: Args = {}): number => { 
+    assert(typeof id === 'string');
+    assert(typeof pts === 'object');
+    assert(typeof times === 'object');
+    assert(id.length < 1e7);
+    assert(pts.length < 1e7);
+    assert(times.length < 1e7);
+    b.cmd('move_along', { id, path: pts.map(v3), times, ...extra }); const returned = lastOf(times);
+  assert(typeof returned === 'number');
+  return returned; };
   const swap = (id: string, t: number, to: boolean) => b.cmd('animate', { id, channel: 'scale', keys: to ? [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] : [{ t: 0, v: [1, 1, 1], ease: 'step' }, { t, v: [0.001, 0.001, 0.001], ease: 'step' }] });
+  const appear = (id: string, t: number) => b.cmd('animate', { id, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] });
+  return { b, place, person, dist, leg, timed, swap, appear };
+}
+
+// The backdrop, the real footprints and the street (all layout is estimated).
+function street0({ b, place }: Kit): void {
 
   b.cmd('set_backdrop', { ground: 'street', size: [160, 160], origin: { lat: 1.30888, lon: 103.85116 }, source: 'estimated: junction of Race Course Road and Hampshire Road, read from OpenStreetMap road data', estimated: true });
   // Real footprints (OpenStreetMap, recorded once). Race Course Road has a compass bearing of about 35 degrees.
@@ -72,7 +141,10 @@ export function build(): FinishedReport {
   b.cmd('place_sign', { text: 'Race Course Road', at: [5.9, 0, 5.5], yaw: 270, ...L, id: 'sign-rcr' });
   b.cmd('place_sign', { text: 'Hampshire Road', at: [10, 0, -5.6], yaw: 0, ...L, id: 'sign-hamp' });
   // A person who rides in a vehicle does not show. It appears beside the door when the vehicle stops.
-  const appear = (id: string, t: number) => b.cmd('animate', { id, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t, v: [1, 1, 1], ease: 'step' }] });
+}
+
+// Chapters 1 to 4: a quiet evening, a worker leaves a bus, the accident and the first call.
+function chapters1to4({ b, place, person, leg, timed, appear }: Kit): void {
 
   // ---------- chapter 1: quiet evening. Pavement walkers keep apart: opposite directions use lines 0.6 m apart.
   const walkers: [string, number, P2, P2, number][] = [['w1', 0, [8.8, -30], [8.8, -12], 1.2], ['w2', 1, [-6.4, -12], [-6.4, -33], 1.3], ['w3', 3, [9.4, -9], [9.4, -33], 1.1], ['w4', 4, [-7.0, -30], [-7.0, -16], 1.2], ['w5', 6, [8.8, 30], [8.8, 10], 1.3], ['w6', 7, [-6.6, 12], [-6.6, 30], 1.2]];
@@ -105,12 +177,17 @@ export function build(): FinishedReport {
   b.cmd('set_pose', { id: 'bystander', t: 38.5, pose: 'point' });
   b.cmd('set_pose', { id: 'bystander2', t: 40, pose: 'wave' });
   b.cmd('set_pose', { id: 'bystander', t: 44, pose: 'stand' });
+}
 
+// Chapters 5 to 7 (the crowd gathers). Returns the ids of the crowd.
+function gather({ person, leg }: Kit): string[] {
   // ---------- chapters 5 to 7: the crowd gathers (figures are representative only).
   // Each person has its own place, 0.6 m or more from the next. Nobody stands on the paths of the
   // paramedics. Everybody walks in from the west along the line of its own place, and the person with the
   // place furthest east arrives first, so no path crosses a person who already stands there.
-  const segDist = ([px, pz]: P2, [ax, az]: P2, [bx, bz]: P2) => { const dx = bx - ax, dz = bz - az, u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(px - ax - u * dx, pz - az - u * dz); };
+  const segDist = ([px, pz]: P2, [ax, az]: P2, [bx, bz]: P2) => { const dx = bx - ax, dz = bz - az, u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz))); const returned = Math.hypot(px - ax - u * dx, pz - az - u * dz);
+  assert(typeof returned === 'number');
+  return returned; };
   const paraPaths: [P2, P2][] = [[[-0.65, 2.0], [0.6, -3]], [[0.6, -3], [1.2, -13.8]], [[-0.65, 3.6], [1.4, -3]], [[1.4, -3], [3.2, -13.8]]];
   const spots: P2[] = [];
   while (spots.length < 60) {
@@ -118,9 +195,17 @@ export function build(): FinishedReport {
     if (spots.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.6) || paraPaths.some(([a, z]) => segDist(p, a, z) < 0.7)) continue;
     spots.push(p);
   }
-  spots.sort((p, q) => q[0] - p[0]);
+  spots.sort((p, q) => {
+    assert(typeof q === 'object');
+    assert(typeof p === 'object');
+    return q[0] - p[0];
+  });
   const crowd: string[] = [];
   spots.forEach((tgt, i) => {
+    assert(typeof tgt === 'object');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(tgt[0]));
+    assert(!Number.isNaN(i));
     const id = `cr-${i + 1}`, wave = Math.floor(i / 20), k = i % 20;
     const arrive = (([49, 72, 78][wave] ?? 0) + k * ([0.5, 0.25, 0.25][wave] ?? 0)), from: P2 = [-70 - i * 0.5, tgt[1]];
     person(id, Math.floor(R() * 24), [from[0], 0, from[1]], { yaw: 90 });
@@ -128,7 +213,14 @@ export function build(): FinishedReport {
     crowd.push(id);
   });
 
+  return crowd;
+}
+
+// Chapters 6 and 7: SCDF arrives and the crowd reacts.
+function scdf({ b, place, person, timed, appear }: Kit, crowd: string[]): void {
   // ---------- chapter 6: SCDF arrives (21:39). The paramedics step out on the free side of the ambulance.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   place('ambulance-scdf', [-2, 0, 78], { id: 'amb', yaw: 180 });
   timed('amb', [[-2, 78], [-2, 3]], [55, 62]);
   person('para1', 14, [-0.65, 0, 2.0], { colors: { shirt: '#b5483c', pants: '#3a3f47' } }); person('para2', 20, [-0.65, 0, 3.6], { colors: { shirt: '#b5483c', pants: '#3a3f47' } });
@@ -138,7 +230,10 @@ export function build(): FinishedReport {
 
   // ---------- chapter 7: tension. Some of the crowd reacts.
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 74 + (i % 7) * 0.6, pose: ['point', 'cheer', 'wave', 'stand'][i % 4] }));
+}
 
+// Chapter 8: police arrive. Returns the ids of the officers.
+function police({ place, leg, timed, appear }: Kit): string[] {
   // ---------- chapter 8: police arrive. Both cars come up the west lane, one behind the other, and stop behind the ambulance.
   place('car-police', [-2.4, 0, 95], { id: 'pc1', yaw: 180 }); place('car-police', [-2.2, 0, 101], { id: 'pc2', yaw: 180 });
   timed('pc1', [[-2.4, 95], [-2.4, 9]], [82, 88]); timed('pc2', [[-2.2, 101], [-2.2, 16]], [82.4, 88.4]);
@@ -146,6 +241,16 @@ export function build(): FinishedReport {
   // They walk on the east pavement to the bus door. The other four form a line between the crowd and the vehicles.
   const cops: string[] = [];
   const cop = (i: number, door: P2, t: number, pts: P2[], speed: number) => {
+    assert(typeof i === 'number');
+    assert(typeof door === 'object');
+    assert(typeof t === 'number');
+    assert(typeof pts === 'object');
+    assert(typeof speed === 'number');
+    assert(!Number.isNaN(i));
+    assert(!Number.isNaN(door[0]));
+    assert(!Number.isNaN(t));
+    assert(pts.length < 1e7);
+    assert(!Number.isNaN(speed));
     const id = `pol-${i + 1}`;
     place('person', [door[0], 0, door[1]], { id, variant: 18 + i, outfit: i < 2 ? 'police-shield' : 'police', yaw: 90 });
     appear(id, t);
@@ -156,9 +261,15 @@ export function build(): FinishedReport {
   cop(1, [-1.15, 9.0], 88.6, [[6.3, 2.6], [6.3, -18.4], [4.5, -19.7]], 2.5);
   cop(2, [-1.15, 10.4], 88.6, [[0.4, 10.4], [0.4, -1.5], [-4, -1]], 1.6);
   const officers: P2[] = [[14.6, -2], [16.0, 0], [17.4, 2]];
-  officers.forEach(([z, x], k) => cop(3 + k, [-0.95, z], 89.0, [[0.4, z], [0.4, -1.5], [x, -1]], 1.6));
+  officers.forEach(([z, x], k) => { cop(3 + k, [-0.95, z], 89.0, [[0.4, z], [0.4, -1.5], [x, -1]], 1.6); });
+  return cops;
+}
 
+// Chapters 9 and 10: the bus crew leaves, the vehicles are overturned and burnt.
+function chapters9and10({ b, place, person, leg, swap, appear }: Kit, crowd: string[]): void {
   // ---------- chapter 9: the bus driver and timekeeper leave under police shield (22:08). They walk in a file on the east pavement.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   person('driver', 17, [3.8, 0, -18.4], { colors: { shirt: '#e8dcc0', pants: '#3a3f47' } }); person('timekeeper', 8, [3.8, 0, -19.2]);
   for (const id of ['driver', 'timekeeper']) appear(id, 103);
   const file: [string, P2, number, number][] = [['pol-1', [4.5, -17.4], -3.0, 104], ['driver', [3.8, -18.4], -3.9, 104], ['timekeeper', [3.8, -19.2], -4.8, 104], ['pol-2', [4.5, -19.7], -5.7, 105.5]];
@@ -171,12 +282,20 @@ export function build(): FinishedReport {
     place(model, [p[0], 0, p[1]], { id: `${id}-after`, yaw: 180, scale: [0.001, 0.001, 0.001] });
     swap(`${id}-after`, t, true); swap(id, t, false);
   }
-  vehicles.slice(1).forEach(([, , p, t], i) => { place('flame', [p[0] + 0.3, 0.4, p[1]], { id: `fl-${i + 1}`, scale: [0.001, 0.001, 0.001] }); b.cmd('animate', { id: `fl-${i + 1}`, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t: t + 0.5, v: [2, 2, 2], ease: 'step' }, { t: 144, v: [0.001, 0.001, 0.001], ease: 'step' }] }); });
+  vehicles.slice(1).forEach(([, , p, t], i) => { 
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    place('flame', [p[0] + 0.3, 0.4, p[1]], { id: `fl-${i + 1}`, scale: [0.001, 0.001, 0.001] }); b.cmd('animate', { id: `fl-${i + 1}`, channel: 'scale', keys: [{ t: 0, v: [0.001, 0.001, 0.001], ease: 'step' }, { t: t + 0.5, v: [2, 2, 2], ease: 'step' }, { t: 144, v: [0.001, 0.001, 0.001], ease: 'step' }] }); });
   place('car-police-overturned', [-6, 0, 12], { id: 'pc3-after', yaw: 60, scale: [0.001, 0.001, 0.001] }); swap('pc3-after', 111, true);
   crowd.slice(0, 40).forEach((id, i) => b.cmd('set_pose', { id, t: 112 + (i % 6) * 0.5, pose: ['cheer', 'point', 'wave'][i % 3] }));
+}
 
+// Chapter 11: SOC arrives. Returns the ids of the riot officers.
+function socArrives({ b, place, leg, appear, dist }: Kit, crowd: string[]): string[] {
   // ---------- chapter 11: SOC arrives (22:50). Riot officers walk in from the south and form a shield line south of the burnt vehicles.
   // A long shield needs a walk, not a run. The real troops were larger; the number, the route and the line are estimated.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   const soc: string[] = [];
   for (let i = 0; i < 10; i++) {
     const id = `soc-${i + 1}`, x = -5.4 + i * 1.2, far: P2 = [x * 0.5, 105], end: P2 = [x, 22];
@@ -187,9 +306,17 @@ export function build(): FinishedReport {
     soc.push(id);
   }
   crowd.slice(0, 60).forEach((id, i) => b.cmd('set_pose', { id, t: 124 + (i % 8) * 0.4, pose: 'stand' }));
+  return soc;
+}
 
+// Chapters 12 to 14: the crowd disperses, the next morning and the Committee of Inquiry.
+function epilogue({ b, place, person, leg }: Kit, crowd: string[]): void {
   // ---------- chapter 12: the crowd disperses (23:30). Everybody runs west at the same time and speed, so nobody meets.
+  assert(typeof crowd === 'object');
+  assert(crowd.length < 1e7);
   crowd.forEach((id) => {
+    assert(typeof id === 'string');
+    assert(id.length < 1e7);
     const track: Track | undefined = b.scene.tracks.find((t) => t.object === id && t.channel === 'at');
     const here = track?.keys.at(-1)?.v;
     if (!Array.isArray(here)) throw new Error(`${id} has no position`);
@@ -201,6 +328,8 @@ export function build(): FinishedReport {
   // Each cleaner walks along its own line to the side of one wreck.
   const cleaners: [string, number, number][] = [['clean-1', 12, 17], ['clean-2', 15, 8.5], ['clean-3', 19, 3]];
   cleaners.forEach(([id, v, z], i) => {
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
     person(id, v, [-24, 0, z], { colors: { shirt: '#d98a3d', pants: '#3a3f47' }, yaw: 90 });
     leg(id, [[-24, z], [-3.8, z]], 142 + i * 0.7, 1.8, { pose: 'walk', end_pose: 'bend' });
   });
@@ -221,17 +350,33 @@ export function build(): FinishedReport {
   person('coi-witness', 16, [ROOM[0], 0, ROOM[2] + 1.8], { yaw: 180, pose: 'sit' });
   b.cmd('set_cutaway', { ceilings: true, nearWalls: true });
   b.cmd('set_lighting', { t: 156, look: 'indoor' });
+}
 
+// The camera shots and the chapters.
+function camerasAndChapters({ b }: Kit, crowd: string[], cops: string[], soc: string[]): void {
   // ---------- camera and chapters
   const VIEW0: Record<string, number | undefined> = { wide: 20, medium: 20, close: 15, top: 0, orbit: 0 };
-  const cam = (_start: number, end: number, segs: Seg[]) => segs.forEach((s, i) => {
+  const cam = (_start: number, end: number, segs: Seg[]) => { segs.forEach((s, i) => {
     const view = s.view ?? VIEW0[s.shot];
-    const args = (t: number, v: number | undefined) => ({ t, shot: s.shot, frame: s.frame, ...(v !== undefined ? { view: v } : {}), ...(s.opts || {}) });
+    const args = (t: number, v: number | undefined) => ({ t, shot: s.shot, frame: s.frame, ...(v !== undefined ? { view: v } : {}), ...(s.opts ?? {}) });
     b.cmd('set_camera', args(s.t, view));
     const hold = (segs[i + 1]?.t ?? end) - 1.0;
     if (hold > s.t + 0.05) b.cmd('set_camera', args(hold, view === undefined ? undefined : view + (s.shot === 'orbit' ? 45 : 6)));
-  });
+  }); };
   const chapter = (id: string, start: number, end: number, title: string, clock: string, caption: string, focus: Frame, shot: string, source: string, est: boolean, segs: Seg[]) => {
+    assert(typeof id === 'string');
+    assert(typeof start === 'number');
+    assert(typeof end === 'number');
+    assert(typeof title === 'string');
+    assert(typeof clock === 'string');
+    assert(typeof caption === 'string');
+    assert(typeof focus === 'object');
+    assert(typeof shot === 'string');
+    assert(typeof source === 'string');
+    assert(typeof est === 'boolean');
+    assert(typeof segs === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(start));
     cam(start, end, segs);
     b.cmd('add_chapter', { id, start, end, title, clock, caption, focus, shot, source, ...(est ? { estimated: true } : { measured: true }) });
   };
@@ -265,6 +410,20 @@ export function build(): FinishedReport {
     [{ t: 144, shot: 'wide', frame: ['pc1-after', 'pc2-after', 'amb-after', 'clean-1', 'clean-2', 'clean-3'], view: 350 }]);
   chapter('c14', 156, 168, 'Committee of Inquiry', '', 'A Committee of Inquiry was appointed on 13 December 2013. It reported on 27 June 2014. It ruled out racial and labour issues as causes. The hearing room here is approximate.', ['coi-sign'], 'medium', WIKI, false,
     [{ t: 156, shot: 'medium', frame: ['coi-sign', 'coi-1', 'coi-2', 'coi-3'], opts: { cut: true } }]);
+}
+
+export function build(): FinishedReport {
+  const b = new Builder({ title: 'Little India, 8 December 2013', author: 'Toybox eval', ground: 'street', look: 'dusk', size: [160, 160], color: '#8f9a8a' });
+  const k = makeKit(b);
+  street0(k);
+  chapters1to4(k);
+  const crowd = gather(k);
+  scdf(k, crowd);
+  const cops = police(k);
+  chapters9and10(k, crowd);
+  const soc = socArrives(k, crowd);
+  epilogue(k, crowd);
+  camerasAndChapters(k, crowd, cops, soc);
   return finish(b, 'riot');
 }
 

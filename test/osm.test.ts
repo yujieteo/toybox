@@ -14,8 +14,9 @@ interface Back { header: { license: string; credit: string }; osm: { buildings: 
 const sample = view<OverpassResult>(JSON.parse(readFileSync(new URL('./fixtures/overpass-sample.json', import.meta.url), 'utf8')));
 const origin = { lat: 1.3068, lon: 103.8512 };
 
+function tests1(): void {
 test('projection: x east, z south, in metres', () => {
-  const [x = NaN, z = NaN] = project(1.3068 + 0.001, 103.8512 + 0.001, origin);
+  const [x, z] = project(1.3068 + 0.001, 103.8512 + 0.001, origin);
   assert.ok(Math.abs(x - 111.2) < 1 && Math.abs(z + 111.2) < 1, `${x} ${z}`);
 });
 
@@ -35,13 +36,13 @@ test('parse recorded sample and build the map block', () => {
   assert.equal(b2.height, 9);
   const blk = toMapBlock(b, origin);
   assert.equal(blk.attribution, '© OpenStreetMap contributors');
-  assert.ok(blk.buildings.every((x) => !Reflect.get(x, 'll') && x.poly.every((p) => p.length === 2)));
+  assert.ok(blk.buildings.every((x) => !('ll' in x) && x.poly.every((p) => Object.keys(p).length === 2)));
   const s = newScene({}); s.map = { origin, osm: blk }; assert.deepEqual(validate(s), []);
 });
 
 test('fetchBuildings sends the Overpass query', async () => {
   let seen: { url: string; body: string } | undefined;
-  const fake: FetchLike = async (url, init) => { seen = { url, body: decodeURIComponent(init.body) }; return { ok: true, status: 200, json: async () => sample }; };
+  const fake: FetchLike = (url, init) => { seen = { url, body: decodeURIComponent(init.body) }; return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(sample) }); };
   const b = await fetchBuildings({ lat: 1.3068, lon: 103.8512, radius: 100, fetchImpl: fake });
   const sent = must(seen, 'the request');
   assert.equal(sent.url, OVERPASS_URL);
@@ -56,7 +57,10 @@ test('writeOdbl keeps the licence and the credit with the data', () => {
   assert.equal(back.header.license, 'ODbL 1.0'); assert.equal(back.header.credit, '© OpenStreetMap contributors');
   assert.equal(back.osm.buildings.length, 3); assert.equal(f.header.license, 'ODbL 1.0');
 });
+}
+tests1();
 
+function tests2(): void {
 test('OneMap tile addresses', () => {
   const t = tileXY(1.3068, 103.8512, 18);
   assert.ok(t.x > 200000 && t.x < 270000 && t.y > 100000 && t.y < 140000);
@@ -67,7 +71,7 @@ test('OneMap tile addresses', () => {
 
 test('live Overpass call (skipped when the network fails)', { timeout: 30000 }, async (tc: TestContext) => {
   let b;
-  try { b = await fetchBuildings({ lat: 1.3068, lon: 103.8512, radius: 80, fetchImpl: (u, i) => fetch(u, { ...i, signal: AbortSignal.timeout(8000) }) }); } catch { return tc.skip('network unavailable'); }
+  try { b = await fetchBuildings({ lat: 1.3068, lon: 103.8512, radius: 80, fetchImpl: (u, i) => fetch(u, { ...i, signal: AbortSignal.timeout(8000) }) }); } catch { tc.skip('network unavailable'); return; }
   assert.ok(Array.isArray(b));
 });
 
@@ -78,3 +82,5 @@ test('recorded real Overpass answer (OpenStreetMap data, ODbL 1.0)', () => {
   for (const x of b) { assert.ok(x.height > 0); assert.ok(x.poly.length >= 3); assert.ok(x.poly.every(([px, pz]) => Math.hypot(px, pz) < 300)); }
   const s = newScene({}); s.map = { origin, osm: toMapBlock(b, origin) }; assert.deepEqual(validate(s), []);
 });
+}
+tests2();

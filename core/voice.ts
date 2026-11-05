@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { plain } from '../web/vid.js';
+import { assert } from './assert.ts';
 
 export const VOICE = 'af_heart', RATE = 24000;
 const KEEP = 1200;   // samples of silence to keep at each end of a sentence (50 ms)
@@ -17,16 +18,22 @@ export const VOICE_HOME = path.join(os.homedir(), '.cache', 'toybox', 'voice');
 
 // The voice speaks the plain text: the ^{...} and _{...} markup is not spoken, so it is not part of
 // the id either. For a sentence without markup plain(text) is the same text: its file id does not change.
-export const voiceId = (text: unknown): string => createHash('sha1').update(`${VOICE} ${plain(String(text))}`).digest('hex').slice(0, 12);
+export const voiceId = (text: unknown): string => {
+  return createHash('sha1').update(`${VOICE} ${plain(String(text))}`).digest('hex').slice(0, 12);
+};
 export const voiceFile = (text: unknown): string => `voice/${voiceId(text)}.wav`;
 
 // The seconds of a voice file that exists in dir, or null.
 export function voiceSeconds(dir: string, text: unknown): number | null {
+  assert(typeof dir === 'string');
+  assert(dir.length < 1e7);
   const f = path.join(dir, voiceFile(text));
   if (!fs.existsSync(f)) return null;
   const head = Buffer.alloc(44), fd = fs.openSync(f, 'r');
   fs.readSync(fd, head, 0, 44, 0); fs.closeSync(fd);
-  return Math.round((head.readUInt32LE(40) / 2 / RATE) * 1000) / 1000;
+  const returned = Math.round((head.readUInt32LE(40) / 2 / RATE) * 1000) / 1000;
+  assert(typeof returned === 'number');
+  return returned;
 }
 
 function install(): void {   // npm ci in VOICE_HOME when the packages are missing or their lock file is not the project's
@@ -43,15 +50,20 @@ function install(): void {   // npm ci in VOICE_HOME when the packages are missi
 
 // The part of kokoro-js that this file uses.
 interface Tts { generate(text: string, opts: { voice: string }): Promise<{ audio: Float32Array }> }
+interface KokoroModule { KokoroTTS: { from_pretrained(model: string, opts: { dtype: string; device: string }): Promise<Tts> } }
 let tts: Tts | null = null;
 async function speak(text: unknown): Promise<Buffer> {   // 16-bit mono WAV bytes, without the long silence at each end
+  assert(typeof VOICE_HOME === 'string');
+  assert(typeof VOICE === 'string');
+  assert(typeof KEEP === 'number');
+  assert(VOICE_HOME.length < 1e7);
   if (!tts) {
     install();
-    const { KokoroTTS } = await import(pathToFileURL(path.join(VOICE_HOME, 'node_modules', 'kokoro-js', 'dist', 'kokoro.js')).href);
-    tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
+    const mod = await import(pathToFileURL(path.join(VOICE_HOME, 'node_modules', 'kokoro-js', 'dist', 'kokoro.js')).href) as KokoroModule; // allow-unsafe: the file is installed from voice/package-lock.json and has this shape
+    tts = await mod.KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
   }
   const engine = tts;
-  if (!engine) throw new Error('The voice model did not load.');
+  assert(typeof engine.generate === 'function');
   const a = (await engine.generate(plain(String(text)), { voice: VOICE })).audio, loud = (v: number): boolean => Math.abs(v) > 0.01;
   // Keep the spoken part with 50 ms of silence at each end. A silent result (no sample over the
   // threshold: punctuation only, or an empty render) keeps a short quiet clip, so the file is not
@@ -63,12 +75,24 @@ async function speak(text: unknown): Promise<Buffer> {   // 16-bit mono WAV byte
   wav.write('RIFF', 0); wav.writeUInt32LE(36 + 2 * pcm.length, 4); wav.write('WAVEfmt ', 8);
   wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(RATE, 24);
   wav.writeUInt32LE(2 * RATE, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(2 * pcm.length, 40);
-  pcm.forEach((v, i) => wav.writeInt16LE(Math.round(Math.max(-1, Math.min(1, v)) * 32767), 44 + 2 * i));
+  pcm.forEach((v, i) => {
+    assert(typeof v === 'number');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(v));
+    assert(!Number.isNaN(i));
+    const returned = wav.writeInt16LE(Math.round(Math.max(-1, Math.min(1, v)) * 32767), 44 + 2 * i);
+    assert(typeof returned === 'number');
+    return returned;
+  });
   return wav;
 }
 
 // Makes the voice file of each text that has none in dir. Returns the number of new files.
 export async function makeVoices(dir: string, texts: unknown[]): Promise<number> {
+  assert(typeof dir === 'string');
+  assert(typeof texts === 'object');
+  assert(dir.length < 1e7);
+  assert(texts.length < 1e7);
   let made = 0;
   fs.mkdirSync(path.join(dir, 'voice'), { recursive: true });
   for (const text of new Set(texts)) {

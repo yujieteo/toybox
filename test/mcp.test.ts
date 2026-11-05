@@ -53,6 +53,7 @@ function start(args: string[]): Client {
   };
 }
 
+function tests1(): void {
 test('MCP server over stdio: handshake, tools, saving, errors', async () => {
   const scene = join(mkdtempSync(join(tmpdir(), 'tbmcp-')), 's.toybox.json');
   const c = start(['--scene', scene]);
@@ -84,8 +85,8 @@ test('MCP server over stdio: handshake, tools, saving, errors', async () => {
 
 test('render_preview posts t to the render url and returns the image path', async () => {
   let got: unknown = null;
-  const srv = createServer((req, res) => { let b = ''; req.on('data', (d: Buffer) => (b += d)); req.on('end', () => { got = JSON.parse(b); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ path: '/tmp/frame-3.png' })); }); });
-  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+  const srv = createServer((req, res) => { let b = ''; req.on('data', (d: Buffer) => (b += d.toString())); req.on('end', () => { got = JSON.parse(b); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ path: '/tmp/frame-3.png' })); }); });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => { r(); }));
   const scene = join(mkdtempSync(join(tmpdir(), 'tbmcp-')), 's.toybox.json');
   const c = start(['--scene', scene, '--render-url', `http://127.0.0.1:${port(srv)}/render`]);
   await c.call('initialize', {});
@@ -94,14 +95,17 @@ test('render_preview posts t to the render url and returns the image path', asyn
   assert.equal(r.content.length, 1, 'a picture that cannot be read gives the text block only');
   await c.stop(); srv.close();
 });
+}
+tests1();
 
+function tests2(): void {
 test('render_preview gives the picture to the agent as an MCP image block', async () => {
   // A 1x1 PNG: the daemon writes the real frame; this only proves the bytes reach the client.
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const dir = mkdtempSync(join(tmpdir(), 'tbmcp-')), pngPath = join(dir, 'preview-1.png');
   writeFileSync(pngPath, png);
   const srv = createServer((req, res) => { req.resume(); req.on('end', () => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ path: pngPath })); }); });
-  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => { r(); }));
   const c = start(['--scene', join(dir, 's.toybox.json'), '--render-url', `http://127.0.0.1:${port(srv)}/render`]);
   await c.call('initialize', {});
   const r = await c.tool<{ path: string }>('render_preview', { t: 3 });
@@ -124,3 +128,5 @@ test('CLI runs a tool, a guide and validate', () => {
   r = run('guide', 'camera'); assert.match(r.stdout, /CAMERA/);
   r = run('guide', 'zzz'); assert.equal(r.status, 1);
 });
+}
+tests2();

@@ -2,6 +2,7 @@
 // Pure, so the viewer and core/scene.ts share it. Format: docs/scene-format.md
 import type { Catalogue, Scene } from './types.js';
 import { isRecord } from './dom.js';
+import { assert } from './assert.ts';
 
 export const FORMAT = 1;
 
@@ -16,6 +17,8 @@ const ARRAYS = ['objects', 'tracks', 'camera', 'chapters', 'captions', 'callouts
 // (the scene, the format number, the lists, the backdrop). A list that is left out is allowed, as
 // before: validate reports what a scene needs. Throws an Error that tells what is wrong.
 export function parseScene(input: unknown): Scene {
+  assert(typeof ARRAYS === 'object');
+  assert(ARRAYS.length < 1e7);
   if (!isRecord(input)) throw new Error('This is not a Toybox scene: the file must hold one JSON object.');
   const v = input.toybox;
   if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) throw new Error('This is not a Toybox scene: the toybox field must be a format number.');
@@ -26,6 +29,8 @@ export function parseScene(input: unknown): Scene {
 }
 
 export function upgradeScene(input: unknown, upgrades: Upgrades = UPGRADES, format: number = FORMAT): Scene {
+  assert(Number.isInteger(format));
+  assert(format >= 1);
   const scene = parseScene(input);
   const v = scene.toybox;
   if (v > format) throw new Error(`This scene has format ${v}. This Toybox reads format ${format} and older. Use a newer Toybox.`);

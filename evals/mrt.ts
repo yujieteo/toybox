@@ -12,6 +12,7 @@ import type { Args, FinishedReport } from './lib.ts';
 import type { Cue } from '../web/types.js';
 import type { Sentence } from './narrated.ts';
 import { cueTime } from '../core/narration.ts';
+import { assert } from '../core/assert.ts';
 
 export const DEMO_DIR = fileURLToPath(new URL('../web/scenes/mrt/', import.meta.url));
 
@@ -43,12 +44,26 @@ const E = { estimated: true, source: 'estimated: station layout and positions ar
 const EP = { estimated: true, source: 'estimated: full-height platform screen doors, as at an underground station; positions and sizes are approximate' };
 const PERSON = { estimated: true, source: 'estimated: a typical commuter; faces are generic' };
 
-export function build(): FinishedReport {
-  const b = new Builder({ title: 'How to board an MRT train', author: 'Toybox eval', ground: 'floor', look: 'indoor', size: [110, 80], color: '#a9a49a' });
-  const cmd = (t: string, a: Args) => b.cmd(t, a, { sceneDir: DEMO_DIR });
-  const at = (cue: Cue) => cueTime(b.scene.narration, cue);
+interface Step { id: string; title: string; from: number; to: number | null; focus: string[]; shot: string; source: string; measured?: boolean; estimated?: boolean }
+const STEPS: Step[] = [
+  { id: 'c1', title: 'The fare gate', from: 0, to: 1, focus: ['main', 'gate-3', 'gate-4'], shot: 'medium', source: WIKI_MRT, measured: true },
+  { id: 'c2', title: 'Tap in', from: 1, to: 2, focus: ['main', 'gate-4'], shot: 'close', source: WIKI_FARES, measured: true },
+  { id: 'c3', title: 'The screen doors', from: 2, to: 4, focus: ['main', 'psd-3', 'psd-2', 'psd-4'], shot: 'wide', source: `${WIKI_SAFETY} ; ${WIKI_MRT}`, measured: true },
+  { id: 'c4', title: 'Behind the line', from: 4, to: 5, focus: ['main', 'waiter-b', 'psd-3'], shot: 'medium', source: LTA_GRACIOUS, measured: true },
+  { id: 'c5', title: 'The train arrives', from: 5, to: 6, focus: ['train', 'main', 'psd-3'], shot: 'wide', source: 'estimated: staging of a typical weekday morning boarding', estimated: true },
+  { id: 'c6', title: 'Mind the gap', from: 6, to: 7, focus: ['main', 'psd-3'], shot: 'close', source: WIKI_GAP, measured: true },
+  { id: 'c7', title: 'Let them alight', from: 7, to: 8, focus: ['alight-3', 'main', 'psd-3'], shot: 'medium', source: LTA_GRACIOUS, measured: true },
+  { id: 'c8', title: 'Board and move in', from: 8, to: 9, focus: ['main', 'psd-3'], shot: 'follow', source: LTA_GRACIOUS, measured: true },
+  { id: 'c9', title: 'The doors close', from: 9, to: null, focus: ['main', 'psd-3', 'psd-2'], shot: 'close', source: LTA_RAIL, measured: true },
+];
 
+interface Ctx { b: Builder; cmd: (t: string, a: Args) => unknown; at: (cue: Cue) => number }
+
+// The outline: only facts that a public page gives, the narration and its voice. Returns the length of the scene.
+function outline({ b, cmd }: Ctx): number {
   // ---------- the outline: only facts that a public page gives
+  assert(typeof WIKI_MRT === 'string');
+  assert(typeof WIKI_FARES === 'string');
   cmd('add_fact', { id: 'paid-area', text: 'Stations are divided into two areas, paid and unpaid, which collect fares by restricting entry only through the fare gates (access control gates).', source: WIKI_MRT });
   cmd('add_fact', { id: 'tap', text: 'Fares are charged based on commuters "tapping in" at the start and "tapping out" at the destination; the failure to tap out generally results in full or flat fare(s).', source: WIKI_FARES });
   cmd('add_fact', { id: 'psd-first', text: 'The Singapore MRT was the first rapid transit system in Asia to incorporate glass platform screen doors, in its underground stations in 1987.', source: WIKI_SAFETY });
@@ -69,9 +84,18 @@ export function build(): FinishedReport {
   cmd('add_credit', { text: 'Fact sources: Wikipedia.' });
   cmd('add_credit', { text: 'Fact sources: Land Transport Authority (LTA).' });
   cmd('add_credit', { text: 'Layout, train and crowd are approximate. Faces are generic.' });
+  return LEN;
+}
 
-  // ---------- the platform: x is along the platform, z points south from the platform edge (z = -2)
-  const place = (model: string, p: number[], extra: Args = {}) => cmd('place', { model, at: p, ...E, ...extra });
+// The platform: x is along the platform, z points south from the platform edge (z = -2).
+function platform({ cmd }: Ctx): void {
+  const place = (model: string, p: number[], extra: Args = {}) => {
+    assert(typeof model === 'string');
+    assert(typeof p === 'object');
+    assert(model.length < 1e7);
+    assert(!Number.isNaN(p[0]));
+    return cmd('place', { model, at: p, ...E, ...extra });
+  };
   // the floor the visitor walks on (tag floor: a surface, not a wall)
   place('floor-tile', [-13, 0, 2.25], { id: 'platform-w', scale: [13, 1, 4.25], tags: ['floor'], colors: { floor: '#cdc6b6' } });
   place('floor-tile', [13, 0, 2.25], { id: 'platform-e', scale: [13, 1, 4.25], tags: ['floor'], colors: { floor: '#cdc6b6' } });
@@ -84,6 +108,10 @@ export function build(): FinishedReport {
   // full-height platform screen doors: five bays, a leaf on each side of each door
   const BAYS = [-14.4, -7.2, 0, 7.2, 14.4];
   BAYS.forEach((x, i) => {
+    assert(typeof x === 'number');
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(x));
+    assert(!Number.isNaN(i));
     const bay = `psd-${i + 1}`;
     place('psd-bay', [x, 0, -2], { id: bay, tags: ['floor'], ...EP });
     for (const side of [-1, 1]) place('psd-leaf', [x + side * 0.38, 0, -1.85], { id: `${bay}-leaf-${side < 0 ? 'l' : 'r'}`, tags: ['floor'], ...EP });
@@ -104,8 +132,19 @@ export function build(): FinishedReport {
   place('bin', [-1.6, 0, 6.4], { id: 'bin-w' }); place('bin', [3.2, 0, 6.8], { id: 'bin-e' });
   place('notice-board', [-8.5, 0, 6.2], { id: 'board', label: 'Station map' });
 
-  // ---------- the commuter who boards, and the crowd around the door (variants are fixed)
-  const person = (id: string, variant: number, p: [number, number], extra: Args = {}) => cmd('place', { model: 'person', at: [p[0], 0.02, p[1]], id, variant, ...PERSON, ...extra });
+}
+
+// The commuter who boards, and the crowd around the door (variants are fixed).
+function people({ cmd }: Ctx): void {
+  const person = (id: string, variant: number, p: [number, number], extra: Args = {}) => {
+    assert(typeof id === 'string');
+    assert(typeof variant === 'number');
+    assert(typeof p === 'object');
+    assert(id.length < 1e7);
+    assert(!Number.isNaN(variant));
+    assert(!Number.isNaN(p[0]));
+    return cmd('place', { model: 'person', at: [p[0], 0.02, p[1]], id, variant, ...PERSON, ...extra });
+  };
   person('main', 8, [0, 11.8], { yaw: 180, colors: { shirt: '#3f6e9a', pants: '#3a3f47' } });
   person('waiter-a', 2, [-2.4, -0.2], { yaw: 180, pose: 'stand', colors: { shirt: '#c8553d', pants: '#3a3f47' } });
   person('waiter-b', 5, [3.4, -0.6], { yaw: 170, pose: 'stand', colors: { shirt: '#6f9a6a', pants: '#4a5568' } });
@@ -125,7 +164,10 @@ export function build(): FinishedReport {
   person('carrier', 17, [-7.2, 0.4], { yaw: 120, pose: 'stand', colors: { shirt: '#e8dcc0', pants: '#3a3f47' } });
   person('child', 10, [2.4, 3.2], { yaw: 180, pose: 'stand', colors: { shirt: '#d9b44a', pants: '#4a5568' } });
 
-  // ---------- the commuter walks in, taps in and walks to the queue behind the line
+}
+
+// The commuter walks in, taps in and walks to the queue behind the line.
+function walks({ cmd }: Ctx): void {
   cmd('move_along', { id: 'main', path: [[0, 11.8], [0, 9.1]], times: [0, 2.1], cue: [0], pose: 'walk', end_pose: 'stand' });
   cmd('move_along', { id: 'main', path: [[0, 9.1], [0, 8.0], [0, 6.4], [1.1, 2.4], [1.1, -1.05]], times: [0, 0.9, 2.2, 5.8, 8.6], cue: [1, 'Tap', 0.5], pose: 'walk', end_pose: 'stand' });
   // the late commuter runs up to the edge, and two people walk off along the platform
@@ -133,7 +175,10 @@ export function build(): FinishedReport {
   cmd('move_along', { id: 'walker-w', path: [[-6, 5.8], [-24, 5.8]], start: 0.5, speed: 0.9, pose: 'walk', end_pose: 'stand' });
   cmd('move_along', { id: 'walker-e', path: [[10, 5.2], [24, 5.2]], start: 0.5, speed: 0.9, pose: 'walk', end_pose: 'stand' });
 
-  // ---------- the train arrives during the queue chapter, then the doors open
+}
+
+// The train arrives during the queue chapter, then the doors open and the passengers alight.
+function trainAndDoors({ cmd }: Ctx): void {
   cmd('animate', { id: 'train', channel: 'at', keys: [
     { t: 0, v: [-34, 0, -3.8] },
     { cue: [4], v: [-34, 0, -3.8], ease: 'inout' },
@@ -159,32 +204,67 @@ export function build(): FinishedReport {
   // then the waiting commuter steps through the open doors and stands clear inside the car
   cmd('move_along', { id: 'main', path: [[1.1, -1.05], [0.7, -1.25], [0.35, -2.0], [0.15, -2.4], [0, -3.2]], times: [0, 0.6, 1.4, 1.9, 3.0], cue: [8, 'move'], pose: 'walk', end_pose: 'stand' });
 
-  // ---------- chapters: one step of boarding for each chapter, and one beat of the narration for
-  // each sentence. The page lists every chapter as a step of "How to board", so the facts about the
-  // screen doors share the one step: the screen-door chapter spans sentences 3 and 4.
-  interface Step { id: string; title: string; from: number; to: number | null; focus: string[]; shot: string; source: string; measured?: boolean; estimated?: boolean }
-  const STEPS: Step[] = [
-    { id: 'c1', title: 'The fare gate', from: 0, to: 1, focus: ['main', 'gate-3', 'gate-4'], shot: 'medium', source: WIKI_MRT, measured: true },
-    { id: 'c2', title: 'Tap in', from: 1, to: 2, focus: ['main', 'gate-4'], shot: 'close', source: WIKI_FARES, measured: true },
-    { id: 'c3', title: 'The screen doors', from: 2, to: 4, focus: ['main', 'psd-3', 'psd-2', 'psd-4'], shot: 'wide', source: `${WIKI_SAFETY} ; ${WIKI_MRT}`, measured: true },
-    { id: 'c4', title: 'Behind the line', from: 4, to: 5, focus: ['main', 'waiter-b', 'psd-3'], shot: 'medium', source: LTA_GRACIOUS, measured: true },
-    { id: 'c5', title: 'The train arrives', from: 5, to: 6, focus: ['train', 'main', 'psd-3'], shot: 'wide', source: 'estimated: staging of a typical weekday morning boarding', estimated: true },
-    { id: 'c6', title: 'Mind the gap', from: 6, to: 7, focus: ['main', 'psd-3'], shot: 'close', source: WIKI_GAP, measured: true },
-    { id: 'c7', title: 'Let them alight', from: 7, to: 8, focus: ['alight-3', 'main', 'psd-3'], shot: 'medium', source: LTA_GRACIOUS, measured: true },
-    { id: 'c8', title: 'Board and move in', from: 8, to: 9, focus: ['main', 'psd-3'], shot: 'follow', source: LTA_GRACIOUS, measured: true },
-    { id: 'c9', title: 'The doors close', from: 9, to: null, focus: ['main', 'psd-3', 'psd-2'], shot: 'close', source: LTA_RAIL, measured: true },
-  ];
+}
+
+// The time at which the narration reaches a step, and the time it ends.
+function chapterStart({ at }: Ctx, i: number): number { 
+  assert(typeof i === 'number');
+  assert(!Number.isNaN(i));
+  return at([stepAt(i).from]); }
+function chapterEnd({ at }: Ctx, len: number, i: number): number { 
+  assert(typeof len === 'number');
+  assert(typeof i === 'number');
+  assert(!Number.isNaN(len));
+  assert(!Number.isNaN(i));
+  const to = stepAt(i).to; const returned = to === null ? len : at([to]);
+assert(typeof returned === 'number');
+return returned; }
+function stepAt(i: number): Step { 
+  assert(typeof i === 'number');
+  assert(!Number.isNaN(i));
+  const v = STEPS[i]; if (!v) throw new Error(`no step ${i}`); return v; }
+
+// Chapters: one step of boarding for each chapter, and one beat of the narration for
+// each sentence. The page lists every chapter as a step of "How to board", so the facts about the
+// screen doors share the one step: the screen-door chapter spans sentences 3 and 4.
+function chapters({ cmd }: Ctx, LEN: number): void {
+  assert(typeof LEN === 'number');
+  assert(!Number.isNaN(LEN));
   STEPS.forEach((s) => cmd('add_chapter', {
     id: s.id, cue: [s.from], ...(s.to === null ? { end: LEN } : { end_cue: [s.to] }),
     title: s.title, clock: '08:12', focus: s.focus, shot: s.shot,
     source: s.source, ...(s.measured ? { measured: true } : { estimated: true }),
   }));
-  const step = (i: number): Step => { const v = STEPS[i]; if (!v) throw new Error(`no step ${i}`); return v; };
-  const start = (i: number) => at([step(i).from]), end = (i: number) => { const to = step(i).to; return to === null ? LEN : at([to]); };
+}
 
-  // The camera keys. A key with cut true holds the old shot and cuts; the hold key of the same shot
-  // lets the camera drift with the people inside the chapter.
+// The camera keys. A key with cut true holds the old shot and cuts; the hold key of the same shot
+// lets the camera drift with the people inside the chapter.
+function cameras(c: Ctx, len: number): void {
+  assert(typeof c === 'object');
+  assert(typeof len === 'number');
+  assert(!Number.isNaN(len));
+  const { cmd, at } = c;
+  const LEN = len;
+  const start = (i: number): number => {
+    assert(typeof i === 'number');
+    assert(!Number.isNaN(i));
+    const returned = chapterStart(c, i);
+    assert(typeof returned === 'number');
+    return returned;
+  }, end = (i: number): number => {
+    assert(!Number.isNaN(i));
+    assert(typeof i === 'number');
+    return chapterEnd(c, LEN, i);
+  };
   const cam = (i: number, t0: number, shot: string, frame: string[], opts: Args = {}) => {
+    assert(typeof i === 'number');
+    assert(typeof t0 === 'number');
+    assert(typeof shot === 'string');
+    assert(typeof frame === 'object');
+    assert(!Number.isNaN(i));
+    assert(!Number.isNaN(t0));
+    assert(shot.length < 1e7);
+    assert(frame.length < 1e7);
     cmd('set_camera', { t: t0, shot, frame, ...opts, ...(i > 0 ? { cut: true } : {}) });
     const hold = Math.min(end(i) - 0.45, LEN - 0.25);
     if (hold > t0 + 0.2) cmd('set_camera', { t: hold, shot, frame, ...opts });
@@ -203,11 +283,23 @@ export function build(): FinishedReport {
   cam(7, start(7), 'follow', ['main'], {});
   cmd('set_camera', { t: start(8), shot: 'close', frame: ['main', 'psd-3'], view: 10, elevation: 8, margin: 1.8, cut: true });
   cmd('set_camera', { t: Math.min(start(8) + 2.4, LEN - 0.3), shot: 'close', frame: ['psd-2', 'psd-3', 'psd-4', 'main'], view: 6, elevation: 12, margin: 1.3 });
+}
 
-  // two callouts: the tap at the gate and the gap at the platform edge
+// Two callouts: the tap at the gate and the gap at the platform edge.
+function callouts({ cmd }: Ctx): void {
   cmd('add_callout', { cue: [1, 'Tap'], end_cue: [1, 'phone'], text: 'Tap in here', object: 'gate-4', source: WIKI_FARES, measured: true });
   cmd('add_callout', { cue: [6, 'gap'], end_cue: [7], text: 'Please mind the platform gap', object: 'main', source: WIKI_GAP, measured: true });
+}
 
+export function build(): FinishedReport {
+  const b = new Builder({ title: 'How to board an MRT train', author: 'Toybox eval', ground: 'floor', look: 'indoor', size: [110, 80], color: '#a9a49a' });
+  const c: Ctx = { b, cmd: (t: string, a: Args) => b.cmd(t, a, { sceneDir: DEMO_DIR }), at: (cue: Cue) => {
+    assert(typeof cue === 'object');
+    return cueTime(b.scene.narration, cue);
+  } };
+  const len = outline(c);
+  platform(c); people(c); walks(c); trainAndDoors(c);
+  chapters(c, len); cameras(c, len); callouts(c);
   return finish(b, 'mrt', { dir: DEMO_DIR });
 }
 

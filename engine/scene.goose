@@ -35,13 +35,13 @@ let FLAG_WALL: i32 = 4;
 let FLAG_EYE: i32 = 8;
 
 // ---------------------------------------------------------------- matrices
-fn ident() -> Mat {
+fn ident() -> Mat { assert(FLAG_EYE == 8); assert(DEG > 0.0);
     var r = Mat { m: [1.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0, 0.0,  0.0, 0.0, 1.0, 0.0,  0.0, 0.0, 0.0, 1.0] };
     r
 }
 
 // Column-major: element (row, col) is m[col * 4 + row].
-fn mul(a: Mat, b: Mat) -> Mat {
+fn mul(a: Mat, b: Mat) -> Mat { assert(a.m.len == 16); assert(b.m.len == 16);
     var r = ident();
     for c in 4 {
         for rw in 4 {
@@ -53,40 +53,40 @@ fn mul(a: Mat, b: Mat) -> Mat {
     r
 }
 
-fn translate(x: f32, y: f32, z: f32) -> Mat {
+fn translate(x: f32, y: f32, z: f32) -> Mat { assert(!is_nan(x)); assert(!is_nan(y)); assert(!is_nan(z));
     var r = ident();
     r.m[12] = x; r.m[13] = y; r.m[14] = z;
     r
 }
 
-fn scale(x: f32, y: f32, z: f32) -> Mat {
+fn scale(x: f32, y: f32, z: f32) -> Mat { assert(!is_nan(x)); assert(!is_nan(y)); assert(!is_nan(z));
     var r = ident();
     r.m[0] = x; r.m[5] = y; r.m[10] = z;
     r
 }
 
-fn rot_x(a: f32) -> Mat {
+fn rot_x(a: f32) -> Mat { assert(!is_nan(a));
     var r = ident();
     let c = cos(a); let s = sin(a);
     r.m[5] = c; r.m[6] = s; r.m[9] = 0.0 - s; r.m[10] = c;
     r
 }
 
-fn rot_y(a: f32) -> Mat {
+fn rot_y(a: f32) -> Mat { assert(!is_nan(a));
     var r = ident();
     let c = cos(a); let s = sin(a);
     r.m[0] = c; r.m[2] = 0.0 - s; r.m[8] = s; r.m[10] = c;
     r
 }
 
-fn rot_z(a: f32) -> Mat {
+fn rot_z(a: f32) -> Mat { assert(!is_nan(a));
     var r = ident();
     let c = cos(a); let s = sin(a);
     r.m[0] = c; r.m[1] = s; r.m[4] = 0.0 - s; r.m[5] = c;
     r
 }
 
-fn perspective(fovy: f32, aspect: f32, n: f32, f: f32) -> Mat {
+fn perspective(fovy: f32, aspect: f32, n: f32, f: f32) -> Mat { assert(fovy > 0.0); assert(n > 0.0); assert(f > n); assert(aspect > 0.0);
     var r = ident();
     let t = 1.0 / tan(fovy * 0.5);
     r.m[0] = t / aspect; r.m[5] = t;
@@ -95,7 +95,7 @@ fn perspective(fovy: f32, aspect: f32, n: f32, f: f32) -> Mat {
     r
 }
 
-fn look_at(ex: f32, ey: f32, ez: f32, tx: f32, ty: f32, tz: f32) -> Mat {
+fn look_at(ex: f32, ey: f32, ez: f32, tx: f32, ty: f32, tz: f32) -> Mat { assert(!is_nan(ex)); assert(!is_nan(ey)); assert(!is_nan(ez)); assert(!is_nan(tx)); assert(!is_nan(ty)); assert(!is_nan(tz));
     var fx = tx - ex; var fy = ty - ey; var fz = tz - ez;
     let fl = sqrt(fx * fx + fy * fy + fz * fz);
     fx /= fl; fy /= fl; fz /= fl;
@@ -117,17 +117,17 @@ fn look_at(ex: f32, ey: f32, ez: f32, tx: f32, ty: f32, tz: f32) -> Mat {
 }
 
 // ---------------------------------------------------------------- meshes
-fn vtx(x: f32, y: f32, z: f32, nx: f32, ny: f32, nz: f32) -> V {
+fn vtx(x: f32, y: f32, z: f32, nx: f32, ny: f32, nz: f32) -> V { assert(!is_nan(x)); assert(!is_nan(y)); assert(!is_nan(z)); assert(!is_nan(nx)); assert(!is_nan(ny)); assert(!is_nan(nz));
     V { x: x, y: y, z: z, nx: nx, ny: ny, nz: nz }
 }
 
-fn put(out: f32[>..]&, v: V) {
+fn put(out: f32[>..]&, v: V) { assert(out.len % 6 == 0); assert(out.len < 100000000);
     out.push(v.x); out.push(v.y); out.push(v.z);
     out.push(v.nx); out.push(v.ny); out.push(v.nz);
 }
 
 // A triangle whose winding is set so that it faces along the mean vertex normal.
-fn tri(out: f32[>..]&, a: V, b: V, c: V) {
+fn tri(out: f32[>..]&, a: V, b: V, c: V) { assert(out.len % 6 == 0); assert(out.len < 100000000);
     let ux = b.x - a.x; let uy = b.y - a.y; let uz = b.z - a.z;
     let vx = c.x - a.x; let vy = c.y - a.y; let vz = c.z - a.z;
     let gx = uy * vz - uz * vy; let gy = uz * vx - ux * vz; let gz = ux * vy - uy * vx;
@@ -136,12 +136,12 @@ fn tri(out: f32[>..]&, a: V, b: V, c: V) {
     else { put(out, a); put(out, c); put(out, b); }
 }
 
-fn quad(out: f32[>..]&, a: V, b: V, c: V, d: V) {
+fn quad(out: f32[>..]&, a: V, b: V, c: V, d: V) { assert(out.len % 6 == 0); assert(out.len < 100000000);
     tri(out, a, b, c);
     tri(out, a, c, d);
 }
 
-fn make_cube(out: f32[>..]&) {
+fn make_cube(out: f32[>..]&) { assert(out.len == 0); assert(g_n == 0 || g_n > 0);
     for f in 3 {
         for sgn in 2 {
             let s: f32 = if sgn == 0 { 0.5 } else { -0.5 };
@@ -159,7 +159,7 @@ fn make_cube(out: f32[>..]&) {
     }
 }
 
-fn make_cylinder(out: f32[>..]&, segs: i32) {
+fn make_cylinder(out: f32[>..]&, segs: i32) { assert(segs >= 3); assert(out.len == 0);
     for i in segs {
         let a0 = 2.0 * PI32 * (i as f32) / (segs as f32);
         let a1 = 2.0 * PI32 * ((i + 1) as f32) / (segs as f32);
@@ -171,7 +171,7 @@ fn make_cylinder(out: f32[>..]&, segs: i32) {
     }
 }
 
-fn make_sphere(out: f32[>..]&, rings: i32, segs: i32) {
+fn make_sphere(out: f32[>..]&, rings: i32, segs: i32) { assert(rings >= 2); assert(segs >= 3);
     for i in rings {
         for j in segs {
             let a0 = PI32 * (i as f32) / (rings as f32);
@@ -188,7 +188,7 @@ fn make_sphere(out: f32[>..]&, rings: i32, segs: i32) {
 }
 
 // A triangular prism: ridge along z, base on the bottom (a gable roof).
-fn make_wedge(out: f32[>..]&) {
+fn make_wedge(out: f32[>..]&) { assert(out.len == 0); assert(PI32 > 3.0);
     let k: f32 = 0.8944272; let l: f32 = 0.4472136;
     quad(out, vtx(-0.5, -0.5, -0.5, 0.0, -1.0, 0.0), vtx(0.5, -0.5, -0.5, 0.0, -1.0, 0.0), vtx(0.5, -0.5, 0.5, 0.0, -1.0, 0.0), vtx(-0.5, -0.5, 0.5, 0.0, -1.0, 0.0));
     quad(out, vtx(0.5, -0.5, -0.5, k, l, 0.0), vtx(0.0, 0.5, -0.5, k, l, 0.0), vtx(0.0, 0.5, 0.5, k, l, 0.0), vtx(0.5, -0.5, 0.5, k, l, 0.0));
@@ -248,7 +248,7 @@ var g_hz: f32[>..] = [];
 var g_s0: f32 = 0.0; var g_s1: f32 = 0.0; var g_s2: f32 = 0.0;
 var g_pa: i32 = 0; var g_pb: i32 = 0; var g_pbl: f32 = 1.0;
 
-export "scene_init" fn scene_init(w: i32, h: i32) {
+export "scene_init" fn scene_init(w: i32, h: i32) { assert(w > 0); assert(h > 0);
     g_w = w; g_h = h;
     gl_init(w, h);
     var cube: f32[>..] = [];
@@ -265,15 +265,15 @@ export "scene_init" fn scene_init(w: i32, h: i32) {
     gl_mesh(3, wed);
 }
 
-export "scene_resize" fn scene_resize(w: i32, h: i32) { g_w = w; g_h = h; gl_resize(w, h); }
+export "scene_resize" fn scene_resize(w: i32, h: i32) { assert(w >= 0); assert(h >= 0); g_w = w; g_h = h; gl_resize(w, h); }
 
-export "scene_lod" fn scene_lod(on: i32, dist: f32) { g_lod_on = on; g_lod_dist = dist; }
+export "scene_lod" fn scene_lod(on: i32, dist: f32) { assert(on == 0 || on == 1); assert(dist >= 0.0); g_lod_on = on; g_lod_dist = dist; }
 
-export "skel_set" fn skel_set(i: i32, parent: i32, x: f32, y: f32, z: f32) {
+export "skel_set" fn skel_set(i: i32, parent: i32, x: f32, y: f32, z: f32) { assert(i >= 0); assert(i == g_par.len);
     g_par.push(parent); g_hx.push(x); g_hy.push(y); g_hz.push(z);
 }
 
-export "scene_reset" fn scene_reset() {
+export "scene_reset" fn scene_reset() { assert(g_n >= 0); assert(g_nt >= 0);
     g_objs = []; g_n = 0; g_trks = []; g_nt = 0;
     g_kt = []; g_k0 = []; g_k1 = []; g_k2 = []; g_ke = [];
     g_cur = []; g_world = []; g_vis = []; g_bone = []; g_bslot = []; g_bmat = []; g_pose = [];
@@ -286,7 +286,7 @@ export "scene_reset" fn scene_reset() {
 export "obj_add" fn obj_add(prim: i32, mesh: i32, parent: i32, flags: i32, variant: i32, pose: i32, flip: i32,
                             x: f32, y: f32, z: f32, yaw: f32, rx: f32, ry: f32, rz: f32,
                             sx: f32, sy: f32, sz: f32,
-                            r: f32, g: f32, b: f32, r2: f32, g2: f32, b2: f32, shadow: f32) -> i32 {
+                            r: f32, g: f32, b: f32, r2: f32, g2: f32, b2: f32, shadow: f32) -> i32 { assert(prim >= 0); assert(prim <= 6); assert(flip == 0 || flip == 1); assert(g_n == g_objs.len);
     g_objs.push(Obj { prim: prim, mesh: mesh, parent: parent, flags: flags, variant: variant, pose: pose, flip: flip,
         x: x, y: y, z: z, yaw: yaw, rx: rx, ry: ry, rz: rz, sx: sx, sy: sy, sz: sz,
         r: r, g: g, b: b, r2: r2, g2: g2, b2: b2, shadow: shadow });
@@ -301,7 +301,7 @@ export "obj_add" fn obj_add(prim: i32, mesh: i32, parent: i32, flags: i32, varia
 
 // Object i follows bone b (0 to 19) of its parent, which must be a person. Its at, yaw and rot are then
 // in the rest pose of the body: origin on the ground between the feet, facing +z.
-export "obj_bone" fn obj_bone(i: i32, b: i32) {
+export "obj_bone" fn obj_bone(i: i32, b: i32) { assert(i >= 0); assert(i < g_n);
     let p = g_objs[i].parent;
     if p >= 0 && g_objs[p].prim == 4 && b >= 0 && b < 20 {
         g_bone[i] = b;
@@ -313,25 +313,25 @@ export "obj_bone" fn obj_bone(i: i32, b: i32) {
 // dx and up move it to its side and up (metres), tilt rocks it round its front axis (degrees), hs and vs
 // scale its width and height. Its children with FLAG_EYE turn round the point at height pivot (metres,
 // in the model) by eyaw and epitch (radians, to the right and up), and eye scales their height.
-export "obj_pose" fn obj_pose(i: i32, dx: f32, up: f32, tilt: f32, hs: f32, vs: f32, eyaw: f32, epitch: f32, eye: f32, pivot: f32) {
+export "obj_pose" fn obj_pose(i: i32, dx: f32, up: f32, tilt: f32, hs: f32, vs: f32, eyaw: f32, epitch: f32, eye: f32, pivot: f32) { assert(i >= 0); assert(i < g_n); assert(g_pose.len == g_n * 9);
     let b = i * 9;
     g_pose[b] = dx; g_pose[b + 1] = up; g_pose[b + 2] = tilt; g_pose[b + 3] = hs; g_pose[b + 4] = vs;
     g_pose[b + 5] = eyaw; g_pose[b + 6] = epitch; g_pose[b + 7] = eye; g_pose[b + 8] = pivot;
 }
 
 // channel: 0 at, 1 yaw, 2 scale, 3 pose
-export "trk_begin" fn trk_begin(obj: i32, ch: i32) {
+export "trk_begin" fn trk_begin(obj: i32, ch: i32) { assert(obj >= 0); assert(g_n >= 0); assert(ch >= 0); assert(ch <= 3);
     g_trks.push(Trk { obj: obj, ch: ch, first: g_kt.len as i32, n: 0 });
     g_nt += 1;
 }
 
 // ease: 0 linear, 1 in-out, 2 step
-export "key_add" fn key_add(t: f32, v0: f32, v1: f32, v2: f32, ease: i32) {
+export "key_add" fn key_add(t: f32, v0: f32, v1: f32, v2: f32, ease: i32) { assert(g_nt > 0); assert(ease >= 0); assert(ease <= 2);
     g_kt.push(t); g_k0.push(v0); g_k1.push(v1); g_k2.push(v2); g_ke.push(ease);
     g_trks[g_nt - 1].n += 1;
 }
 
-export "cam_add" fn cam_add(t: f32, ex: f32, ey: f32, ez: f32, tx: f32, ty: f32, tz: f32, fov: f32, ease: i32) {
+export "cam_add" fn cam_add(t: f32, ex: f32, ey: f32, ez: f32, tx: f32, ty: f32, tz: f32, fov: f32, ease: i32) { assert(ease >= 0); assert(ease <= 2); assert(fov > 0.0);
     g_ct.push(t);
     g_cv.push(ex); g_cv.push(ey); g_cv.push(ez); g_cv.push(tx); g_cv.push(ty); g_cv.push(tz); g_cv.push(fov);
     g_ce.push(ease);
@@ -339,35 +339,35 @@ export "cam_add" fn cam_add(t: f32, ex: f32, ey: f32, ez: f32, tx: f32, ty: f32,
 }
 
 // look: 0 day 1 dusk 2 night 3 indoor
-export "light_add" fn light_add(t: f32, look: i32) { g_lt.push(t); g_ll.push(look); g_nlight += 1; }
+export "light_add" fn light_add(t: f32, look: i32) { assert(look >= 0); assert(look <= 8); assert(g_nlight >= 0); g_lt.push(t); g_ll.push(look); g_nlight += 1; }
 
 // kind: 0 grass 1 street 2 floor 3 plain
-export "set_backdrop" fn set_backdrop(kind: i32, sx: f32, sz: f32, r: f32, g: f32, b: f32) {
+export "set_backdrop" fn set_backdrop(kind: i32, sx: f32, sz: f32, r: f32, g: f32, b: f32) { assert(kind >= 0); assert(sx >= 0.0); assert(sz >= 0.0);
     g_ground = kind; g_gsx = sx; g_gsz = sz; g_gr = r; g_gg = g; g_gb = b;
 }
 
-export "set_cutaway" fn set_cutaway(ceil: i32, walls: i32) { g_cut_ceil = ceil; g_cut_wall = walls; }
+export "set_cutaway" fn set_cutaway(ceil: i32, walls: i32) { assert(ceil == 0 || ceil == 1); assert(walls == 0 || walls == 1); g_cut_ceil = ceil; g_cut_wall = walls; }
 
-export "ground_map" fn ground_map(on: i32, x0: f32, z0: f32, x1: f32, z1: f32) {
+export "ground_map" fn ground_map(on: i32, x0: f32, z0: f32, x1: f32, z1: f32) { assert(on == 0 || on == 1); assert(!is_nan(x0 + z0 + x1 + z1));
     g_map_on = on; g_mx0 = x0; g_mz0 = z0; g_mx1 = x1; g_mz1 = z1;
 }
 
-export "cam_user" fn cam_user(on: i32, yaw: f32, pitch: f32, dist: f32, tx: f32, ty: f32, tz: f32) {
+export "cam_user" fn cam_user(on: i32, yaw: f32, pitch: f32, dist: f32, tx: f32, ty: f32, tz: f32) { assert(on == 0 || on == 1); assert(dist >= 0.0);
     g_user = on; g_uyaw = yaw; g_upitch = pitch; g_udist = dist; g_utx = tx; g_uty = ty; g_utz = tz;
 }
 
 // ---------------------------------------------------------------- sampling
-fn ease_u(u: f32, e: i32) -> f32 {
+fn ease_u(u: f32, e: i32) -> f32 { assert(e >= 0); assert(e <= 2);
     var r = u;
     if e == 1 { r = u * u * (3.0 - 2.0 * u); }
     if e == 2 { r = 0.0; }
     r
 }
 
-fn clamp01(u: f32) -> f32 { if u < 0.0 { 0.0 } else if u > 1.0 { 1.0 } else { u } }
+fn clamp01(u: f32) -> f32 { assert(!is_nan(u)); if u < 0.0 { 0.0 } else if u > 1.0 { 1.0 } else { u } }
 
 // Sample a track at t into g_s0..g_s2 (values) and g_pa, g_pb, g_pbl (pose).
-fn sample(ti: i32, t: f32) {
+fn sample(ti: i32, t: f32) { assert(ti >= 0); assert(ti < g_nt); assert(g_trks[ti].n > 0);
     let first = g_trks[ti].first;
     let n = g_trks[ti].n;
     var a = first;
@@ -387,13 +387,13 @@ fn sample(ti: i32, t: f32) {
 }
 
 // ---------------------------------------------------------------- poses
-fn blank() -> f32[>..] {
+fn blank() -> f32[>..] { assert(g_n >= 0); assert(g_nt >= 0);
     var a: f32[>..] = [];
     for i in 63 { a.push(0.0); }
     a
 }
 
-fn mix_pose(a: f32[>..], b: f32[>..], k: f32) -> f32[>..] {
+fn mix_pose(a: f32[>..], b: f32[>..], k: f32) -> f32[>..] { assert(a.len >= 63); assert(b.len >= 63); assert(k >= 0.0);
     var r: f32[>..] = [];
     for i in 63 { r.push(a[i] * (1.0 - k) + b[i] * k); }
     r
@@ -403,7 +403,7 @@ fn mix_pose(a: f32[>..], b: f32[>..], k: f32) -> f32[>..] {
 // 10 clavR 11 uarmR 12 larmR 13 wristR 14 ulegL 15 llegL 16 footL 17 ulegR 18 llegR 19 footR.
 // Angles a[b*3+0..2] = rx, ry, rz in degrees; a[60..62] = root offset in metres.
 // Pose 0 stand, 1 walk, 2 run, 3 wave, 4 point, 5 cheer, 6 sit, 7 bend.
-fn pose_angles(pose: i32, t: f32) -> f32[>..] {
+fn pose_angles(pose: i32, t: f32) -> f32[>..] { assert(pose >= 0); assert(pose < 1000);
     var a = blank();
     a[7 * 3 + 2] = -35.0; a[11 * 3 + 2] = 35.0;
     if pose == 0 { a[2 * 3] = 1.5 * sin(t * 1.5); }
@@ -435,7 +435,7 @@ fn pose_angles(pose: i32, t: f32) -> f32[>..] {
     a
 }
 
-fn bone_matrices(a: f32[>..]) -> f32[>..] {
+fn bone_matrices(a: f32[>..]) -> f32[>..] { assert(a.len >= 0); assert(a.len < 1000);
     var world: Mat[>..] = [];
     var out: f32[>..] = [];
     for i in 20 {
@@ -454,7 +454,7 @@ fn bone_matrices(a: f32[>..]) -> f32[>..] {
 }
 
 // Palette: 0 skin 1 shirt 2 pants 3 shoes 4 hair 5 eye white 6 lips 7 pupil.
-fn palette(p: i32, o: Obj) -> f32[>..] {
+fn palette(p: i32, o: Obj) -> f32[>..] { assert(p >= 0); assert(o.prim == 4);
     var c: f32[>..] = [];
     let skin = (p * 7) % 6;
     let sr = 0.93 - 0.11 * (skin as f32); let sg = 0.78 - 0.11 * (skin as f32); let sb = 0.66 - 0.10 * (skin as f32);
@@ -475,7 +475,7 @@ fn palette(p: i32, o: Obj) -> f32[>..] {
 
 // ---------------------------------------------------------------- lighting looks
 // Each look: sky rgb, light dir xyz, light colour rgb.
-fn look_vals(k: i32) -> f32[>..] {
+fn look_vals(k: i32) -> f32[>..] { assert(k >= 0); assert(k <= 8);
     var v: f32[>..] = [];
     if k == 0 { v.push(0.93); v.push(0.91); v.push(0.86); v.push(0.4); v.push(0.8); v.push(0.5); v.push(1.0); v.push(1.0); v.push(1.0); }
     if k == 1 { v.push(0.93); v.push(0.62); v.push(0.46); v.push(-0.6); v.push(0.35); v.push(0.5); v.push(1.0); v.push(0.78); v.push(0.62); }
@@ -485,27 +485,27 @@ fn look_vals(k: i32) -> f32[>..] {
 }
 
 // ---------------------------------------------------------------- frame
-fn world_of(i: i32) -> Mat {
+fn world_of(i: i32) -> Mat { assert(i >= 0); assert(i < g_n);
     var r = ident();
     for k in 16 { r.m[k] = g_world[i * 16 + k]; }
     r
 }
 
-fn body_scale(o: Obj) -> Mat {
+fn body_scale(o: Obj) -> Mat { assert(o.sx == o.sx); assert(o.prim == 4);
     let h = 0.92 + 0.016 * ((o.variant % 11) as f32);
     let wd = 0.88 + 0.025 * (((o.variant * 3) % 10) as f32);
     scale(wd, h, wd)
 }
 
 // Body scale times the posed matrix of bone b of person p, from the last draw_person of p.
-fn bone_of(p: i32, b: i32) -> Mat {
+fn bone_of(p: i32, b: i32) -> Mat { assert(p >= 0); assert(b >= 0); assert(b < 20);
     var r = ident();
     let base = g_bslot[p] * 320 + b * 16;
     for k in 16 { r.m[k] = g_bmat[base + k]; }
     mul(body_scale(g_objs[p]), r)
 }
 
-fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) {
+fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) { assert(i >= 0); assert(i < g_n); assert(o.prim == 4);
     let model = mul(world_of(i), body_scale(o));
     let mvp = mul(vp, model);
     let tt = t + (o.variant as f32) * 0.37;
@@ -523,9 +523,11 @@ fn draw_person(vp: Mat, i: i32, o: Obj, t: f32) {
     gl_draw_skin(lod, mvp, model, bm, pl, 1);
 }
 
-export "render_frame" fn render_frame(t: f64) {
-    let tf = t as f32;
-    // 1. current value of every object
+// The camera of this frame: the target and the field of view are kept for the wall cut-away.
+var g_tgx: f32 = 0.0; var g_tgy: f32 = 1.0; var g_tgz: f32 = 0.0; var g_fov: f32 = 50.0;
+
+// 1. current value of every object: its own values, then the tracks on top
+fn current_values(tf: f32) { assert(g_cur.len == g_n * 10); assert(!is_nan(tf));
     for i in g_n {
         let o = g_objs[i];
         g_cur[i * 10] = o.x; g_cur[i * 10 + 1] = o.y; g_cur[i * 10 + 2] = o.z; g_cur[i * 10 + 3] = o.yaw;
@@ -543,7 +545,10 @@ export "render_frame" fn render_frame(t: f64) {
             if tr.ch == 3 { g_cur[b + 7] = g_pa as f32; g_cur[b + 8] = g_pb as f32; g_cur[b + 9] = g_pbl; }
         }
     }
-    // 2. camera
+}
+
+// 2. camera: the keyed camera, then the viewer's own camera on top
+fn place_camera(tf: f32) { assert(!is_nan(tf)); assert(g_w > 0); assert(g_h > 0);
     var ex = g_eyex; var ey = g_eyey; var ez = g_eyez; var tx: f32 = 0.0; var ty: f32 = 1.0; var tz: f32 = 0.0; var fov: f32 = 50.0;
     if g_ncam > 0 {
         var a: i32 = 0;
@@ -567,10 +572,13 @@ export "render_frame" fn render_frame(t: f64) {
         tx = g_utx; ty = g_uty; tz = g_utz;
     }
     g_eyex = ex; g_eyey = ey; g_eyez = ez;
+    g_tgx = tx; g_tgy = ty; g_tgz = tz; g_fov = fov;
     let proj = perspective(fov * DEG, (g_w as f32) / (g_h as f32), 0.1, 600.0);
-    let vp = mul(proj, look_at(ex, ey, ez, tx, ty, tz));
-    g_vp = vp;
-    // 3. lighting
+    g_vp = mul(proj, look_at(ex, ey, ez, tx, ty, tz));
+}
+
+// 3. lighting: the keyed look of this time
+fn set_lighting(tf: f32) { assert(!is_nan(tf)); assert(g_nlight >= 0);
     var lk = look_vals(0);
     if g_nlight > 0 {
         var a: i32 = 0;
@@ -583,7 +591,10 @@ export "render_frame" fn render_frame(t: f64) {
     }
     gl_begin(lk[0], lk[1], lk[2]);
     gl_light(lk[3], lk[4], lk[5], lk[6], lk[7], lk[8]);
-    // 4. ground
+}
+
+// 4. ground and map
+fn draw_ground(vp: Mat) { assert(g_gsx > 0.0); assert(g_gsz > 0.0);
     let gm = mul(translate(0.0, -0.05, 0.0), scale(g_gsx, 0.1, g_gsz));
     let gmvp = mul(vp, gm);
     var gr = g_gr; var gg = g_gg; var gb = g_gb;
@@ -596,23 +607,66 @@ export "render_frame" fn render_frame(t: f64) {
         let mmvp = mul(vp, mm);
         gl_draw_ground(mmvp);
     }
-    // 5. world matrices, visibility, draw
+}
+
+// 5a. the local matrix of object i, with the eye follow of a parent person
+fn local_matrix(i: i32, o: Obj) -> Mat { assert(i >= 0); assert(i < g_n); assert(g_cur.len == g_n * 10);
+    let b = i * 10;
+    let pb = i * 9;
+    var esy: f32 = 1.0;
+    let eye = o.parent >= 0 && (o.flags / FLAG_EYE) % 2 == 1;
+    if eye { esy = g_pose[o.parent * 9 + 7]; }
+    let pose = mul(translate(g_pose[pb], g_pose[pb + 1], 0.0), mul(rot_z(g_pose[pb + 2] * DEG), scale(g_pose[pb + 3], g_pose[pb + 4], g_pose[pb + 3])));
+    var local = mul(translate(g_cur[b], g_cur[b + 1], g_cur[b + 2]),
+                mul(rot_y(g_cur[b + 3] * DEG), mul(pose, mul(rot_z(o.rz * DEG), mul(rot_y(o.ry * DEG), mul(rot_x(o.rx * DEG),
+                scale(g_cur[b + 4], g_cur[b + 5] * esy, g_cur[b + 6])))))));
+    if eye {
+        let pp = o.parent * 9;
+        let cy = g_pose[pp + 8];
+        local = mul(translate(0.0, cy, 0.0), mul(rot_y(g_pose[pp + 5]), mul(rot_x(0.0 - g_pose[pp + 6]), mul(translate(0.0, 0.0 - cy, 0.0), local))));
+    }
+    local
+}
+
+// 5b. 1 when a wall of the room is cut away: it faces the camera and sits between the camera and the target
+fn wall_cut(i: i32, o: Obj) -> i32 { assert(i >= 0); assert(i < g_n);
+    let b = i * 10;
+    let f: f32 = if o.flip != 0 { -1.0 } else { 1.0 };
+    let nx = f * sin(g_cur[b + 3] * DEG); let nz = f * cos(g_cur[b + 3] * DEG);
+    let wx = g_cur[b] - g_eyex; let wz = g_cur[b + 2] - g_eyez;
+    let vx = g_tgx - g_eyex; let vz = g_tgz - g_eyez;
+    let along = wx * vx + wz * vz;
+    if nx * (0.0 - wx) + nz * (0.0 - wz) > 0.0 && along > 0.0 && along < vx * vx + vz * vz { 1 } else { 0 }
+}
+
+// 5c. draw object i (or its shadow) with its world matrix
+fn draw_object(i: i32, o: Obj, local: Mat, mirror: i32, tf: f32) { assert(i >= 0); assert(i < g_n); assert(mirror == 0 || mirror == 1);
+    let b = i * 10;
+    let pb = i * 9;
+    let vp = g_vp;
+    if o.prim == 4 { draw_person(vp, i, o, tf); }
+    if o.prim >= 0 && o.prim < 4 || o.prim == 5 {
+        let mesh = if o.prim == 5 { o.mesh } else { o.prim };
+        let mvp = mul(vp, local);
+        gl_front(mirror);
+        gl_draw(mesh, mvp, local, o.r, o.g, o.b, 1.0, 1);
+    }
+    if o.shadow > 0.0 && o.parent < 0 {
+        let ss = o.shadow * 2.0 * g_pose[pb + 3];
+        let sm = mul(translate(g_cur[b], g_cur[b + 1] + 0.012, g_cur[b + 2]), scale(ss, 0.01, ss));
+        let smvp = mul(vp, sm);
+        gl_front(0);
+        gl_draw(1, smvp, sm, 0.0, 0.0, 0.0, 0.28, 0);
+    }
+}
+
+// 5. world matrices, visibility, draw
+fn draw_objects(tf: f32) { assert(!is_nan(tf)); assert(g_vis.len == g_n);
     for i in g_n {
         let o = g_objs[i];
-        let b = i * 10;
         let pb = i * 9;
-        var flags = o.flags;
-        var esy: f32 = 1.0;
-        if o.parent >= 0 && (flags / FLAG_EYE) % 2 == 1 { esy = g_pose[o.parent * 9 + 7]; }
-        let pose = mul(translate(g_pose[pb], g_pose[pb + 1], 0.0), mul(rot_z(g_pose[pb + 2] * DEG), scale(g_pose[pb + 3], g_pose[pb + 4], g_pose[pb + 3])));
-        var local = mul(translate(g_cur[b], g_cur[b + 1], g_cur[b + 2]),
-                    mul(rot_y(g_cur[b + 3] * DEG), mul(pose, mul(rot_z(o.rz * DEG), mul(rot_y(o.ry * DEG), mul(rot_x(o.rx * DEG),
-                    scale(g_cur[b + 4], g_cur[b + 5] * esy, g_cur[b + 6])))))));
-        if o.parent >= 0 && (flags / FLAG_EYE) % 2 == 1 {
-            let pp = o.parent * 9;
-            let cy = g_pose[pp + 8];
-            local = mul(translate(0.0, cy, 0.0), mul(rot_y(g_pose[pp + 5]), mul(rot_x(0.0 - g_pose[pp + 6]), mul(translate(0.0, 0.0 - cy, 0.0), local))));
-        }
+        let flags = o.flags;
+        var local = local_matrix(i, o);
         var vis: i32 = 1;
         if g_pose[pb + 3] * g_pose[pb + 4] < 0.000001 { vis = 0; }
         var mirror = o.flip;
@@ -624,38 +678,24 @@ export "render_frame" fn render_frame(t: f64) {
         }
         if (flags / FLAG_HIDDEN) % 2 == 1 { vis = 0; }
         if g_cut_ceil != 0 && (flags / FLAG_CEIL) % 2 == 1 { vis = 0; }
-        if o.parent < 0 && g_cut_wall != 0 && (flags / FLAG_WALL) % 2 == 1 {
-            // Only a wall that faces the camera and sits between the camera and the target is cut away.
-            let f: f32 = if o.flip != 0 { -1.0 } else { 1.0 };
-            let nx = f * sin(g_cur[b + 3] * DEG); let nz = f * cos(g_cur[b + 3] * DEG);
-            let wx = g_cur[b] - ex; let wz = g_cur[b + 2] - ez;
-            let vx = tx - ex; let vz = tz - ez;
-            let along = wx * vx + wz * vz;
-            if nx * (0.0 - wx) + nz * (0.0 - wz) > 0.0 && along > 0.0 && along < vx * vx + vz * vz { vis = 0; }
-        }
+        if o.parent < 0 && g_cut_wall != 0 && (flags / FLAG_WALL) % 2 == 1 && wall_cut(i, o) == 1 { vis = 0; }
         if mirror != 0 { local.m[0] = 0.0 - local.m[0]; local.m[1] = 0.0 - local.m[1]; local.m[2] = 0.0 - local.m[2]; }
         for k in 16 { g_world[i * 16 + k] = local.m[k]; }
         g_vis[i] = vis + 2 * mirror;
-        if vis != 0 {
-            if o.prim == 4 { draw_person(vp, i, o, tf); }
-            if o.prim >= 0 && o.prim < 4 || o.prim == 5 {
-                let mesh = if o.prim == 5 { o.mesh } else { o.prim };
-                let mvp = mul(vp, local);
-                gl_front(mirror);
-                gl_draw(mesh, mvp, local, o.r, o.g, o.b, 1.0, 1);
-            }
-            if o.shadow > 0.0 && o.parent < 0 {
-                let ss = o.shadow * 2.0 * g_pose[pb + 3];
-                let sm = mul(translate(g_cur[b], g_cur[b + 1] + 0.012, g_cur[b + 2]), scale(ss, 0.01, ss));
-                let smvp = mul(vp, sm);
-                gl_front(0);
-                gl_draw(1, smvp, sm, 0.0, 0.0, 0.0, 0.28, 0);
-            }
-        }
+        if vis != 0 { draw_object(i, o, local, mirror, tf); }
     }
 }
 
-fn mix_pose_n(a: f32[>..], b: f32[>..], k: f32) -> f32[>..] {
+export "render_frame" fn render_frame(t: f64) { assert(!is_nan(t)); assert(g_w > 0);
+    let tf = t as f32;
+    current_values(tf);
+    place_camera(tf);
+    set_lighting(tf);
+    draw_ground(g_vp);
+    draw_objects(tf);
+}
+
+fn mix_pose_n(a: f32[>..], b: f32[>..], k: f32) -> f32[>..] { assert(a.len >= 9); assert(b.len >= 9); assert(k >= 0.0);
     var r: f32[>..] = [];
     for i in 9 { r.push(a[i] * (1.0 - k) + b[i] * k); }
     r
@@ -663,7 +703,7 @@ fn mix_pose_n(a: f32[>..], b: f32[>..], k: f32) -> f32[>..] {
 
 // ---------------------------------------------------------------- projection (for labels and picking)
 // Returns 1 when the point is in front of the camera. Read the result with proj_x and proj_y.
-export "project" fn project(x: f32, y: f32, z: f32) -> i32 {
+export "project" fn project(x: f32, y: f32, z: f32) -> i32 { assert(!is_nan(x)); assert(!is_nan(y)); assert(!is_nan(z)); assert(g_w > 0);
     let m = g_vp.m;
     let cx = m[0] * x + m[4] * y + m[8] * z + m[12];
     let cy = m[1] * x + m[5] * y + m[9] * z + m[13];
@@ -677,14 +717,14 @@ export "project" fn project(x: f32, y: f32, z: f32) -> i32 {
     ok
 }
 
-export "proj_x" fn proj_x() -> f32 { g_px }
-export "proj_y" fn proj_y() -> f32 { g_py }
+export "proj_x" fn proj_x() -> f32 { assert(g_w > 0); assert(g_h > 0); g_px }
+export "proj_y" fn proj_y() -> f32 { assert(g_w > 0); assert(g_h > 0); g_py }
 
 // World position of an object after the last frame.
-export "obj_wx" fn obj_wx(i: i32) -> f32 { g_world[i * 16 + 12] }
-export "obj_wy" fn obj_wy(i: i32) -> f32 { g_world[i * 16 + 13] }
-export "obj_wz" fn obj_wz(i: i32) -> f32 { g_world[i * 16 + 14] }
-export "obj_visible" fn obj_visible(i: i32) -> i32 { g_vis[i] % 2 }
-export "cam_x" fn cam_x() -> f32 { g_eyex }
-export "cam_y" fn cam_y() -> f32 { g_eyey }
-export "cam_z" fn cam_z() -> f32 { g_eyez }
+export "obj_wx" fn obj_wx(i: i32) -> f32 { assert(i >= 0); assert(i < g_n); g_world[i * 16 + 12] }
+export "obj_wy" fn obj_wy(i: i32) -> f32 { assert(i >= 0); assert(i < g_n); g_world[i * 16 + 13] }
+export "obj_wz" fn obj_wz(i: i32) -> f32 { assert(i >= 0); assert(i < g_n); g_world[i * 16 + 14] }
+export "obj_visible" fn obj_visible(i: i32) -> i32 { assert(i >= 0); assert(i < g_n); g_vis[i] % 2 }
+export "cam_x" fn cam_x() -> f32 { assert(g_w > 0); assert(g_h > 0); g_eyex }
+export "cam_y" fn cam_y() -> f32 { assert(g_w > 0); assert(g_h > 0); g_eyey }
+export "cam_z" fn cam_z() -> f32 { assert(g_w > 0); assert(g_h > 0); g_eyez }

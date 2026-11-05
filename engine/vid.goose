@@ -10,18 +10,18 @@ import math;
 var g_in: f64[>..] = [];
 var g_out: f64[>..] = [];
 
-export "clear" fn clear() { g_in.clear(); }
-export "put" fn put(x: f64) { g_in.push(x); }
-export "out" fn out(i: i32) -> f64 { g_out[i] }
-export "out_len" fn out_len() -> i32 { g_out.len as i32 }
+export "clear" fn clear_input() { assert(g_in.len >= 0); assert(g_in.len < 1000000); g_in.clear(); }
+export "put" fn put(x: f64) { assert(g_in.len >= 0); assert(g_in.len < 1000000); g_in.push(x); }
+export "out" fn out(i: i32) -> f64 { assert(i >= 0); assert(i < g_out.len); g_out[i] }
+export "out_len" fn out_len() -> i32 { assert(g_out.len >= 0); assert(g_out.len < 1000000); g_out.len as i32 }
 
 // JavaScript Math.round: the nearest integer, a half goes up.
-fn jround(v: f64) -> f64 {
+fn jround(v: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);
     let f = floor(v);
     if v - f >= 0.5 { f + 1.0 } else { f }
 }
 // JavaScript Math.max of two numbers.
-fn jmax(a: f64, b: f64) -> f64 {
+fn jmax(a: f64, b: f64) -> f64 { assert(!is_nan(a) || !is_nan(b) || is_nan(a + b)); assert(a == a || b == b || a != b);
     if is_nan(a) || is_nan(b) { a + b } else if a > b { a } else { b }
 }
 
@@ -41,29 +41,29 @@ struct Pose {
 
 let MOVES = "pop out hop squash blink squint look glance wave spin";
 
-fn rest() -> Pose {
+fn rest() -> Pose { assert(LEAD > 0.0); assert(GAP > 0.0);
     Pose { s: 1.0, sx: 1.0, sz: 1.0, dx: 0.0, z: 0.0, up: 0.0, tilt: 0.0, eye: 1.0, gaze: 1.0, ex: 0.0, ez: 0.0, spin: 0.0 }
 }
 
-fn clamp01(u: f64) -> f64 { if u < 0.0 { 0.0 } else if u > 1.0 { 1.0 } else { u } }
-fn ease(t: f64, t0: f64, t1: f64) -> f64 {   // 0 before t0, 1 after t1, smooth in and out
+fn clamp01(u: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0); if u < 0.0 { 0.0 } else if u > 1.0 { 1.0 } else { u } }
+fn ease(t: f64, t0: f64, t1: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);   // 0 before t0, 1 after t1, smooth in and out
     let u = clamp01((t - t0) / (t1 - t0));
     u * u * (3.0 - 2.0 * u)
 }
-fn bump(t: f64, t0: f64, t1: f64) -> f64 {
+fn bump(t: f64, t0: f64, t1: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);
     if t <= t0 || t >= t1 { 0.0 } else { pow(sin((PI * (t - t0)) / (t1 - t0)), 2.0) }
 }
-fn hold(t: f64, t0: f64, t1: f64, r: f64) -> f64 {   // go to 1 in r seconds, stay, go back to 0 at t1
+fn hold(t: f64, t0: f64, t1: f64, r: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);   // go to 1 in r seconds, stay, go back to 0 at t1
     ease(t, t0, t0 + r) - ease(t, t1 - r, t1)
 }
 // A blink closes in 0.13 s, stays closed 0.06 s and opens in 0.21 s. A look turns on a spring that is almost critically damped.
-fn shut(t: f64, t0: f64) -> f64 { ease(t, t0, t0 + 0.13) - ease(t, t0 + 0.19, t0 + 0.4) }
-fn settle(u: f64) -> f64 {
+fn shut(t: f64, t0: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0); ease(t, t0, t0 + 0.13) - ease(t, t0 + 0.19, t0 + 0.4) }
+fn settle(u: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);
     if u <= 0.0 { 0.0 } else { 1.0 - exp(-21.7 * u) * (cos(7.9 * u) + 2.75 * sin(7.9 * u)) }
 }
-fn stretch(p: Pose&, sz: f64) { p.sz = sz; p.sx = 1.0 / sqrt(sz); }   // keep the volume about the same
+fn stretch(p: Pose&, sz: f64) { assert(sz > 0.0); assert(p.s == p.s); p.sz = sz; p.sx = 1.0 / sqrt(sz); }   // keep the volume about the same
 
-fn pop(t: f64, t0: f64) -> Pose {   // grow from nothing with a spring: overshoot, stretch, then settle. Then the eyes open.
+fn pop(t: f64, t0: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // grow from nothing with a spring: overshoot, stretch, then settle. Then the eyes open.
     var p = rest();
     let u = t - t0;
     if u <= 0.0 { p.s = 0.0; p.z = -0.25; p.eye = 0.0; return p; }
@@ -73,20 +73,20 @@ fn pop(t: f64, t0: f64) -> Pose {   // grow from nothing with a spring: overshoo
     stretch(p, 1.0 + 0.16 * exp(-u / 0.1) * sin(17.5 * u));
     p
 }
-fn out_(t: f64, t0: f64, d: f64) -> Pose {   // swell a little, then shrink to nothing
+fn out_(t: f64, t0: f64, d: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // swell a little, then shrink to nothing
     var p = rest();
     let k = clamp01((t - t0) / d);
     p.s = if k >= 1.0 { 0.0 } else { (1.0 + 0.15 * sin(PI * k)) * (1.0 - pow(k, 3.0)) };
     p
 }
-fn arc(k: f64, k0: f64, k1: f64, hh: f64) -> f64 {
+fn arc(k: f64, k0: f64, k1: f64, hh: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);
     if k > k0 && k < k1 { (4.0 * hh * (k - k0) * (k1 - k)) / pow(k1 - k0, 2.0) } else { 0.0 }
 }
-fn hop_z(tt: f64, t0: f64, h: f64, d: f64) -> f64 {
+fn hop_z(tt: f64, t0: f64, h: f64, d: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);
     let k = (tt - t0) / d;
     arc(k, 0.0, 1.0, h) + arc(k, 1.2, 1.6, 0.15 * h)
 }
-fn hop(t: f64, t0: f64, h: f64, d: f64) -> Pose {   // crouch, jump on an arc with wide eyes, land with a squash, bounce once more, settle
+fn hop(t: f64, t0: f64, h: f64, d: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // crouch, jump on an arc with wide eyes, land with a squash, bounce once more, settle
     var p = rest();
     p.up = hop_z(t, t0, h, d);
     p.ez = 0.4 * (hop_z(t - 0.06, t0, h, d) - hop_z(t, t0, h, d));   // the eyes follow a little late
@@ -95,7 +95,7 @@ fn hop(t: f64, t0: f64, h: f64, d: f64) -> Pose {   // crouch, jump on an arc wi
         - 0.12 * bump(t, t0 + d, t0 + 1.2 * d) - 0.05 * bump(t, t0 + 1.6 * d, t0 + 1.6 * d + 0.16));
     p
 }
-fn squash(t: f64, t0: f64) -> Pose {   // stretch up a little, press down with closed eyes, then spring back with an overshoot
+fn squash(t: f64, t0: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // stretch up a little, press down with closed eyes, then spring back with an overshoot
     var p = rest();
     let press = bump(t, t0, t0 + 0.26);
     p.eye = 1.0 - 0.7 * press;
@@ -103,15 +103,15 @@ fn squash(t: f64, t0: f64) -> Pose {   // stretch up a little, press down with c
         + 0.05 * bump(t, t0 + 0.2, t0 + 0.46) - 0.015 * bump(t, t0 + 0.42, t0 + 0.62));
     p
 }
-fn blink(t: f64, t0: f64) -> Pose { var p = rest(); p.eye = 1.0 - 0.92 * shut(t, t0); p }
-fn squint(t: f64, t0: f64, d: f64) -> Pose {
+fn blink(t: f64, t0: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0); var p = rest(); p.eye = 1.0 - 0.92 * shut(t, t0); p }
+fn squint(t: f64, t0: f64, d: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);
     var p = rest();
     p.eye = 1.0 - 0.5 * hold(t, t0, t0 + d, 0.18);
     p.sz = 1.0 - 0.03 * hold(t, t0, t0 + d, 0.18);
     p
 }
 // ex and ez go from -1 to 1 (right and up). gaze stops the eyes from looking around by themselves.
-fn look(t: f64, t0: f64, d: f64, ex: f64, ez: f64) -> Pose {   // look at one place for d seconds, with a blink at the turn
+fn look(t: f64, t0: f64, d: f64, ex: f64, ez: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // look at one place for d seconds, with a blink at the turn
     var p = rest();
     let m = settle(t - t0) - settle(t - t0 - d);
     p.ex = 0.22 * ex * m; p.ez = 0.14 * ez * m;
@@ -119,30 +119,30 @@ fn look(t: f64, t0: f64, d: f64, ex: f64, ez: f64) -> Pose {   // look at one pl
     p.eye = 1.0 - 0.92 * shut(t, t0 - 0.05);
     p
 }
-fn glance(t: f64, t0: f64, d: f64) -> Pose {   // look to one side, then to the other side
+fn glance(t: f64, t0: f64, d: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // look to one side, then to the other side
     var p = rest();
     let k = clamp01((t - t0) / d);
     p.ex = 0.16 * sin(2.0 * PI * k) * sin(PI * k);
     p.gaze = 1.0 - sin(PI * k);
     p
 }
-fn wave(t: f64, t0: f64, d: f64, deg: f64) -> Pose {   // rock from side to side
+fn wave(t: f64, t0: f64, d: f64, deg: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // rock from side to side
     var p = rest();
     let k = clamp01((t - t0) / d);
     p.tilt = deg * sin(4.0 * PI * k) * sin(PI * k);
     p
 }
-fn spin(t: f64, t0: f64, d: f64) -> Pose {   // the face goes 1 time around the body
+fn spin(t: f64, t0: f64, d: f64) -> Pose { assert(g_in.len >= 0); assert(g_out.len >= 0);   // the face goes 1 time around the body
     var p = rest();
     p.spin = 2.0 * PI * ease(t, t0, t0 + d);
     p.gaze = 1.0 - bump(t, t0 - 0.2, t0 + d + 0.2);
     p
 }
 
-fn dflt(v: f64, dflt: f64) -> f64 { if is_nan(v) { dflt } else { v } }   // NaN is a value that the scene leaves out
+fn dflt(v: f64, dflt: f64) -> f64 { assert(dflt == dflt); assert(dflt > -1e300); if is_nan(v) { dflt } else { v } }   // NaN is a value that the scene leaves out
 
 // The pose of one motion entry: the index of its word in MOVES, t, d, h, x, y and deg.
-fn move_pose(m: i64, t: f64, t0: f64, d: f64, h: f64, x: f64, y: f64, deg: f64) -> Pose {
+fn move_pose(m: i64, t: f64, t0: f64, d: f64, h: f64, x: f64, y: f64, deg: f64) -> Pose { assert(!is_nan(t));  assert(g_in.len >= 0); assert(g_out.len >= 0);
     if m == 0 { return pop(t, t0); }
     if m == 1 { return out_(t, t0, dflt(d, 0.3)); }
     if m == 2 { return hop(t, t0, dflt(h, 0.5), dflt(d, 0.5)); }
@@ -156,20 +156,20 @@ fn move_pose(m: i64, t: f64, t0: f64, d: f64, h: f64, x: f64, y: f64, deg: f64) 
     rest()
 }
 
-fn hash(seed: i32, i: i64) -> f64 {   // a fixed number from 0 to 1 for each pair of integers
+fn hash(seed: i32, i: i64) -> f64 { assert(g_out.len >= 0); assert(i > -9000000000000000000);   // a fixed number from 0 to 1 for each pair of integers
     var h: u32 = ((seed as! u32) ^ ((i as! u32) * 0x9e3779b1)) * 0x85ebca77;
     h ^= h >> 13;
     h = h * 0xc2b2ae3d;
     (h ^ (h >> 16)) / 4294967296.0
 }
-fn hi(seed: i32, i: f64) -> f64 { hash(seed, i as! i64) }
+fn hi(seed: i32, i: f64) -> f64 { assert(g_out.len >= 0); assert(i == i); hash(seed, i as! i64) }
 
 struct Gz { x: f64, z: f64 }
-fn gaze_to(seed: i32, j: f64) -> Gz {
+fn gaze_to(seed: i32, j: f64) -> Gz { assert(g_out.len >= 0); assert(!is_nan(j));
     if hi(seed, 4.0 * j + 10.0) < 0.25 { Gz { x: 0.0, z: 0.0 } }
     else { Gz { x: 2.0 * hi(seed, 4.0 * j + 11.0) - 1.0, z: 1.5 * hi(seed, 4.0 * j + 12.0) - 0.5 } }
 }
-fn gaze(t: f64, seed: i32) -> Gz {   // where the eyes look: x and z from -1 to 1. A new place every 1 to 2.2 s.
+fn gaze(t: f64, seed: i32) -> Gz { assert(g_in.len >= 0); assert(g_out.len >= 0);   // where the eyes look: x and z from -1 to 1. A new place every 1 to 2.2 s.
     let len = 1.0 + 1.2 * hash(seed, 3);
     let k = floor(t / len);
     let m = settle(t - k * len - 0.45 * len * hi(seed, 4.0 * k + 13.0));
@@ -177,7 +177,7 @@ fn gaze(t: f64, seed: i32) -> Gz {   // where the eyes look: x and z from -1 to 
     let b = gaze_to(seed, k);
     Gz { x: a.x + (b.x - a.x) * m, z: a.z + (b.z - a.z) * m }
 }
-fn lids(t: f64, seed: i32) -> f64 {   // a blink every 2.8 to 7.4 s (sometimes 2 blinks), and a squint now and then
+fn lids(t: f64, seed: i32) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0);   // a blink every 2.8 to 7.4 s (sometimes 2 blinks), and a squint now and then
     let len = 2.8 + 4.6 * hash(seed, 5);
     let k = floor(t / len);
     let t0 = k * len + 0.5 * len * hi(seed, 3.0 * k + 20.0);
@@ -190,7 +190,7 @@ fn lids(t: f64, seed: i32) -> f64 {   // a blink every 2.8 to 7.4 s (sometimes 2
 }
 
 // The words of MOVES, as text in out. Returns their number.
-export "moves" fn moves() -> i32 {
+export "moves" fn moves() -> i32 { assert(g_out.len >= 0); assert(MOVES.len > 0);
     g_out.clear();
     var n: i32 = 1;
     for c in MOVES { g_out.push(c); if c == 32 { n += 1; } }
@@ -198,7 +198,7 @@ export "moves" fn moves() -> i32 {
 }
 
 // The seed of a character from its id (the text in the input).
-export "seed_of" fn seed_of() -> i32 {
+export "seed_of" fn seed_of() -> i32 { assert(g_in.len >= 0); assert(g_in.len < 1000000);
     var seed: u32 = 7;
     for c in g_in { seed = (seed ^ (c as! u32)) * 16777619; }
     seed as! i32
@@ -206,7 +206,7 @@ export "seed_of" fn seed_of() -> i32 {
 
 // The pose of an object at time t: its motions (7 numbers each in the input: move t d h x y deg),
 // plus its own life when life is 1 (a character). out holds s sx sz dx z up tilt eye gaze ex ez spin.
-export "pose" fn pose(t: f64, seed: i32, life: i32) {
+export "pose" fn pose(t: f64, seed: i32, life: i32) { assert(!is_nan(t)); assert(life == 0 || life == 1); assert(g_in.len % 7 == 0);
     var p = rest();
     var i: i64 = 0;
     while i + 7 <= g_in.len {
@@ -235,7 +235,7 @@ export "pose" fn pose(t: f64, seed: i32, life: i32) {
 // ^{...} and _{...}. For example "m^{2}", "CO_{2}", "31^{st}". A ^ or _ without braces is plain text.
 
 // The end (the index of "}") of a mark that starts at i, or -1.
-fn mark_end(i: i64) -> i64 {
+fn mark_end(i: i64) -> i64 { assert(i >= 0); assert(i < g_in.len);
     if i + 1 >= g_in.len || (g_in[i] != 94.0 && g_in[i] != 95.0) || g_in[i + 1] != 123.0 { return -1; }
     for j in i + 2..g_in.len { if g_in[j] == 125.0 { return j; } }
     -1
@@ -243,7 +243,7 @@ fn mark_end(i: i64) -> i64 {
 
 // The parts of the text in the input: 3 numbers each in out, shift (1 raised, -1 lowered, 0 normal)
 // and the start and end of the part text in the input.
-export "marks" fn marks() {
+export "marks" fn marks() { assert(g_in.len >= 0); assert(g_in.len < 1000000);
     g_out.clear();
     var from: i64 = 0;
     var i: i64 = 0;
@@ -259,7 +259,7 @@ export "marks" fn marks() {
 }
 
 // The Unicode character for c raised (shift 1) or lowered (-1), or 0.
-fn small(c: f64, shift: f64) -> f64 {
+fn small(c: f64, shift: f64) -> f64 { assert(shift != 0.0); assert(c >= 0.0);
     if c >= 48.0 && c <= 57.0 {
         if shift < 0.0 { return 8320.0 + c - 48.0; }
         if c == 49.0 { return 185.0; }
@@ -277,12 +277,12 @@ fn small(c: f64, shift: f64) -> f64 {
     if shift > 0.0 && c == 105.0 { return 8305.0; }   // i
     0.0
 }
-fn letter(c: f64) -> bool { (c >= 65.0 && c <= 90.0) || (c >= 97.0 && c <= 122.0) }
+fn letter(c: f64) -> bool { assert(c == c); assert(c >= 0.0); (c >= 65.0 && c <= 90.0) || (c >= 97.0 && c <= 122.0) }
 
 // The text in the input for a place that has no raised text (an .srt file, a length count), in out:
 // Unicode characters when they exist for all of the part, the letters alone for a word ("31st"),
 // else ^(...) or _(...).
-export "plain" fn plain() {
+export "plain" fn plain() { assert(g_in.len >= 0); assert(g_in.len < 1000000);
     marks();
     var parts: f64[>..] = [];
     for v in g_out { parts.push(v); }
@@ -317,19 +317,19 @@ let GAP: f64 = 0.45;        // between sentences
 let TAIL: f64 = 0.8;        // after the last sentence
 let STAND_IN: f64 = 0.066;  // seconds for each character of a sentence that has no voice yet
 
-export "lead" fn lead() -> f64 { LEAD }
-export "gap" fn gap() -> f64 { GAP }
-export "tail" fn tail() -> f64 { TAIL }
-export "stand_in" fn stand_in() -> f64 { STAND_IN }
+export "lead" fn lead() -> f64 { assert(LEAD > 0.0); assert(LEAD < GAP + 1.0); LEAD }
+export "gap" fn gap() -> f64 { assert(GAP > 0.0); assert(GAP < 1.0); GAP }
+export "tail" fn tail() -> f64 { assert(TAIL > 0.0); assert(TAIL < 2.0); TAIL }
+export "stand_in" fn stand_in() -> f64 { assert(STAND_IN > 0.0); assert(STAND_IN < 1.0); STAND_IN }
 
-fn r3(v: f64) -> f64 { jround(v * 1000.0) / 1000.0 }
+fn r3(v: f64) -> f64 { assert(g_in.len >= 0); assert(g_out.len >= 0); jround(v * 1000.0) / 1000.0 }
 
 // The stand-in seconds of a sentence with n characters.
-export "stand_in_seconds" fn stand_in_seconds(n: i32) -> f64 { r3(STAND_IN * n) }
+export "stand_in_seconds" fn stand_in_seconds(n: i32) -> f64 { assert(n >= 0); assert(n < 100000); r3(STAND_IN * n) }
 
 // The beats: the input has seconds and pause of each sentence, out gets start and end of each
 // sentence. Returns the length of the narration in seconds.
-export "timeline" fn timeline() -> f64 {
+export "timeline" fn timeline() -> f64 { assert(g_in.len % 2 == 0); assert(g_in.len < 1000000);
     g_out.clear();
     var t = LEAD - GAP;
     var i: i64 = 0;
@@ -345,7 +345,7 @@ export "timeline" fn timeline() -> f64 {
 
 // The index of the first n code units of the input (a sentence) at which the rest of the input
 // (a word) starts, or -1. As String.indexOf.
-export "find" fn find(n: i32) -> i32 {
+export "find" fn find(n: i32) -> i32 { assert(n >= 0); assert(n <= g_in.len);
     let w = g_in.len - n;
     var k: i64 = 0;
     while k + w <= n {
@@ -359,6 +359,6 @@ export "find" fn find(n: i32) -> i32 {
 
 // The time of the word at index k of a sentence of n code units from start to end: the start of the
 // sentence plus the part of its length that comes before the word, plus offset seconds.
-export "cue_time" fn cue_time(start: f64, end: f64, k: i32, n: i32, offset: f64) -> f64 {
+export "cue_time" fn cue_time(start: f64, end: f64, k: i32, n: i32, offset: f64) -> f64 { assert(n > 0); assert(k >= 0); assert(end >= start);
     r3(start + ((end - start) * k) / n + offset)
 }

@@ -1,4 +1,5 @@
 /* WebGL2 calls for scene.goose. Included into the generated C by --include. */
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -13,13 +14,13 @@ static int g_w, g_h;
 static float g_ldir[3] = {0.4f, 0.8f, 0.5f}, g_lcol[3] = {1, 1, 1};
 static GLint u_mvp, u_model, u_color, u_pass, u_alpha, u_ldir, u_lcol, u_px;
 static GLuint g_prog_now;
-static void gl_use(GLuint p) { if (g_prog_now != p) { glUseProgram(p); g_prog_now = p; } }
+static void gl_use(GLuint p) { assert(p != 0); assert(g_prog != 0); if (g_prog_now != p) { glUseProgram(p); g_prog_now = p; } }
 /* Outline width in screen pixels; the vertex shaders turn it into a clip-space offset. */
 static float g_outline_px = 1.5f, g_outline_skin_px = 1.2f;
 static GLuint g_skin;
 static GLint su_px, su_ldir, su_lcol;   /* forward: gl_begin/gl_light set these */
 
-static GLuint compile(GLenum t, const char *src) {
+static GLuint compile(GLenum t, const char *src) { assert(src != 0); assert(t != 0);
     GLuint s = glCreateShader(t);
     glShaderSource(s, 1, &src, 0);
     glCompileShader(s);
@@ -28,7 +29,7 @@ static GLuint compile(GLenum t, const char *src) {
     return s;
 }
 
-static GLuint link2(const char *vs, const char *fs) {
+static GLuint link2(const char *vs, const char *fs) { assert(vs != 0); assert(fs != 0);
     GLuint p = glCreateProgram();
     glAttachShader(p, compile(GL_VERTEX_SHADER, vs));
     glAttachShader(p, compile(GL_FRAGMENT_SHADER, fs));
@@ -47,7 +48,7 @@ static GLuint link2(const char *vs, const char *fs) {
 static GLuint g_ground_prog, g_ground_vao, g_ground_tex;
 static GLint gu_mvp, gu_lcol;
 
-static void gl_init(int32_t w, int32_t h) {
+static void gl_init(int32_t w, int32_t h) { assert(w > 0); assert(h > 0);
     g_w = w; g_h = h;
     EmscriptenWebGLContextAttributes a; emscripten_webgl_init_context_attributes(&a);
     a.majorVersion = 2; a.antialias = 1; a.alpha = 0; a.depth = 1; a.preserveDrawingBuffer = 1;
@@ -91,13 +92,13 @@ static void gl_init(int32_t w, int32_t h) {
     glViewport(0, 0, w, h);
 }
 
-static void gl_resize(int32_t w, int32_t h) {
+static void gl_resize(int32_t w, int32_t h) { assert(w > 0); assert(h > 0);
     g_w = w; g_h = h;
     emscripten_set_canvas_element_size("#canvas", w, h);
     glViewport(0, 0, w, h);
 }
 
-static void gl_mesh(int32_t id, sl_f32 d) {
+static void gl_mesh(int32_t id, sl_f32 d) { assert(id >= 0 && id < MAX_MESH); assert(d.len % 6 == 0);
     glBindVertexArray(g_vao[id]);
     glBindBuffer(GL_ARRAY_BUFFER, g_vbo[id]);
     glBufferData(GL_ARRAY_BUFFER, d.len * 4, d.data, GL_STATIC_DRAW);
@@ -108,11 +109,11 @@ static void gl_mesh(int32_t id, sl_f32 d) {
 
 /* Shared upload buffer: JavaScript writes here, then calls a toybox_* loader. */
 static unsigned char g_up_buf[1 << 22];
-EMSCRIPTEN_KEEPALIVE unsigned char *toybox_up_buf(void) { return g_up_buf; }
-EMSCRIPTEN_KEEPALIVE int toybox_up_size(void) { return (int)sizeof g_up_buf; }
+EMSCRIPTEN_KEEPALIVE unsigned char *toybox_up_buf(void) { assert(sizeof g_up_buf > 0); assert(sizeof g_up_buf >= 4); return g_up_buf; }
+EMSCRIPTEN_KEEPALIVE int toybox_up_size(void) { assert(sizeof g_up_buf == (1 << 22)); assert(sizeof g_up_buf >= 4); return (int)sizeof g_up_buf; }
 
 /* A custom mesh (for example extruded building footprints): nfloats of pos+normal, 6 per vertex. */
-EMSCRIPTEN_KEEPALIVE void toybox_mesh_upload(int id, int nfloats) {
+EMSCRIPTEN_KEEPALIVE void toybox_mesh_upload(int id, int nfloats) { assert(id >= 0 && id < MAX_MESH); assert(nfloats >= 0 && (size_t)nfloats * 4 <= sizeof g_up_buf);
     glBindVertexArray(g_vao[id]);
     glBindBuffer(GL_ARRAY_BUFFER, g_vbo[id]);
     glBufferData(GL_ARRAY_BUFFER, (size_t)nfloats * 4, g_up_buf, GL_STATIC_DRAW);
@@ -122,7 +123,7 @@ EMSCRIPTEN_KEEPALIVE void toybox_mesh_upload(int id, int nfloats) {
 }
 
 /* RGBA pixels (w by h) for the map ground quad. */
-EMSCRIPTEN_KEEPALIVE void toybox_ground_upload(int w, int h) {
+EMSCRIPTEN_KEEPALIVE void toybox_ground_upload(int w, int h) { assert(w > 0 && h > 0); assert((size_t)w * h * 4 <= sizeof g_up_buf);
     if (!g_ground_tex) glGenTextures(1, &g_ground_tex);
     glBindTexture(GL_TEXTURE_2D, g_ground_tex);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -132,7 +133,7 @@ EMSCRIPTEN_KEEPALIVE void toybox_ground_upload(int w, int h) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-static void gl_begin(float r, float g, float b) {
+static void gl_begin(float r, float g, float b) { assert(g_w > 0); assert(g_h > 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, g_w, g_h);
     glClearColor(r, g, b, 1); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -146,15 +147,15 @@ static void gl_begin(float r, float g, float b) {
     }
 }
 
-static void gl_light(float dx, float dy, float dz, float lr, float lg, float lb) {
+static void gl_light(float dx, float dy, float dz, float lr, float lg, float lb) { assert(g_prog != 0); assert(g_w > 0);
     g_ldir[0] = dx; g_ldir[1] = dy; g_ldir[2] = dz; g_lcol[0] = lr; g_lcol[1] = lg; g_lcol[2] = lb;
     gl_use(g_prog); glUniform3fv(u_ldir, 1, g_ldir); glUniform3fv(u_lcol, 1, g_lcol);
     if (g_skin) { gl_use(g_skin); glUniform3fv(su_ldir, 1, g_ldir); glUniform3fv(su_lcol, 1, g_lcol); }
 }
 
-static void gl_front(int32_t flip) { glFrontFace(flip ? GL_CW : GL_CCW); }
+static void gl_front(int32_t flip) { assert(flip == 0 || flip == 1); assert(g_prog != 0); glFrontFace(flip ? GL_CW : GL_CCW); }
 
-static void gl_draw(int32_t mesh, Mat_g *mvp, Mat_g *model, float r, float g, float b, float a, int32_t outline) {
+static void gl_draw(int32_t mesh, Mat_g *mvp, Mat_g *model, float r, float g, float b, float a, int32_t outline) { assert(mesh >= 0 && mesh < MAX_MESH); assert(mvp != 0 && model != 0); assert(outline == 0 || outline == 1);
     gl_use(g_prog);
     glBindVertexArray(g_vao[mesh]);
     glUniformMatrix4fv(u_mvp, 1, 0, mvp->m_g.e);
@@ -167,7 +168,7 @@ static void gl_draw(int32_t mesh, Mat_g *mvp, Mat_g *model, float r, float g, fl
     if (a < 0.99f) { glDisable(GL_BLEND); glDepthMask(GL_TRUE); }
 }
 
-static void gl_draw_ground(Mat_g *mvp) {
+static void gl_draw_ground(Mat_g *mvp) { assert(mvp != 0); assert(g_ground_prog != 0);
     if (!g_ground_tex) return;
     gl_use(g_ground_prog);
     glUniformMatrix4fv(gu_mvp, 1, 0, mvp->m_g.e);
@@ -182,7 +183,7 @@ static void gl_draw_ground(Mat_g *mvp) {
     glEnable(GL_CULL_FACE);
 }
 
-EMSCRIPTEN_KEEPALIVE unsigned char *toybox_read_pixels(void) {
+EMSCRIPTEN_KEEPALIVE unsigned char *toybox_read_pixels(void) { assert(g_w > 0); assert(g_h > 0);
     static unsigned char *pix; if (!pix) pix = (unsigned char*)malloc((size_t)g_w * g_h * 4);
     glReadPixels(0, 0, g_w, g_h, GL_RGBA, GL_UNSIGNED_BYTE, pix);
     return pix;
@@ -192,7 +193,7 @@ EMSCRIPTEN_KEEPALIVE unsigned char *toybox_read_pixels(void) {
 static GLuint g_skin, g_skin_vao[2], g_skin_n[2];
 static GLint su_mvp, su_model, su_bones, su_pal, su_pass, su_ldir, su_lcol;
 
-EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) {
+EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) { assert(id >= 0 && id < 2); assert(nv >= 0 && ni >= 0);
     const float *v = (const float *)(g_up_buf);
     const unsigned short *idx = (const unsigned short *)(g_up_buf + (size_t)nv * 60);
     if (!g_skin) {
@@ -234,7 +235,7 @@ EMSCRIPTEN_KEEPALIVE void toybox_load_skin(int id, int nv, int ni) {
     g_skin_n[id] = ni;
 }
 
-static void gl_draw_skin(int32_t lod, Mat_g *mvp, Mat_g *model, sl_f32 bones, sl_f32 pal, int32_t outline) {
+static void gl_draw_skin(int32_t lod, Mat_g *mvp, Mat_g *model, sl_f32 bones, sl_f32 pal, int32_t outline) { assert(lod == 0 || lod == 1); assert(mvp != 0 && model != 0); assert(outline == 0 || outline == 1);
     if (!g_skin_n[lod]) return;
     gl_use(g_skin);
     glBindVertexArray(g_skin_vao[lod]);

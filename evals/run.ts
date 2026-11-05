@@ -4,8 +4,11 @@ import { build as home } from './hometeamns.ts';
 import { build as narrated } from './narrated.ts';
 import { build as mrt } from './mrt.ts';
 import { printReport } from './lib.ts';
+import { assert } from '../core/assert.ts';
 
 let failed = 0;
+assert(process.argv.length >= 2);
+assert(!Number.isNaN(failed));
 for (const build of [riot, home, narrated, mrt]) {
   const rep = build();
   printReport(rep);

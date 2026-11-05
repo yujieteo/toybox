@@ -15,7 +15,7 @@ interface StairsResult { top: Vec }
 
 const fresh = (): Scene => newScene({});
 // The result of a successful command, as the type T.
-const done = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const done = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 // One component of a vector.
 const comp = (v: readonly number[] | number | undefined, i: number): number => {
   if (typeof v === 'number') throw new Error('a number is not a vector');
@@ -24,6 +24,7 @@ const comp = (v: readonly number[] | number | undefined, i: number): number => {
 // The keys of a track.
 const keysOf = (s: Scene, id: string, channel: Channel): Key[] => must(trackOf(s, id, channel), `${id} ${channel} track`).keys;
 
+function tests1(): void {
 test('every tool has name, description and an object inputSchema', () => {
   const need = ['list_models', 'new_scene', 'get_scene', 'place', 'place_near', 'place_group', 'transform', 'duplicate', 'remove', 'build_room', 'build_stairs', 'place_sign',
     'set_pose', 'animate', 'move_along', 'set_camera', 'set_lighting', 'add_caption', 'add_callout', 'add_chapter', 'set_backdrop', 'import_osm', 'set_cutaway', 'add_credit', 'validate', 'render_preview', 'export_scene'];
@@ -35,7 +36,7 @@ test('every tool has name, description and an object inputSchema', () => {
 
 test('list_models filters by query and kind', () => {
   const s = fresh();
-  assert.ok(done<{ models: ModelRow[] }>(C.list_models(s, { query: 'bus' })).models.every((m) => /bus/.test(`${m.id} ${m.name} ${m.tags}`.toLowerCase())));
+  assert.ok(done<{ models: ModelRow[] }>(C.list_models(s, { query: 'bus' })).models.every((m) => `${m.id} ${m.name} ${m.tags}`.toLowerCase().includes('bus')));
   assert.ok(done<{ count: number }>(C.list_models(s, { kind: 'vehicle' })).count >= 8);
   assert.ok(done<{ models: ModelRow[] }>(C.list_models(s, {})).models.some((m) => m.id === 'person'));
 });
@@ -66,7 +67,10 @@ test('place_near, transform, duplicate, remove', () => {
   assert.ok(!s.objects.some((o) => o.id === n.id)); assert.ok(!s.tracks.some((t) => t.object === n.id));
   assert.equal(isOk(C.remove(s, { id: 'zzz' })), false);
 });
+}
+tests1();
 
+function tests2(): void {
 test('place_group is deterministic by seed and respects patterns', () => {
   const run = (seed: number, pattern: string) => { const s = fresh(); done(C.place_group(s, { model: 'person', count: 12, pattern, at: [0, 0], seed, spacing: 1.5, variants: [1, 2, 3, 4, 5], poses: ['stand', 'wave', 'cheer'] })); return s.objects; };
   assert.deepEqual(run(7, 'scatter'), run(7, 'scatter'));
@@ -109,7 +113,10 @@ test('place_sign sets the label', () => {
   assert.equal(must(s.objects.find((o) => o.id === r.id)).label, 'Race Course Road');
   assert.equal(isOk(C.place_sign(s, { text: 'x'.repeat(80), at: [3, 3] })), false);
 });
+}
+tests2();
 
+function tests3(): void {
 test('move_along writes at, yaw and pose tracks', () => {
   const s = fresh();
   done(C.place(s, { model: 'person', at: [0, 0], id: 'w', variant: 4 }));
@@ -150,7 +157,10 @@ test('set_camera frame fits objects; cut and shot limits', () => {
   assert.equal(must(s.camera.find((k) => k.t === 1)).ease, 'step');
   done(C.set_camera(s, { t: 10, shot: 'top', eye: [0, 30, 1], target: [0, 0, 0] }) );
 });
+}
+tests3();
 
+function tests4(): void {
 test('chapters, captions, callouts, lighting, credits, backdrop, cutaway', () => {
   const s = fresh();
   done(C.place(s, { model: 'car-taxi', at: [0, 0], id: 'taxi' }));
@@ -182,3 +192,5 @@ test('animate, render_preview stub, get_scene, export_scene', () => {
   assert.equal(done<{ toybox: number }>(C.get_scene(s, { full: true })).toybox, 1);
   assert.equal(done<{ scene: { toybox: number } }>(C.export_scene(s, {})).scene.toybox, 1);
 });
+}
+tests4();

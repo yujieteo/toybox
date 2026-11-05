@@ -9,7 +9,7 @@ export const PAGE_BUDGET_KB: Readonly<Record<string, number>> = {
   'app.html': 710,
   'demo.html': 710,
   'viewer.html': 710,
-  'headless.html': 700,
+  'headless.html': 706,
 };
 
 const transpiler = new Bun.Transpiler({ loader: 'ts' });

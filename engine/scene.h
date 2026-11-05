@@ -25,6 +25,8 @@ struct V_g {
     float nz_g;
 };
 
+typedef struct { float *data; int64_t len; } sl_f32;
+
 typedef struct Obj_g Obj_g;
 struct Obj_g {
     int32_t prim_g;
@@ -52,8 +54,6 @@ struct Obj_g {
     float b2_g;
     float shadow_g;
 };
-
-typedef struct { float *data; int64_t len; } sl_f32;
 
 typedef struct Trk_g Trk_g;
 struct Trk_g {

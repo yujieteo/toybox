@@ -7,7 +7,7 @@ import type { Scene, Outfit, Part } from '../web/types.ts';
 import { must as need, okResult, isOk } from './helpers.ts';
 
 // The result of a successful command, as the type T.
-const must = <T = Record<string, never>>(r: unknown): T => okResult<T>(r);
+const must = <T = Record<string, never>>(r: unknown, check?: (x: unknown) => x is T): T => okResult<T>(r, check);
 const cat = loadCatalogue();
 const codes = (errs: { code: string }[]): string[] => errs.map((e) => e.code);
 // A straight road along z, 8 s long.
@@ -17,6 +17,7 @@ function road(): Scene {
   return s;
 }
 
+function tests1(): void {
 test('two cars that drive through each other are a collision', () => {
   const s = road();
   must(C.place(s, { model: 'car-sedan', at: [-2.2, 0, 20], id: 'a', yaw: 180 }));
@@ -25,7 +26,7 @@ test('two cars that drive through each other are a collision', () => {
   const r = must<{ collisions?: unknown[] }>(C.move_along(s, { id: 'b', path: [[-2.2, -20], [-2.2, 20]], times: [0, 4] }));
   assert.ok(r.collisions?.length, 'move_along reports the collision');
   const errs = motionErrors(s, cat);
-  assert.ok(errs.some((e) => e.code === 'collision' && /a and b pass into each other/.test(e.message)), JSON.stringify(errs));
+  assert.ok(errs.some((e) => e.code === 'collision' && e.message.includes('a and b pass into each other')), JSON.stringify(errs));
   assert.ok(must<{ errors: { code: string }[] }>(C.validate(s, {})).errors.some((e) => e.code === 'collision'));
 });
 
@@ -64,7 +65,10 @@ test('a hidden object and a building that shrinks to nothing fail validate', () 
   must(C.animate(s, { id: 'house', channel: 'scale', keys: [{ t: 0, v: [1, 1, 1] }, { t: 2, v: [0.001, 0.001, 0.001], ease: 'step' }] }));
   assert.ok(codes(validate(s, cat)).includes('object_vanishes'));
 });
+}
+tests1();
 
+function tests2(): void {
 test('a building that is tiny from the start fails validate', () => {
   const s = newScene({ duration: 4 });
   must(C.place(s, { model: 'shophouse-2', at: [0, 0, 8], id: 'house', scale: [0.001, 0.001, 0.001] }));
@@ -80,7 +84,7 @@ test('a pair that collides twice reports both time spans', () => {
   must(C.place(s, { model: 'person', at: [0, 0, -5], id: 'p', variant: 1 }));
   must(C.place(s, { model: 'person', at: [0, 0, 0], id: 'q', variant: 2 }));
   must(C.move_along(s, { id: 'p', path: [[0, -5], [0, 5], [0, -5]], times: [0, 5, 10] }));
-  const spans = motionErrors(s, cat).filter((e) => e.code === 'collision').map((e) => need(e.message.match(/from ([\d.]+) s/)?.[1]));
+  const spans = motionErrors(s, cat).filter((e) => e.code === 'collision').map((e) => need((/from ([\d.]+) s/.exec(e.message))?.[1]));
   assert.equal(spans.length, 2, JSON.stringify(spans));
   assert.ok(Number(spans[0]) < 5 && Number(spans[1]) > 5, JSON.stringify(spans));
 });
@@ -108,7 +112,10 @@ test('a vehicle may be swapped for its wreck at the same place and time', () => 
   assert.ok(!codes(validate(s, cat)).includes('object_vanishes'));
   assert.deepEqual(motionErrors(s, cat), []);
 });
+}
+tests2();
 
+function tests3(): void {
 test('a callout outside its chapter and an outdoor cutaway fail validate', () => {
   const s = newScene({ duration: 8 });
   must(C.place(s, { model: 'person', at: [0, 0], id: 'p', variant: 1 }));
@@ -131,3 +138,5 @@ test('held gear is on the forearm or the wrist, and the guide list has motion', 
   const r = C.guide(newScene({}), { name: 'motion' });
   assert.ok(isOk(r), JSON.stringify(r));
 });
+}
+tests3();
