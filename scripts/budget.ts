@@ -58,12 +58,12 @@ export function measurePages(webDir: string): PageSize[] {
   const pages = readdirSync(webDir).filter((f) => f.endsWith('.html')).sort();
   return pages.map((page) => {
     const files = new Map<string, number>();
-    const visit = (file: string): void => {
-      if (files.has(file) || !existsSync(sourceFor(file))) return;
+    const pending = [join(webDir, page)];
+    for (let file = pending.pop(); file !== undefined; file = pending.pop()) {
+      if (files.has(file) || !existsSync(sourceFor(file))) continue;
       files.set(file, gzipSync(bytesOf(file)).length);
-      for (const ref of references(file)) visit(ref);
-    };
-    visit(join(webDir, page));
+      pending.push(...references(file).reverse());
+    }
     const totalKb = [...files.values()].reduce((a, b) => a + b, 0) / KB;
     return { page, files, totalKb, budgetKb: PAGE_BUDGET_KB[page] ?? DEFAULT_BUDGET_KB };
   });

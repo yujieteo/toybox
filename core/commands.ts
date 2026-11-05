@@ -78,13 +78,25 @@ const common = {
 } satisfies Record<string, JsonSchema>;
 const cueArg: JsonSchema = { type: 'array', minItems: 1, maxItems: 3, description: '[sentence, "word", offset]: the time when the narration says "word" in sentence (0 is the first), plus offset seconds. [sentence] is the start of the sentence. The time follows the voice when the narration changes.' };
 
-export function checkArgs(schema: JsonSchema, v: unknown, path = 'args'): ToolError[] {
-  const errs: ToolError[] = [];
-  const e = (m: string) => errs.push({ code: 'bad_args', message: `${path}: ${m}` });
+type ArgJob =
+  | { kind: 'node'; schema: JsonSchema; v: unknown; path: string; out: ToolError[] }
+  | { kind: 'tail'; schema: JsonSchema; v: unknown; path: string; out: ToolError[] }
+  | { kind: 'any'; sinks: ToolError[][]; path: string; out: ToolError[] };
+
+// Checks one value against its schema, then lists the checks its parts and its tail still need, in order.
+function checkNode(job: Extract<ArgJob, { kind: 'node' }>): ArgJob[] {
+  const { schema, v, path, out } = job;
+  const e = (m: string) => out.push({ code: 'bad_args', message: `${path}: ${m}` });
   if (schema.anyOf) {
-    if (!schema.anyOf.some((s) => checkArgs(s, v, path).length === 0)) e('does not match any allowed form.');
-    return errs;
+    const sinks: ToolError[][] = [];
+    const alternatives = schema.anyOf.map((s): ArgJob => {
+      const sink: ToolError[] = [];
+      sinks.push(sink);
+      return { kind: 'node', schema: s, v, path, out: sink };
+    });
+    return [{ kind: 'any', sinks, path, out }, ...alternatives.reverse()];
   }
+  const parts: ArgJob[] = [];
   const t = schema.type;
   if (t === 'string' && typeof v !== 'string') e('must be a string.');
   else if (t === 'number' && (typeof v !== 'number' || !Number.isFinite(v))) e('must be a number.');
@@ -96,18 +108,32 @@ export function checkArgs(schema: JsonSchema, v: unknown, path = 'args'): ToolEr
       if (schema.minItems !== undefined && v.length < schema.minItems) e(`needs at least ${schema.minItems} items.`);
       if (schema.maxItems !== undefined && v.length > schema.maxItems) e(`needs at most ${schema.maxItems} items.`);
       const items = schema.items;
-      if (items) v.forEach((x: unknown, i: number) => errs.push(...checkArgs(items, x, `${path}[${i}]`)));
+      if (items) v.forEach((x: unknown, i: number) => parts.push({ kind: 'node', schema: items, v: x, path: `${path}[${i}]`, out }));
     }
   } else if (t === 'object') {
     if (!isRecord(v)) e('must be an object.');
     else {
-      for (const k of schema.required || []) if (v[k] === undefined) errs.push({ code: 'bad_args', message: `${path}.${k}: is required.` });
-      for (const [k, s] of Object.entries(schema.properties || {})) if (v[k] !== undefined && v[k] !== null) errs.push(...checkArgs(s, v[k], `${path}.${k}`));
-      if (schema.additionalProperties === false) for (const k of Object.keys(v)) if (!schema.properties?.[k]) errs.push({ code: 'bad_args', message: `${path}.${k}: unknown argument.` });
+      for (const k of schema.required || []) if (v[k] === undefined) out.push({ code: 'bad_args', message: `${path}.${k}: is required.` });
+      for (const [k, s] of Object.entries(schema.properties || {})) if (v[k] !== undefined && v[k] !== null) parts.push({ kind: 'node', schema: s, v: v[k], path: `${path}.${k}`, out });
+      if (schema.additionalProperties === false) for (const k of Object.keys(v)) if (!schema.properties?.[k]) out.push({ code: 'bad_args', message: `${path}.${k}: unknown argument.` });
     }
   }
-  if (schema.enum && !schema.enum.includes(v)) e(`must be one of ${schema.enum.join(', ')}.`);
-  if (schema.minimum !== undefined && typeof v === 'number' && v < schema.minimum) e(`must be at least ${schema.minimum}.`);
+  return [{ kind: 'tail', schema, v, path, out }, ...parts.reverse()];
+}
+
+// An explicit stack, not recursion (JPL rule 1): the errors come out in the same order as a depth-first walk.
+export function checkArgs(schema: JsonSchema, v: unknown, path = 'args'): ToolError[] {
+  const errs: ToolError[] = [];
+  const stack: ArgJob[] = [{ kind: 'node', schema, v, path, out: errs }];
+  for (let job = stack.pop(); job !== undefined; job = stack.pop()) {
+    if (job.kind === 'node') stack.push(...checkNode(job));
+    else if (job.kind === 'any') {
+      if (!job.sinks.some((sink) => sink.length === 0)) job.out.push({ code: 'bad_args', message: `${job.path}: does not match any allowed form.` });
+    } else {
+      if (job.schema.enum && !job.schema.enum.includes(job.v)) job.out.push({ code: 'bad_args', message: `${job.path}: must be one of ${job.schema.enum.join(', ')}.` });
+      if (job.schema.minimum !== undefined && typeof job.v === 'number' && job.v < job.schema.minimum) job.out.push({ code: 'bad_args', message: `${job.path}: must be at least ${job.schema.minimum}.` });
+    }
+  }
   return errs;
 }
 
