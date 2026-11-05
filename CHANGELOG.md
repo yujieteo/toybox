@@ -6,6 +6,7 @@ All notable changes to Toybox are in this file. The form is [Keep a Changelog](h
 
 ### Changed
 
+- The Power of 10 checker is power10-check 0.2.0 (Goose compiled to C, built from source by `scripts/power10-check`), pinned by `power10.lock` to one full commit. It replaces 0.1.0 (Python), so the check needs no Python. Its C and TypeScript parsers reject two shapes that 0.1.0 read, so `EMSCRIPTEN_KEEPALIVE` became the `__attribute__((used))` it expands to in `engine/gl_shim.h` and `engine/vid_host.c`, and one assertion in `test/evals.test.ts` compares the other way round.
 - `bun run check` compiles `engine/*.c` for WebAssembly with all warnings and `-Werror`, and runs `clang --analyze`. Goose-made C has the five code-generator warnings and the dead-store check off. It needs emsdk (`EMSDK`).
 - All project JavaScript is strict TypeScript (`strict`, `noUncheckedIndexedAccess`) and runs with Bun. The daemon transpiles `web/*.ts` for the browser. `bun scripts/build-web.ts` writes `dist/web/` for a static host.
 - `bun run check` runs the type check, the escape-hatch scan, the web page budget, the dead-code check, the tests and a process replay against `main`.
