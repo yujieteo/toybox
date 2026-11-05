@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { findEscapes } from './escapes.ts';
 import { measurePages } from './budget.ts';
 import { checkJpl } from './jpl.ts';
+import { checkC } from './c-check.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures: string[] = [];
@@ -33,6 +34,10 @@ console.log('\n== JPL rules 1 and 4 (no recursion, functions of at most 60 lines
 const jpl = checkJpl(root);
 for (const p of jpl) console.log(p);
 if (jpl.length > 0) failures.push('jpl');
+console.log('\n== C warnings and analyser (engine/*.c, Goose-made C without the code-generator warnings and dead stores)');
+const cProblems = checkC(root);
+for (const p of cProblems) console.log(p);
+if (cProblems.length > 0) failures.push('C warnings and analyser');
 
 step('dead code (knip)', resolve(root, 'node_modules/.bin/knip'), []);
 step('tests and process replay against main', process.execPath, [resolve(root, 'scripts/replay.ts'), '--capture', '--base', process.env['TOYBOX_REPLAY_BASE'] ?? 'main']);
