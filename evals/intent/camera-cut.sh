@@ -4,7 +4,7 @@
 main() {
   local text report error distance
   blender_ready
-  text=$(blender -b --factory-startup --threads "${TOYBOX_THREADS}" -P evals/probes/camera_cut.py 2>&1)
+  text=$(blender -b --factory-startup --threads "${TOYBOX_THREADS:-4}" -P evals/probes/camera_cut.py 2>&1)
   report=$(grep '^PROBE' <<< "${text}")
   error=$(probe_value "${report}" cut_error)
   distance=$(probe_value "${report}" move_distance)
