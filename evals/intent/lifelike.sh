@@ -9,7 +9,7 @@ small() {
 }
 
 main() {
-  local text report name breath shift parts
+  local text report name breath shift parts rays
   blender_ready
   text=$(blender -b --factory-startup --threads "${TOYBOX_THREADS:-4}" -P evals/probes/lifelike.py 2> /dev/null)
   report=$(grep '^PROBE' <<< "${text}")
@@ -18,6 +18,9 @@ main() {
     small "${report}" "${name}_weights" 0.00001
   done
   small "${report}" idle_foot_drift 0.003
+  small "${report}" shirt_pokes 0
+  rays=$(probe_value "${report}" shoulder_rays)
+  [[ "${rays}" -gt 0 ]] || fail "no shoulder coverage rays"
   breath=$(probe_value "${report}" breath)
   shift=$(probe_value "${report}" shift)
   awk -v b="${breath}" -v s="${shift}" \

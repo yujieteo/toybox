@@ -138,10 +138,6 @@ def shell(body: Body, kind: str, scale: float) -> Body:
 
 def garment(rig: Object, body: Body, joints: list[Joint], kind: str, material: Material) -> None:
     obj = make_mesh(f"{rig.name}.{kind}", body, joints, [material])
-    if kind == "shirt":
-        smooth = obj.modifiers.new("cloth folds", "SUBSURF")
-        smooth.levels = 1
-        smooth.render_levels = 1
     bind(obj, rig)
     if kind == "hair":
         return

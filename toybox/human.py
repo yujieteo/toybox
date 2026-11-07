@@ -15,6 +15,9 @@ DOWN_BONES = ("upperarm", "lowerarm", "wrist", "upperleg", "lowerleg", "foot")
 SHORT_BONE = 0.08
 IRIS = 7
 SHOES = 3
+SHIRT = 1
+COVERED_SHOULDER = 1.29
+COVERED_TORSO = 0.22
 PUPIL_RADIUS = 0.0033
 
 
@@ -123,6 +126,14 @@ def make_mesh(name: str, body: Body, joints: list[Joint], materials: list[Materi
     return obj
 
 
+def under_shirt(body: Body, tri: tuple[int, int, int], scale: float) -> bool:
+    if majority([body.regions[i] for i in tri]) != SHIRT:
+        return False
+    x = sum(body.points[i][0] for i in tri) / 3.0 / scale
+    z = sum(body.points[i][2] for i in tri) / 3.0 / scale
+    return abs(x) < COVERED_TORSO or z > COVERED_SHOULDER
+
+
 def bare_body(body: Body, scale: float) -> Body:
     regions: list[int] = []
     points: list[Vec3] = []
@@ -132,7 +143,11 @@ def bare_body(body: Body, scale: float) -> Body:
             region = 8
         regions.append(region)
         points.append((point[0], point[1] - 0.0045 * scale, point[2]) if source in (5, IRIS) else point)
-    faces = [tri for tri in body.faces if not all(body.regions[i] == SHOES for i in tri)]
+    faces = [
+        tri
+        for tri in body.faces
+        if not all(body.regions[i] == SHOES for i in tri) and not under_shirt(body, tri, scale)
+    ]
     return Body(points, regions, body.weights, faces)
 
 

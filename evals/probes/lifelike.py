@@ -3,6 +3,7 @@ import math
 import bpy
 from bpy.types import Object
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 from toybox.clothes import shell
 from toybox.formats import FORMATS, QUALITIES, Render
@@ -13,6 +14,10 @@ from toybox.timing import silent_timing
 
 SOURCE = "People look alive: clean clothing edges, breathing, weight shift and richer props"
 EDGE_DEGREE = 2
+SHOULDER_INNER = 0.12
+SHOULDER_OUTER = 0.23
+SHOULDER_HEIGHT = 1.36
+COVERAGE_GAP = 0.001
 
 
 def boundary_loops(body: Body) -> list[list[int]]:
@@ -80,6 +85,32 @@ def feet(rig: Object) -> list[tuple[float, float, float]]:
     return result
 
 
+def coverage(root: Object) -> tuple[int, int]:
+    graph = bpy.context.evaluated_depsgraph_get()
+    skin = bpy.data.objects[f"{root.name}.body"]
+    shirt = bpy.data.objects[f"{root.name}.shirt"]
+    skin_tree, shirt_tree = BVHTree.FromObject(skin, graph), BVHTree.FromObject(shirt, graph)
+    posed = skin.evaluated_get(graph)
+    mesh = posed.to_mesh()
+    source = read_body(1.0)
+    direction = Vector((0.0, -1.0, -0.4)).normalized()
+    pokes, rays = 0, 0
+    for index, point in enumerate(source.points):
+        if source.regions[index] != 1 or not (
+            SHOULDER_INNER < abs(point[0]) < SHOULDER_OUTER and point[2] > SHOULDER_HEIGHT
+        ):
+            continue
+        target = posed.matrix_world @ Vector(mesh.vertices[index].co)
+        origin = target - direction * 0.5
+        skin_distance = skin_tree.ray_cast(origin, direction, 1.0)[3]
+        shirt_distance = shirt_tree.ray_cast(origin, direction, 1.0)[3]
+        rays += 1
+        if skin_distance is not None and (shirt_distance is None or skin_distance + COVERAGE_GAP < shirt_distance):
+            pokes += 1
+    posed.to_mesh_clear()
+    return pokes, rays
+
+
 def motion_metrics() -> None:
     fmt = FORMATS["landscape"]
     stage = make_stage(Render(fmt, QUALITIES["draft"], "cpu"), silent_timing(fmt.fps))
@@ -88,6 +119,7 @@ def motion_metrics() -> None:
     stage.scene.frame_set(1)
     before = feet(person.root)
     drift = 0.0
+    pokes, rays = 0, 0
     breath: list[float] = []
     shift: list[float] = []
     for frame in range(1, end + 1):
@@ -95,6 +127,12 @@ def motion_metrics() -> None:
         drift = max(drift, *(math.dist(a, b) for a, b in zip(before, feet(person.root), strict=True)))
         breath.append(float(person.root.pose.bones["spine01"].scale[0]))
         shift.append(float(person.root.pose.bones["root"].location[0]))
+        if (frame - 1) % fmt.fps == 0:
+            hits, count = coverage(person.root)
+            pokes += hits
+            rays += count
+    show(f"PROBE shirt_pokes={pokes}")
+    show(f"PROBE shoulder_rays={rays}")
     show(f"PROBE breath={max(breath) - min(breath):.6f}")
     show(f"PROBE shift={max(shift) - min(shift):.6f}")
     show(f"PROBE idle_foot_drift={drift:.6f}")
