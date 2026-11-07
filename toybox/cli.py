@@ -41,6 +41,8 @@ def blender_command(extra: list[str]) -> list[str]:
         "--factory-startup",
         "--threads",
         threads,
+        "--python-exit-code",
+        "1",
         "-P",
         str(ROOT / "toybox" / "blend.py"),
         "--",
