@@ -1,4 +1,7 @@
+from collections.abc import Sequence
 from typing import final
+
+from mathutils import Vector
 
 from bpy.types import DataBase, Object
 
@@ -8,9 +11,25 @@ def _drivers_len(self: Drivers) -> int: ...
 class Drivers:
     __len__ = _drivers_len
 
+class Keyframe:
+    co: Vector
+    interpolation: str
+
+class FCurve:
+    keyframe_points: Sequence[Keyframe]
+
+def _action_fcurve_ensure_for_datablock(
+    self: Action, datablock: Object, data_path: str, *, index: int = ...
+) -> FCurve: ...
+
+@final
+class Action:
+    fcurve_ensure_for_datablock = _action_fcurve_ensure_for_datablock
+
 @final
 class AnimationData:
     drivers: Drivers
+    action: Action | None
 
 class Constraint:
     target: Object

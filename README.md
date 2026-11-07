@@ -49,6 +49,10 @@ Run `python -m toybox render evals/shots/lifelike --quality preview --format bot
 
 A box keeps its origin at the point you give it. Its size is baked into the mesh, so moves and turns use that point.
 
+Use `camera_cut(stage, frame, position, look_at)` for a hard cut.
+The camera and its aim hold still up to the cut frame, then jump to the new pose.
+Use `camera_move` for a smooth move.
+
 All motion is keyframes. There are no drivers and no handlers.
 Each format keeps the same width of view. The tall video shows more above and below.
 
