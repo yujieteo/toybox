@@ -1,0 +1,3 @@
+cmd="bin/rules evals/lint/fixtures/py/good.py evals/lint/fixtures/py/shebang.py"
+runs=20
+units=2

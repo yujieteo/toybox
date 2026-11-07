@@ -1,0 +1,26 @@
+from collections.abc import Sequence
+
+from bmesh.types import BMEdge, BMesh, BMFace, BMFaceSeq, BMVert, BMVertSeq
+from mathutils import Floats
+
+type Geom = BMVert | BMEdge | BMFace
+
+def recalc_face_normals(bm: BMesh, *, faces: BMFaceSeq | Sequence[BMFace]) -> dict[str, list[BMFace]]: ...
+def remove_doubles(bm: BMesh, *, verts: BMVertSeq | Sequence[BMVert], dist: float) -> dict[str, list[BMVert]]: ...
+def create_icosphere(bm: BMesh, *, subdivisions: int, radius: float) -> dict[str, list[BMVert]]: ...
+def create_cube(bm: BMesh, *, size: float) -> dict[str, list[BMVert]]: ...
+def bisect_plane(
+    bm: BMesh,
+    *,
+    geom: Sequence[Geom],
+    dist: float,
+    plane_co: Floats,
+    plane_no: Floats,
+    clear_inner: bool = ...,
+    clear_outer: bool = ...,
+) -> dict[str, list[Geom]]: ...
+def translate(bm: BMesh, *, verts: BMVertSeq | Sequence[BMVert], vec: Floats) -> None: ...
+def holes_fill(bm: BMesh, *, edges: Sequence[BMEdge], sides: int) -> dict[str, list[BMFace]]: ...
+def inset_individual(
+    bm: BMesh, *, faces: Sequence[BMFace], thickness: float, depth: float, use_even_offset: bool
+) -> dict[str, list[BMFace]]: ...

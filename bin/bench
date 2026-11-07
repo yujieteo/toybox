@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -u
+[[ "${BASH_VERSINFO[0]}" -ge 5 ]] || { echo "bench: needs bash 5. Run: nix develop" >&2; exit 2; }
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+rss_kb() {
+  case "$(uname)" in
+    Darwin) awk '/maximum resident set size/ { printf "%d", $1 / 1024 }' "$1" ;;
+    *) awk -F': ' '/Maximum resident set size/ { print $2 }' "$1" ;;
+  esac
+}
+
+gpu_mb() {
+  command -v nvidia-smi >/dev/null || { echo na; return; }
+  local out
+  out=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits)
+  echo "${out%%$'\n'*}"
+}
+
+time_flag() {
+  local os
+  os=$(uname)
+  if [[ "${os}" = Darwin ]]; then echo -l; else echo -v; fi
+}
+
+one_run() {
+  local cmd=$1 t0 t1 st tmp bytes rss gpu flag
+  tmp=$(mktemp)
+  t0=${EPOCHREALTIME}
+  flag=$(time_flag)
+  /usr/bin/time "${flag}" -o "${tmp}.t" bash -c "${cmd}" > "${tmp}" 2>/dev/null
+  st=$?
+  t1=${EPOCHREALTIME}
+  bytes=$(wc -c < "${tmp}")
+  rss=$(rss_kb "${tmp}.t")
+  gpu=$(gpu_mb)
+  awk -v a="${t0}" -v b="${t1}" -v s="${st}" -v r="${rss}" -v o="${bytes// /}" -v g="${gpu}" \
+    'BEGIN { printf "%.3f\t%s\t%s\t%s\t%s\n", (b - a) * 1000, r, o, g, s }'
+  rm -f "${tmp}" "${tmp}.t"
+}
+
+summary() {
+  local sorted
+  sorted=$(mktemp)
+  sort -n "$1" > "${sorted}"
+  awk -F'\t' -v units="$2" '
+    function pct(p,   i) { i = int(p * n + 0.999999); if (i < 1) i = 1; return w[i] }
+    { w[++n] = $1; total += $1; if ($2 + 0 > rss) rss = $2 + 0; bytes += $3; gpu = $4; if ($5 != 0) bad++ }
+    END {
+      printf "latency_ms p50=%.1f p95=%.1f p99=%.1f\n", pct(0.5), pct(0.95), pct(0.99)
+      printf "throughput_per_s %.2f\n", n * units / (total / 1000)
+      printf "error_rate %.3f\n", bad / n
+      printf "max_rss_kb %d\n", rss
+      printf "bytes_out_per_run %d\n", bytes / n
+      printf "gpu_mem_mb %s\n", gpu
+    }' "${sorted}"
+  rm -f "${sorted}"
+}
+
+main() {
+  local spec=${1:?usage: bin/bench NAME [samples-file]} samples i
+  local cmd runs units
+  cd "${root}" && . "${root}/evals/bench/${spec}.bench"
+  runs=${BENCH_RUNS:-${runs}}
+  samples=${2:-$(mktemp)}
+  : > "${samples}"
+  for ((i = 0; i < runs; i++)); do one_run "${cmd}" >> "${samples}"; done
+  echo "bench ${spec} (${runs} runs)"
+  summary "${samples}" "${units}"
+}
+
+main "$@"

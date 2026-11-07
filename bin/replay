@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+accept=0
+base=main
+
+parse() {
+  local a
+  for a in "$@"; do
+    case "${a}" in
+      --accept) accept=1 ;;
+      *) base=${a} ;;
+    esac
+  done
+}
+
+main() {
+  local tmp new old
+  parse "$@"
+  git -C "${root}" rev-parse --verify -q "${base}" > /dev/null || base=HEAD
+  tmp=$(mktemp -d)
+  mkdir "${tmp}/base"
+  git -C "${root}" archive -o "${tmp}/base.tar" "${base}"
+  tar -xf "${tmp}/base.tar" -C "${tmp}/base"
+  rm -rf "${tmp}/base/evals"
+  cp -R "${root}/evals" "${tmp}/base/evals"
+  old=${tmp}/old
+  new=${tmp}/new
+  (cd "${tmp}/base" && EVAL_OUT=${old} bin/eval > /dev/null)
+  (cd "${root}" && EVAL_OUT=${new} bin/eval > /dev/null)
+  echo "replay: same inputs through the code of ${base} and the code in this tree"
+  if diff -r "${old}" "${new}"; then
+    echo "replay: no output differs"
+  elif [[ "${accept}" -eq 1 ]]; then
+    echo "replay: the differences above are accepted"
+  else
+    echo "replay: outputs differ. Check the diff, then run bin/replay --accept if it is on purpose." >&2
+    exit 1
+  fi
+}
+
+main "$@"

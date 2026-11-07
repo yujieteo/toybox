@@ -1,0 +1,3 @@
+vision                     https://github.com/kunchenguid/vision 7a20c38181151ec67efdf8fa2cb03a60123a7b83 (MIT)
+blueprint                  https://github.com/yujieteo/blueprint 7b65538 (rules, gate, evals, question-requirements, prove-change)
+ste100                     the author's installed skill
