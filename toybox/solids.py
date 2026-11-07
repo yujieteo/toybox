@@ -18,7 +18,7 @@ def box(name: str, size: Vec3, at: Vec3, material: Material, bevel: float = 0.01
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=at)
     obj = bpy.context.object
     obj.scale = size
-    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     return finish(obj, name, material, bevel)
 
 
