@@ -44,5 +44,4 @@ def area(scene: Scene, name: str, at: Vec3, power: float, size: float) -> Object
     lamp = bpy.data.objects.new(name, data)
     scene.collection.objects.link(lamp)
     lamp.location = at
-    lamp.rotation_euler = (math.pi, 0.0, 0.0)
     return lamp
