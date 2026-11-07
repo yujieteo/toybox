@@ -47,6 +47,8 @@ Each prop has one root, so a shot can move or turn the whole prop.
 See `evals/shots/lifelike/shot.py` for a six-second shot with a person and both props.
 Run `python -m toybox render evals/shots/lifelike --quality preview --format both` to see it.
 
+A box keeps its origin at the point you give it. Its size is baked into the mesh, so moves and turns use that point.
+
 All motion is keyframes. There are no drivers and no handlers.
 Each format keeps the same width of view. The tall video shows more above and below.
 
