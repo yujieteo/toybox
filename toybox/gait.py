@@ -9,8 +9,9 @@ TURN_SECONDS = 0.35
 SETTLE_SECONDS = 0.25
 KNEE_BEND = 0.9
 ARM_BEND = 0.3
-LEG_LENGTH = 0.88
+LEG_LENGTH = 0.834
 MAX_SWING = 0.62
+ADDUCT = 0.5
 
 
 @dataclass(frozen=True)
@@ -34,8 +35,8 @@ def key_limb(limb: Limb, frame: float, phase: float, amplitude: float, side: flo
     bend = -KNEE_BEND * max(0.0, math.cos(angle))
     key_rotation(limb.hip, round(frame), (forward, 0, 0), "LINEAR")
     key_rotation(limb.knee, round(frame), (bend, 0, 0), "LINEAR")
-    key_rotation(limb.shoulder, round(frame), (-0.9 * forward, 0, 0), "LINEAR")
-    key_rotation(limb.elbow, round(frame), (-ARM_BEND - 0.2 * abs(forward), 0, 0), "LINEAR")
+    key_rotation(limb.shoulder, round(frame), (-0.9 * forward, 0, limb.side * ADDUCT), "LINEAR")
+    key_rotation(limb.elbow, round(frame), (ARM_BEND + 0.2 * abs(forward), 0, 0), "LINEAR")
 
 
 def rest_pose(person: Person, frame: int) -> None:
@@ -104,14 +105,14 @@ def wave(person: Person, start: int, seconds: float, fps: int) -> int:
     arm = person.right
     lift = round(0.4 * fps)
     end = start + round(seconds * fps)
-    key_rotation(arm.shoulder, start, (0, 0, 0))
-    key_rotation(arm.shoulder, start + lift, (-2.7, 0, -0.25))
-    key_rotation(arm.shoulder, end - lift, (-2.7, 0, -0.25))
-    key_rotation(arm.shoulder, end, (0, 0, 0))
+    key_rotation(arm.shoulder, start, (0, 0, arm.side * ADDUCT))
+    key_rotation(arm.shoulder, start + lift, (2.7, 0, 0.25))
+    key_rotation(arm.shoulder, end - lift, (2.7, 0, 0.25))
+    key_rotation(arm.shoulder, end, (0, 0, arm.side * ADDUCT))
     beats = max(2, round(seconds * 2.5))
     for beat in range(beats + 1):
         frame = start + lift + (end - start - 2 * lift) * beat / beats
-        key_rotation(arm.elbow, round(frame), (-0.6 - 0.5 * (beat % 2), 0, 0))
+        key_rotation(arm.elbow, round(frame), (0.6 + 0.5 * (beat % 2), 0, 0))
     return end
 
 

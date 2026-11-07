@@ -15,6 +15,7 @@ from bpy._scene_types import Scene as Scene
 from bpy._scene_types import Strip as Strip
 from bpy._scene_types import TextStrip as TextStrip
 from bpy._scene_types import World as World
+from bpy._rig_types import EditBone as EditBone, Pose, PoseBone as PoseBone, VertexGroups
 from mathutils import Floats, Matrix, Quaternion, Vec3
 
 def _coll_iter[T](self: Coll[T]) -> Iterator[T]: ...
@@ -106,6 +107,7 @@ class Node:
     id_data: NodeTree
     node_tree: NodeTree
     operation: str
+    blend_type: str
     data_type: str
     color_ramp: ColorRamp
     layer_name: str
@@ -230,6 +232,7 @@ def _data_shade_smooth(self: DataBase) -> None: ...
 def _data_set_sharp_from_angle(self: DataBase, *, angle: float) -> None: ...
 
 class DataBase:
+    edit_bones: Coll[EditBone]
     materials: MaterialList
     type: str
     ortho_scale: float
@@ -294,10 +297,12 @@ class Light(DataBase):
     shade_smooth = _data_shade_smooth
     set_sharp_from_angle = _data_set_sharp_from_angle
 
-type ObjectData = Mesh | Curve | Light | Camera
+@final
+class Armature(DataBase): ...
+
+type ObjectData = Mesh | Curve | Light | Camera | Armature
 
 def _object_keyframe_insert(self: Object, data_path: str, *, frame: float) -> None: ...
-
 def _object_evaluated_get(self: Object, depsgraph: Depsgraph) -> Object: ...
 def _object_to_mesh(self: Object) -> Mesh: ...
 def _object_to_mesh_clear(self: Object) -> None: ...
@@ -326,6 +331,8 @@ class Object:
     color: Sequence[float]
     animation_data: AnimationData | None
     constraints: Constraints
+    pose: Pose
+    vertex_groups: VertexGroups
     keyframe_insert = _object_keyframe_insert
     evaluated_get = _object_evaluated_get
     to_mesh = _object_to_mesh

@@ -32,7 +32,7 @@ A shot script looks like `evals/shots/tiny/shot.py`. The `make-video` skill says
 | --- | --- |
 | `toybox/stage.py` | The functions a shot script calls: sky, floor, boxes, people, camera. |
 | `toybox/materials.py` | Surfaces with procedural textures: concrete, tile, brick, metal, wood, glass, fabric. |
-| `toybox/person.py`, `toybox/gait.py` | A jointed person and a walk cycle with planted feet. |
+| `toybox/human.py`, `toybox/person.py`, `toybox/gait.py` | A real human body mesh on a 20-bone skeleton, and a walk cycle with planted feet. |
 | `toybox/camera.py`, `toybox/light.py` | A camera with depth of field, a physical sky and area lights. |
 | `toybox/edit.py` | The video editor: the scene, the voice and the captions in one timeline. |
 | `toybox/blend.py`, `toybox/cli.py` | The Blender entry and the command. |
@@ -50,6 +50,20 @@ Set `TOYBOX_HOME` to use another folder.
 ## Render time
 
 Cycles runs on the CPU unless you choose a device. The `draft` quality is a quarter size with 8 samples. The `final` quality is full size with 256 samples, denoising and motion blur.
+
+## Devices
+
+Cycles on the CPU is the path that has run. It is the one on the Linux desktop.
+The air Mac does not have Blender installed. Its GPU is an Apple M5 with 8 cores that reports Metal 4.
+Cycles on Metal has never run there, so `--device metal` is untested. Nothing was installed on that Mac.
+
+## Assets
+
+`assets/people/` holds the person: a body mesh of 13,736 points with up to 4 bone weights per point, and the skeleton.
+It comes from the MakeHuman base mesh, default skeleton and weights, which are CC0 1.0 (<https://creativecommons.org/publicdomain/zero/1.0/>).
+CC0 does not need credit. We credit the MakeHuman community (<https://static.makehumancommunity.org>) to thank them.
+The files are `body.bin` (little-endian: two integers, 15 floats a point, then 16-bit triangle indices) and `skel.tsv` (name, parent, head position).
+Each point has a region (skin, shirt, trousers, shoes, hair, eye white, lips, iris) that picks its material.
 
 ## The gate
 

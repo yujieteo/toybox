@@ -1,5 +1,5 @@
 import bpy
-from bpy.types import Object
+from bpy.types import Object, PoseBone
 
 from toybox.vec import Vec3
 
@@ -16,7 +16,7 @@ def key_location(obj: Object, frame: int, location: Vec3, kind: str = "BEZIER") 
     obj.keyframe_insert("location", frame=frame)
 
 
-def key_rotation(obj: Object, frame: int, euler: Vec3, kind: str = "BEZIER") -> None:
+def key_rotation(obj: Object | PoseBone, frame: int, euler: Vec3, kind: str = "BEZIER") -> None:
     ease(kind)
     obj.rotation_euler = euler
     obj.keyframe_insert("rotation_euler", frame=frame)

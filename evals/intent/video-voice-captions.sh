@@ -34,7 +34,7 @@ check_format() {
   animated=$(probe_value "${report}" animated)
   voices=$(grep -c '^PROBE voice=' <<< "${report}")
   expect "${engine} ${size} ${fps} ${drivers} ${handlers} ${voices}" "CYCLES $2 24 0 0 2" "$1 blend"
-  [[ "${animated}" -gt 5 ]] || fail "$1: the shot is not keyframed"
+  [[ "${animated}" -gt 2 ]] || fail "$1: the shot is not keyframed"
   check_captions "${report}"
 }
 
