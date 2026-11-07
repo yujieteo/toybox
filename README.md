@@ -54,8 +54,8 @@ Cycles runs on the CPU unless you choose a device. The `draft` quality is a quar
 ## Devices
 
 Cycles on the CPU is the path that has run. It is the one on the Linux desktop.
-The air Mac does not have Blender installed. Its GPU is an Apple M5 with 8 cores that reports Metal 4.
-Cycles on Metal has never run there, so `--device metal` is untested. Nothing was installed on that Mac.
+The Apple Silicon Mac we checked does not have Blender installed. Its GPU is an Apple M5 with 8 cores that reports Metal 4.
+Cycles on Metal has never run on it, so `--device metal` is untested. Nothing was installed on it.
 
 ## Assets
 
