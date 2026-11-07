@@ -8,6 +8,7 @@ render_still() {
 main() {
   local size spread name
   blender_ready
+  python3 -m toybox voice evals/shots/tiny > /dev/null 2>&1 || fail "the voice step failed"
   for name in landscape portrait; do
     render_still "${name}"
     size=$(stream_field "out/tiny/still-${name}.png" v:0 width,height)
