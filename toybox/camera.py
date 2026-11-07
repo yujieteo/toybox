@@ -33,9 +33,22 @@ def make_rig(scene: Scene, lens: float, fstop: float) -> Rig:
     return Rig(camera, target)
 
 
+def cut_location(obj: Object, frame: int, location: Vec3) -> None:
+    key_location(obj, frame, location, "CONSTANT")
+    animation = obj.animation_data
+    if animation is None or animation.action is None:
+        msg = "Camera cut has no keyed action"
+        raise RuntimeError(msg)
+    for axis in range(3):
+        curve = animation.action.fcurve_ensure_for_datablock(obj, "location", index=axis)
+        for point in curve.keyframe_points:
+            if point.co[0] == frame:
+                point.interpolation = "CONSTANT"
+
+
 def cut(rig: Rig, frame: int, position: Vec3, look_at: Vec3) -> None:
-    key_location(rig.camera, frame, position, "CONSTANT")
-    key_location(rig.target, frame, look_at, "CONSTANT")
+    cut_location(rig.camera, frame, position)
+    cut_location(rig.target, frame, look_at)
 
 
 def move(rig: Rig, frame: int, position: Vec3, look_at: Vec3, kind: str = "SINE") -> None:
