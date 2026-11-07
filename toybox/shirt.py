@@ -2,7 +2,7 @@ import math
 from bisect import insort
 from dataclasses import dataclass
 
-from toybox.human import Body
+from toybox.human import Body, Face
 from toybox.vec import Vec3
 
 SEGMENTS = 32
@@ -50,11 +50,11 @@ def tube(rings: list[Ring], source: Body, scale: float) -> Body:
             at = (p[0], p[1], p[2])
             points.append((at[0] * scale, at[1] * scale, at[2] * scale))
             weights.append(weights_at(at, source))
-    faces: list[tuple[int, int, int]] = []
+    faces: list[Face] = []
     for row in range(len(rings) - 1):
         for index in range(SEGMENTS):
             a, b = row * SEGMENTS + index, row * SEGMENTS + (index + 1) % SEGMENTS
-            faces.extend(((a, b, b + SEGMENTS), (a, b + SEGMENTS, a + SEGMENTS)))
+            faces.append((a, b, b + SEGMENTS, a + SEGMENTS))
     return Body(points, [0] * len(points), weights, faces)
 
 
@@ -73,7 +73,7 @@ def make_shirt(body: Body, scale: float) -> Body:
     for side in (-1.0, 1.0):
         part = tube(sleeve(side), source, scale)
         offset = len(shirt.points)
-        shirt.faces.extend((a + offset, c + offset, b + offset) for a, b, c in part.faces)
+        shirt.faces.extend(tuple(index + offset for index in reversed(face)) for face in part.faces)
         shirt.points.extend(part.points)
         shirt.weights.extend(part.weights)
         shirt.regions.extend(part.regions)

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from bpy.types import Material, Object
 
-from toybox.human import BODY_HEIGHT, Body, Joint, bind, make_mesh, read_body, read_joints
+from toybox.human import BODY_HEIGHT, Body, Face, Joint, bind, make_mesh, read_body, read_joints
 from toybox.shirt import make_shirt
 from toybox.vec import Vec3
 
@@ -18,11 +18,12 @@ class Point:
 
 def normals(body: Body) -> list[Vec3]:
     sums = [[0.0, 0.0, 0.0] for _ in body.points]
-    for a, b, c in body.faces:
+    for face in body.faces:
+        a, b, c = face[:3]
         u = tuple(body.points[b][i] - body.points[a][i] for i in range(3))
         v = tuple(body.points[c][i] - body.points[a][i] for i in range(3))
         cross = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
-        for index in (a, b, c):
+        for index in face:
             for axis in range(3):
                 sums[index][axis] += cross[axis]
     return [
@@ -113,7 +114,7 @@ def shell(body: Body, kind: str, scale: float) -> Body:
         for p, n, w in zip(body.points, directions, body.weights, strict=True)
     ]
     points: list[Point] = []
-    faces: list[tuple[int, int, int]] = []
+    faces: list[Face] = []
     seen: dict[Vec3, int] = {}
     for tri in body.faces:
         if kind == "hair" and any(body.regions[i] not in (0, 4) for i in tri):
@@ -138,6 +139,10 @@ def shell(body: Body, kind: str, scale: float) -> Body:
 
 def garment(rig: Object, body: Body, joints: list[Joint], kind: str, material: Material) -> None:
     obj = make_mesh(f"{rig.name}.{kind}", body, joints, [material])
+    if kind == "shirt":
+        smooth = obj.modifiers.new("cloth", "SUBSURF")
+        smooth.levels = 1
+        smooth.render_levels = 1
     bind(obj, rig)
     if kind == "hair":
         return

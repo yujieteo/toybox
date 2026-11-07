@@ -2,7 +2,7 @@ import math
 
 from bpy.types import Material, Object
 
-from toybox.human import BODY_HEIGHT, Body, Joint, bind, make_mesh, read_joints
+from toybox.human import BODY_HEIGHT, Body, Face, Joint, bind, make_mesh, read_joints
 
 UPPER = ((0.25, 0.115), (0.55, 0.11), (0.85, 0.09), (1.0, 0.045), (1.0, 0.022))
 SOLE = ((1.0, 0.022), (1.0, 0.005))
@@ -11,7 +11,7 @@ SEGMENTS = 32
 
 def footwear(joints: list[Joint], scale: float, rings: tuple[tuple[float, float], ...]) -> Body:
     points: list[tuple[float, float, float]] = []
-    faces: list[tuple[int, int, int]] = []
+    faces: list[Face] = []
     weights: list[list[tuple[int, float]]] = []
     for bone, joint in enumerate(joints):
         if not joint.name.startswith("foot."):

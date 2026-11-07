@@ -22,8 +22,9 @@ COVERAGE_GAP = 0.001
 
 def boundary_loops(body: Body) -> list[list[int]]:
     edges: dict[tuple[int, int], int] = {}
-    for a, b, c in body.faces:
-        for first, last in ((a, b), (b, c), (c, a)):
+    for face in body.faces:
+        for index, first in enumerate(face):
+            last = face[(index + 1) % len(face)]
             edge = (min(first, last), max(first, last))
             edges[edge] = edges.get(edge, 0) + 1
     neighbors: dict[int, list[int]] = {}

@@ -18,6 +18,8 @@ SHOES = 3
 SHIRT = 1
 COVERED_SHOULDER = 1.29
 COVERED_TORSO = 0.22
+
+type Face = tuple[int, ...]
 PUPIL_RADIUS = 0.0033
 
 
@@ -26,7 +28,7 @@ class Body:
     points: list[Vec3]
     regions: list[int]
     weights: list[list[tuple[int, float]]]
-    faces: list[tuple[int, int, int]]
+    faces: list[Face]
 
 
 @dataclass(frozen=True)
@@ -50,7 +52,7 @@ def read_body(scale: float) -> Body:
     rows = [floats[i * ROW : (i + 1) * ROW] for i in range(count)]
     tris = array("H")
     tris.frombytes(data[8 + count * ROW * 4 :])
-    faces = [(tris[i], tris[i + 1], tris[i + 2]) for i in range(0, len(tris), 3)]
+    faces: list[Face] = [(tris[i], tris[i + 1], tris[i + 2]) for i in range(0, len(tris), 3)]
     return Body(
         [place((r[0], r[1], r[2]), scale) for r in rows],
         [int(r[6]) for r in rows],
@@ -126,11 +128,11 @@ def make_mesh(name: str, body: Body, joints: list[Joint], materials: list[Materi
     return obj
 
 
-def under_shirt(body: Body, tri: tuple[int, int, int], scale: float) -> bool:
+def under_shirt(body: Body, tri: Face, scale: float) -> bool:
     if majority([body.regions[i] for i in tri]) != SHIRT:
         return False
-    x = sum(body.points[i][0] for i in tri) / 3.0 / scale
-    z = sum(body.points[i][2] for i in tri) / 3.0 / scale
+    x = sum(body.points[i][0] for i in tri) / len(tri) / scale
+    z = sum(body.points[i][2] for i in tri) / len(tri) / scale
     return abs(x) < COVERED_TORSO or z > COVERED_SHOULDER
 
 
@@ -153,7 +155,7 @@ def bare_body(body: Body, scale: float) -> Body:
 
 def brows(scale: float) -> Body:
     points: list[Vec3] = []
-    faces: list[tuple[int, int, int]] = []
+    faces: list[Face] = []
     for side in (-1.0, 1.0):
         offset = len(points)
         for step in range(13):
