@@ -1,3 +1,4 @@
+import math
 from array import array
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,9 @@ ROW = 15
 BODY_HEIGHT = 1.7
 DOWN_BONES = ("upperarm", "lowerarm", "wrist", "upperleg", "lowerleg", "foot")
 SHORT_BONE = 0.08
+IRIS = 7
+SHOES = 3
+PUPIL_RADIUS = 0.0033
 
 
 @dataclass(frozen=True)
@@ -119,12 +123,55 @@ def make_mesh(name: str, body: Body, joints: list[Joint], materials: list[Materi
     return obj
 
 
+def bare_body(body: Body, scale: float) -> Body:
+    regions: list[int] = []
+    points: list[Vec3] = []
+    for point, source in zip(body.points, body.regions, strict=True):
+        region = 0 if source in (1, 2, 4) else source
+        if source == IRIS and math.hypot(abs(point[0] / scale) - 0.0314, point[2] / scale - 1.5768) < PUPIL_RADIUS:
+            region = 8
+        regions.append(region)
+        points.append((point[0], point[1] - 0.0045 * scale, point[2]) if source in (5, IRIS) else point)
+    faces = [tri for tri in body.faces if not all(body.regions[i] == SHOES for i in tri)]
+    return Body(points, regions, body.weights, faces)
+
+
+def brows(scale: float) -> Body:
+    points: list[Vec3] = []
+    faces: list[tuple[int, int, int]] = []
+    for side in (-1.0, 1.0):
+        offset = len(points)
+        for step in range(13):
+            t = step / 12.0
+            radius = 0.0003 + 0.002 * math.sin(math.pi * t)
+            for ring in range(6):
+                angle = ring * math.tau / 6.0
+                points.append(
+                    (
+                        side * (0.014 + 0.04 * t) * scale,
+                        (0.156 - 0.027 * t + radius * math.cos(angle)) * scale,
+                        (1.606 + 0.007 * math.sin(math.pi * t) - 0.004 * t + radius * math.sin(angle)) * scale,
+                    )
+                )
+        for step in range(12):
+            for ring in range(6):
+                a = offset + step * 6 + ring
+                b = offset + step * 6 + (ring + 1) % 6
+                faces.extend(((a, b, b + 6), (a, b + 6, a + 6)))
+    return Body(points, [4] * len(points), [[(5, 1.0)] for _ in points], faces)
+
+
+def bind(obj: Object, rig: Object) -> None:
+    obj.parent = rig
+    modifier = obj.modifiers.new("rig", "ARMATURE")
+    modifier.object = rig
+
+
 def make_human(name: str, at: Vec3, height: float, materials: list[Material]) -> tuple[Object, Object]:
     scale = height / BODY_HEIGHT
     joints = read_joints(scale)
     rig = make_rig(name, at, joints)
-    skin = make_mesh(f"{name}.body", read_body(scale), joints, materials)
-    skin.parent = rig
-    modifier = skin.modifiers.new("rig", "ARMATURE")
-    modifier.object = rig
+    skin = make_mesh(f"{name}.body", bare_body(read_body(scale), scale), joints, materials)
+    bind(skin, rig)
+    bind(make_mesh(f"{name}.brows", brows(scale), joints, materials), rig)
     return rig, skin
