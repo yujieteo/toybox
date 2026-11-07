@@ -11,6 +11,8 @@ class PoseBone:
     name: str
     rotation_mode: str
     rotation_euler: Vec3
+    location: Vec3
+    scale: Vec3
     head: Vector
     matrix: Matrix
     keyframe_insert = _bone_keyframe_insert

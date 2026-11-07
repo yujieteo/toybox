@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import bpy
 from bpy.types import Object, Scene
 
-from toybox import camera, gait, light
+from toybox import camera, gait, idle, light, props
 from toybox.formats import Format, Render
 from toybox.grade import apply_grade
 from toybox.materials import make_surface
@@ -102,6 +102,14 @@ def add_sphere(name: str, radius: float, at: Vec3, surface: str = "paint") -> Ob
     return sphere(name, radius, at, make_surface(surface))
 
 
+def add_bench(name: str, at: Vec3) -> Object:
+    return props.add_bench(name, at)
+
+
+def add_planter(name: str, at: Vec3) -> Object:
+    return props.add_planter(name, at)
+
+
 def add_person(name: str, at: Vec3, outfit: Outfit | None = None) -> Person:
     return make_person(name, at, outfit or Outfit())
 
@@ -114,6 +122,10 @@ def walk_path(
 
 def wave_hand(stage: Stage, person: Person, start: int, duration: float = 2.0) -> int:
     return gait.wave(person, start, duration, stage.fmt.fps)
+
+
+def idle_pose(stage: Stage, person: Person, start: int, duration: float = 6.0) -> int:
+    return idle.idle(person, start, duration, stage.fmt.fps)
 
 
 def turn_to(person: Person, frame: int, degrees: float) -> None:

@@ -2,17 +2,19 @@ from dataclasses import dataclass
 
 from bpy.types import Material, Object, PoseBone
 
+from toybox.clothes import dress_mesh
 from toybox.human import make_human
 from toybox.materials import make_surface
+from toybox.shoes import dress_feet
 from toybox.vec import Vec3
 
 
 @dataclass(frozen=True)
 class Outfit:
-    shirt: tuple[float, float, float] = (0.7, 0.12, 0.12)
+    shirt: tuple[float, float, float] = (0.24, 0.065, 0.04)
     trousers: tuple[float, float, float] = (0.12, 0.14, 0.25)
-    skin: tuple[float, float, float] = (0.46, 0.28, 0.2)
-    hair: tuple[float, float, float] = (0.04, 0.03, 0.02)
+    skin: tuple[float, float, float] = (0.32, 0.14, 0.075)
+    hair: tuple[float, float, float] = (0.018, 0.01, 0.006)
     height: float = 1.75
 
 
@@ -40,11 +42,13 @@ def dress(outfit: Outfit) -> list[Material]:
         make_surface("skin", outfit.skin, "skin"),
         make_surface("fabric", outfit.shirt, "shirt"),
         make_surface("fabric", outfit.trousers, "trousers"),
-        make_surface("paint", (0.05, 0.05, 0.05), "shoes"),
-        make_surface("fabric", outfit.hair, "hair"),
-        make_surface("paint", (0.9, 0.9, 0.88), "eye"),
-        make_surface("skin", (0.62, 0.3, 0.28), "lips"),
-        make_surface("paint", (0.12, 0.08, 0.05), "iris"),
+        make_surface("leather", (0.055, 0.035, 0.022), "shoes"),
+        make_surface("hair", outfit.hair, "hair"),
+        make_surface("eye", (0.65, 0.63, 0.57), "eye"),
+        make_surface("skin", (0.26, 0.085, 0.065), "lips"),
+        make_surface("eye", (0.075, 0.033, 0.012), "iris"),
+        make_surface("eye", (0.003, 0.002, 0.001), "pupil"),
+        make_surface("paint", (0.012, 0.015, 0.017), "soles"),
     ]
 
 
@@ -61,5 +65,17 @@ def make_limb(root: Object, side: str) -> Limb:
 
 
 def make_person(name: str, at: Vec3, outfit: Outfit) -> Person:
-    root, _ = make_human(name, at, outfit.height, dress(outfit))
-    return Person(name, root, make_limb(root, "L"), make_limb(root, "R"), outfit.height / 1.75)
+    dress_materials = dress(outfit)
+    root, _ = make_human(name, at, outfit.height, dress_materials)
+    dress_mesh(root, outfit.height, dress_materials)
+    dress_feet(root, outfit.height, dress_materials[3], dress_materials[9])
+    person = Person(name, root, make_limb(root, "L"), make_limb(root, "R"), outfit.height / 1.75)
+    relax(person)
+    return person
+
+
+def relax(person: Person) -> None:
+    for limb in (person.left, person.right):
+        limb.shoulder.rotation_euler = (0.0, 0.0, limb.side * 0.60)
+        limb.elbow.rotation_euler = (0.10, 0.0, 0.0)
+    person.root.pose.bones["head"].rotation_euler = (0.018, 0.0, 0.0)

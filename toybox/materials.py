@@ -21,6 +21,7 @@ class Surface:
     glass: bool = False
     skin: bool = False
     upright: bool = False
+    relief: float = 0.02
 
 
 SURFACES = {
@@ -33,9 +34,14 @@ SURFACES = {
     "metal": Surface("metal", (0.72, 0.74, 0.78), 0.32, metallic=1.0, scale=300.0, bump=0.05),
     "paint": Surface("paint", (0.6, 0.6, 0.6), 0.4, pattern="plain", bump=0.0, variation=0.0),
     "wood": Surface("wood", (0.4, 0.24, 0.12), 0.55, pattern="grain", scale=6.0, bump=0.2, variation=0.3),
-    "fabric": Surface("fabric", (0.3, 0.3, 0.35), 0.92, scale=400.0, bump=0.6, variation=0.08),
+    "fabric": Surface("fabric", (0.3, 0.3, 0.35), 0.86, scale=400.0, bump=0.18, variation=0.08, relief=0.0006),
+    "hair": Surface("hair", (0.018, 0.01, 0.006), 0.72, scale=600.0, bump=0.3, variation=0.35, relief=0.0006),
+    "leather": Surface("leather", (0.055, 0.035, 0.022), 0.6, scale=90.0, bump=0.18, variation=0.12, relief=0.0005),
+    "eye": Surface("eye", (0.65, 0.63, 0.57), 0.16, pattern="plain", bump=0.0, variation=0.0),
     "grass": Surface("grass", (0.12, 0.3, 0.06), 0.9, scale=250.0, bump=1.0, variation=0.3),
-    "skin": Surface("skin", (0.46, 0.28, 0.2), 0.55, pattern="plain", bump=0.0, variation=0.0, skin=True),
+    "skin": Surface(
+        "skin", (0.32, 0.14, 0.075), 0.48, scale=180.0, bump=0.12, variation=0.06, skin=True, relief=0.00025
+    ),
     "glass": Surface("glass", (0.9, 0.95, 1.0), 0.03, pattern="plain", bump=0.0, variation=0.0, glass=True),
 }
 
@@ -142,7 +148,8 @@ def surface_nodes(tree: NodeTree, spec: Surface, base: tuple[float, float, float
         bsdf.inputs["Transmission Weight"].default_value = 1.0
         bsdf.inputs["IOR"].default_value = 1.45
     if spec.skin:
-        bsdf.inputs["Subsurface Weight"].default_value = 0.0
+        bsdf.inputs["Subsurface Weight"].default_value = 0.08
+        bsdf.inputs["Subsurface Scale"].default_value = 0.012
         bsdf.inputs["Subsurface Radius"].default_value = (1.0, 0.35, 0.2)
     if spec.pattern != "plain":
         decorate(tree, spec, bsdf, base)
@@ -152,11 +159,15 @@ def surface_nodes(tree: NodeTree, spec: Surface, base: tuple[float, float, float
 def decorate(tree: NodeTree, spec: Surface, bsdf: Node, base: tuple[float, float, float]) -> None:
     tex = pattern_node(tree, spec, base)
     grime = grime_node(tree, spec)
-    color = dirt(tree, weathered(tree, spec, tex, base), grime)
+    color = weathered(tree, spec, tex, base)
+    if spec.name not in ("skin", "fabric", "hair", "leather"):
+        color = dirt(tree, color, grime)
     join(tree, color.outputs["Result"], bsdf.inputs["Base Color"])
     join(tree, roughness_from(tree, spec, grime).outputs["Result"], bsdf.inputs["Roughness"])
+    if spec.name == "fabric":
+        bsdf.inputs["Sheen Weight"].default_value = 0.18
     if spec.bump > 0.0:
-        bump = linked(tree, "ShaderNodeBump", Strength=spec.bump, Distance=0.02)
+        bump = linked(tree, "ShaderNodeBump", Strength=spec.bump, Distance=spec.relief)
         join(tree, tex.outputs["Fac"], bump.inputs["Height"])
         join(tree, bump.outputs["Normal"], bsdf.inputs["Normal"])
 

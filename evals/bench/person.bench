@@ -1,0 +1,3 @@
+cmd="PYTHONPATH=. blender -b --factory-startup --threads 1 -P evals/probes/person_cost.py"
+runs=3
+units=1

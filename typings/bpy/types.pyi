@@ -190,6 +190,8 @@ class Modifier:
     factor: float
     iterations: int
     use_clamp_overlap: bool
+    thickness: float
+    offset: float
 
 def _modifiers_new(self: Modifiers, name: str, modifier_type: str) -> Modifier: ...
 
