@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+. "${root}/rules.conf"
+
+lang_of() {
+  case "$1" in
+    *.go) echo go ;;
+    *.ts|*.tsx|*.mts|*.cts|*.js|*.mjs|*.cjs|*.jsx) echo ts ;;
+    *.py|*.pyi) echo py ;;
+    *.rs) echo rs ;;
+    *.sh|*.bash) echo sh ;;
+    *.awk) echo awk ;;
+    *) shebang_lang "$1" ;;
+  esac
+}
+
+shebang_lang() {
+  local first
+  [[ -f "$1" ]] || return 0
+  case "$1" in *.*) return 0 ;; *) ;; esac
+  first=$(sed -n 1p "$1")
+  case "${first}" in
+    "#!"*bash*|"#!"*/sh*|"#!"*" sh"*) echo sh ;;
+    "#!"*python*) echo py ;;
+    "#!"*node*|"#!"*bun*) echo ts ;;
+    *) ;;
+  esac
+}
+
+is_excluded() {
+  local p
+  for p in ${exclude} ${vendor}; do
+    case "$1" in "${p}"|"${p}"/*) return 0 ;; *) ;; esac
+  done
+  return 1
+}
+
+list_files() {
+  local f
+  local listed
+  listed=$(git -C "${root}" ls-files -co --exclude-standard)
+  while IFS= read -r f; do
+    is_excluded "${f}" || echo "${f}"
+  done <<< "${listed}"
+}
+
+has_rule() { case " ${rules} " in *" $1 "*) return 0 ;; *) ;; esac; return 1; }
+
+name_rules() {
+  local f=$1 l=$2 base
+  base=$(basename "${f}")
+  has_rule nojs && case "${base}" in *.js|*.mjs|*.cjs|*.jsx) echo "${f}:1: nojs: JavaScript is banned, write TypeScript" ;; *) ;; esac
+  has_rule pyhot && [[ "${l}" = py ]] && case "${base}" in *.hot.py) echo "${f}:1: pyhot: hot code goes in Go, Rust, Swift or TypeScript" ;; *) ;; esac
+  has_rule nativetest || return 0
+  case "${base}" in
+    *_test.go|*.test.ts|*.spec.ts|*.test.tsx|*.spec.tsx|*.test.mts|*.spec.mts|*.test.js|*.spec.js|*.test.mjs|test_*.py|*_test.py|conftest.py)
+      echo "${f}:1: nativetest: tests are evals, not native test files" ;;
+    *) ;;
+  esac
+  case "${l}:${f}" in rs:*/tests/*|rs:tests/*) echo "${f}:1: nativetest: tests are evals, not a tests folder" ;; *) ;; esac
+}
+
+covered_by() {
+  awk -v f="$1" -v pats="$2" -f "${root}/bin/awk/cover.awk" < /dev/null
+}
+
+ts_config_list() {
+  [[ -f "${root}/tsconfig.json" ]] || return 0
+  jq -r --arg k "$1" '.[$k] // [] | join(" ")' "${root}/tsconfig.json"
+}
+
+py_config_list() {
+  [[ -f "${root}/pyproject.toml" ]] || return 0
+  awk -v key="$1" '/^\[/ { on = ($0 == "[tool.basedpyright]") }
+    on && $1 == key { while (match($0, /"[^"]*"/)) { printf "%s ", substr($0, RSTART + 1, RLENGTH - 2); $0 = substr($0, RSTART + RLENGTH) } }' "${root}/pyproject.toml"
+}
+
+cover_rules() {
+  local f=$1 l=$2 inc exc
+  has_rule typecover || return 0
+  is_excluded "${f}" && return 0
+  case "${l}:${f}" in
+    ts:*.ts|ts:*.tsx|ts:*.mts|ts:*.cts) inc=$(ts_config_list include); exc=$(ts_config_list exclude) ;;
+    py:*.py|py:*.pyi) inc=$(py_config_list include); exc=$(py_config_list exclude) ;;
+    *) return 0 ;;
+  esac
+  covered_by "${f}" "${inc}" && ! covered_by "${f}" "${exc}" && return 0
+  echo "${f}:1: typecover: no type checker reads this file; add it to the include list of its checker"
+}
+
+content_rules() {
+  local f=$1 l=$2 re=""
+  has_rule nativetest || return 0
+  case "${l}" in
+    go) re='"testing"' ;;
+    ts) re='bun:test|node:test|vitest|from "jest|@jest' ;;
+    py) re='^[ \t]*(import|from)[ \t]+(pytest|unittest)' ;;
+    rs) re='#\[(cfg\()?test' ;;
+    *) ;;
+  esac
+  [[ -n "${re}" ]] || return 0
+  re="${re}" awk -v f="${f}" '$0 ~ ENVIRON["re"] { print f ":" NR ": nativetest: tests are evals, not native tests" }' "${root}/${f}"
+}
+
+scan_file() {
+  local f=$1 l=$2 hot=0 suppress
+  suppress=$(< "${root}/bin/suppress.re")
+  case "${f}" in *.hot.*) hot=1 ;; *) ;; esac
+  awk -v lang="${l}" -v file="${f}" -v maxfn="${max_function_lines}" -v maxfile="${max_file_lines}" \
+    -v hot="${hot}" -v rules="${rules}" -v suppress="${suppress}" \
+    -f "${root}/bin/awk/scan.awk" -f "${root}/bin/awk/fn.awk" -f "${root}/bin/awk/lang.awk" -f "${root}/bin/awk/hot.awk" "${root}/${f}"
+  [[ "$?" -le 1 ]] || echo "${f}:0: internal: the scanner failed"
+}
+
+check_file() {
+  local f=$1 l
+  l=$(lang_of "${root}/${f}")
+  [[ -n "${l}" ]] || return 0
+  name_rules "${f}" "${l}"
+  cover_rules "${f}" "${l}"
+  content_rules "${f}" "${l}"
+  scan_file "${f}" "${l}"
+}
+
+main() {
+  local files out
+  [[ "${1:-}" = --list ]] && { list_files; exit 0; }
+  if [[ "$#" -gt 0 ]]; then
+    files=$(for a in "$@"; do a=${a#"${root}"/}; echo "${a}"; done)
+  else
+    files=$(list_files)
+  fi
+  out=$(while IFS= read -r f; do [[ -n "${f}" ]] && check_file "${f}"; done <<<"${files}")
+  if [[ -n "${out}" ]]; then
+    printf '%s\n' "${out}"
+    exit 1
+  fi
+}
+
+main "$@"

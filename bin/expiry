@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+add_months() {
+  awk -v d="$1" -v m="$2" 'BEGIN {
+    split(d, p, "-")
+    y = p[1]; mo = p[2] + m - 1; day = p[3]
+    y += int(mo / 12); mo = mo % 12 + 1
+    split("31 28 31 30 31 30 31 31 30 31 30 31", dm, " ")
+    last = dm[mo]
+    if (mo == 2 && (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0))) last = 29
+    if (day > last) day = last
+    printf "%04d-%02d-%02d\n", y, mo, day
+  }'
+}
+
+today() {
+  local d
+  d=$(date +%F)
+  echo "${EXPIRY_TODAY:-${d}}"
+}
+
+create() {
+  local start
+  start=$(today)
+  add_months "${1:-${start}}" 3 > "${root}/EXPIRY"
+  cat "${root}/EXPIRY"
+}
+
+check() {
+  local file=${root}/EXPIRY due now
+  if [[ ! -f "${file}" ]]; then
+    echo "expiry: no EXPIRY file. Run bin/expiry create." >&2
+    return 0
+  fi
+  due=$(sed -n 1p "${file}")
+  now=$(today)
+  if [[ "${now}" > "${due}" ]] || [[ "${now}" = "${due}" ]]; then
+    echo "expiry: this project expired on ${due}. Rethink the playbook, or rebuild the program from what you learned." >&2
+  else
+    echo "expiry: this project runs until ${due}."
+  fi
+  return 0
+}
+
+case "${1:-check}" in
+  create) create "${2:-}" ;;
+  check) check ;;
+  add) add_months "${2:-1970-01-01}" "${3:-0}" ;;
+  *) echo "usage: bin/expiry [check|create [date]]" >&2 ;;
+esac
+exit 0

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+cd "${root}" || exit 1
+. "${root}/rules.conf"
+export MODEL_EVAL_BLOCK=1
+failed=0
+
+step() {
+  local name=$1
+  shift
+  echo "== ${name}"
+  if "$@"; then echo "ok: ${name}"; else echo "FAILED: ${name}"; failed=$((failed + 1)); fi
+}
+
+shell_files() {
+  local listed
+  listed=$(git ls-files -co --exclude-standard)
+  while IFS= read -r f; do
+    case "${f}" in evals/lint/*) continue ;; *) ;; esac
+    case "${f}" in *.sh|gate|bin/*) [[ "${f%.awk}" = "${f}" ]] && [[ "${f%.re}" = "${f}" ]] && echo "${f}" ;; *) ;; esac
+  done <<< "${listed}"
+}
+
+shellcheck_all() {
+  command -v shellcheck > /dev/null || { echo "shellcheck is missing. Run: nix develop" >&2; return 1; }
+  local files list
+  list=$(shell_files)
+  read -ra files <<< "${list//$'\n'/ }"
+  shellcheck -x -o all -e SC1090,SC1091 "${files[@]}"
+}
+
+py_tools() {
+  [[ -n "$(bin/rules --list | grep -E '\.pyi?$' || true)" ]] || return 0
+  ruff check . && basedpyright
+}
+
+main() {
+  bin/expiry check
+  step "rules" bin/rules
+  step "markdown reading grade" bin/mdgrade
+  step "shellcheck" shellcheck_all
+  step "python" py_tools
+  step "evals" bin/eval
+  step "start context size" bin/ctxsize
+  [[ "${failed}" -eq 0 ]] || { echo "gate: ${failed} step(s) failed"; exit 1; }
+  echo "gate: all steps passed"
+}
+
+main

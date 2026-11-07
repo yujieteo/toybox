@@ -1,0 +1,1 @@
+nolint|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|noqa|type: *ignore|pyright: *(ignore|basic|off)|#!?[[]allow|lint:ignore|shellcheck +disable|nosec|biome-ignore|deno-lint-ignore|prettier-ignore|c8 ignore|istanbul ignore|pragma: no cover

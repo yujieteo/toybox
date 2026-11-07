@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cases="${root}/evals/model"
+
+plan() {
+  local c check=""
+  echo "model eval plan (nothing runs, nothing is spent):"
+  for c in "${cases}"/*.case; do
+    ( . "${c}"; echo "  $(basename "${c}" .case): one claude call, graded by: ${check}" )
+  done
+}
+
+refuse() {
+  echo "modeleval: this spends your plan's allowance. Run it only when you ask for it." >&2
+  echo "modeleval: add --captain-requested to run. Use 'plan' to see what would run." >&2
+  exit 3
+}
+
+run_case() {
+  local c=$1 dir=${2:-${root}} json text tokens ok check="" prompt_file="" prompt
+  . "${c}"
+  prompt=$(< "${root}/evals/model/${prompt_file}")
+  json=$(cd "${dir}" && claude -p "${prompt}" --output-format json)
+  text=$(printf '%s' "${json}" | jq -r '.result')
+  tokens=$(printf '%s' "${json}" | jq '.usage | (.input_tokens + .output_tokens + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0))')
+  ok=fail
+  printf '%s' "${text}" | bash -c "${check}" > /dev/null && ok=pass
+  printf '%s\t%s\t%s\n' "$(basename "${c}" .case)" "${ok}" "${tokens}"
+}
+
+run_all() {
+  local c dir=${1:-${root}}
+  for c in "${cases}"/*.case; do run_case "${c}" "${dir}"; done
+}
+
+ab_run() {
+  local tmp
+  tmp=$(mktemp -d)
+  git -C "${root}" archive -o "${tmp}.tar" "$1"
+  tar -xf "${tmp}.tar" -C "${tmp}"
+  echo "base $1 (case, result, tokens)"
+  run_all "${tmp}"
+  echo "current (case, result, tokens)"
+  run_all
+}
+
+main() {
+  case "${1:-}" in
+    plan) plan ;;
+    run)
+      [[ "${MODEL_EVAL_BLOCK:-}" = "" ]] || refuse
+      [[ "${2:-}" = --captain-requested ]] || refuse
+      run_all ;;
+    ab)
+      [[ "${MODEL_EVAL_BLOCK:-}" = "" ]] || refuse
+      [[ "${3:-}" = --captain-requested ]] || refuse
+      ab_run "$2" ;;
+    *) echo "usage: bin/modeleval plan | run --captain-requested | ab REF --captain-requested" >&2; exit 2 ;;
+  esac
+}
+
+main "$@"

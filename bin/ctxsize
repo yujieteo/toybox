@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+. "${root}/rules.conf"
+
+description_of() {
+  awk '/^description:/ { sub(/^description:[ \t]*/, ""); print; exit }' "$1"
+}
+
+start_text() {
+  cat "${root}/AGENTS.md"
+  local s
+  for s in "${root}"/.claude/skills/*/SKILL.md; do
+    [[ -f "${s}" ]] && description_of "${s}"
+  done
+}
+
+main() {
+  local bytes tokens text
+  text=$(start_text)
+  bytes=$(wc -c <<< "${text}")
+  bytes=${bytes// /}
+  tokens=$((bytes / 4))
+  echo "start context: ${bytes} bytes, about ${tokens} tokens (bytes divided by 4: a proxy, not a model count)"
+  if [[ "${tokens}" -gt "${context_budget_tokens:-3000}" ]]; then
+    echo "ctxsize: over the budget of ${context_budget_tokens:-3000} tokens" >&2
+    exit 1
+  fi
+}
+
+main

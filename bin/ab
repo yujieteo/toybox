@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -u
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+min_effect=${AB_MIN_EFFECT:-0.05}
+rounds=${AB_ROUNDS:-4}
+per_round=${AB_RUNS_PER_ROUND:-10}
+
+verdict() {
+  awk -F'\t' -v min="${min_effect}" '
+    FNR == 1 { f++ }
+    { v[f, ++n[f]] = $1 + 0 }
+    function med(k,   i, j, t, a) {
+      for (i = 1; i <= n[k]; i++) a[i] = v[k, i]
+      for (i = 2; i <= n[k]; i++) { t = a[i]; for (j = i - 1; j >= 1 && a[j] > t; j--) a[j + 1] = a[j]; a[j + 1] = t }
+      return a[int((n[k] + 1) / 2)]
+    }
+    function u_stat(   i, j, u) {
+      for (i = 1; i <= n[1]; i++) for (j = 1; j <= n[2]; j++) u += (v[1, i] < v[2, j]) + 0.5 * (v[1, i] == v[2, j])
+      return u
+    }
+    END {
+      mb = med(1); mc = med(2); d = (mc - mb) / mb
+      u = u_stat(); mu = n[1] * n[2] / 2; sd = sqrt(n[1] * n[2] * (n[1] + n[2] + 1) / 12)
+      z = (u - mu) / sd
+      printf "p50 base=%.1fms current=%.1fms change=%+.1f%% z=%.2f\n", mb, mc, d * 100, z
+      if (z * z > 3.84 && d > min) print "verdict: worse"
+      else if (z * z > 3.84 && d < -min) print "verdict: better"
+      else print "verdict: no difference"
+    }' "$1" "$2"
+}
+
+collect() {
+  local dir=$1 name=$2 out=$3
+  BENCH_RUNS=${per_round} "${dir}/bin/bench" "${name}" "${out}.part" > /dev/null
+  cat "${out}.part" >> "${out}"
+}
+
+compare() {
+  local base=$1 name=$2 b c i
+  b=$(mktemp); c=$(mktemp)
+  for ((i = 0; i < rounds; i++)); do
+    collect "${base}" "${name}" "${b}"
+    collect "${root}" "${name}" "${c}"
+  done
+  verdict "${b}" "${c}"
+}
+
+main() {
+  local name=${1:?usage: bin/ab NAME [BASE_REF|--dir PATH]} base tmp out
+  if [[ "${2:-}" = --dir ]]; then
+    base=$3
+  else
+    tmp=$(mktemp -d)
+    git -C "${root}" archive -o "${tmp}.tar" "${2:-HEAD}"
+    tar -xf "${tmp}.tar" -C "${tmp}"
+    base=${tmp}
+  fi
+  echo "ab ${name}: base interleaved with current, ${rounds} rounds"
+  out=$(compare "${base}" "${name}")
+  echo "${out}"
+  case "${out}" in *"verdict: worse"*) [[ -z "${AB_FAIL_ON_WORSE:-}" ]] || exit 1 ;; *) ;; esac
+}
+
+main "$@"
